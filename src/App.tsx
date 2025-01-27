@@ -1,7 +1,17 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { EPublicRoutes } from "./models";
 import { Layout } from "./components/layouts";
-import { Home, About, Contact, Concents, Tournaments, System } from "./pages";
+import {
+  Home,
+  About,
+  Contact,
+  Concents,
+  Tournaments,
+  System,
+  PageNotFound,
+  Login,
+  RecPassword,
+} from "./pages";
 import "./App.css";
 
 function App() {
@@ -19,8 +29,14 @@ function App() {
                 path={EPublicRoutes.TOURNAMENTS}
                 element={<Tournaments />}
               />
+              <Route path="*" element={<PageNotFound />} />
             </Route>
             <Route path={EPublicRoutes.SISTEMA} element={<System />} />
+            <Route path={EPublicRoutes.LOGIN} element={<Login />} />
+            <Route
+              path={EPublicRoutes.REC_PASSWORD}
+              element={<RecPassword />}
+            />
           </Routes>
         </BrowserRouter>
       </div>

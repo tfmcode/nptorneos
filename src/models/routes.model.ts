@@ -5,6 +5,8 @@ export enum EPublicRoutes {
   CONCENTS = "/concents",
   TOURNAMENTS = "/tournaments",
   SISTEMA = "/sistema",
+  LOGIN = "/login",
+  REC_PASSWORD = "/recoverpassword",
 }
 
 export enum EPrivateRoutes {

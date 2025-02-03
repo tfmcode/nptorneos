@@ -30,7 +30,15 @@ const SocialMedia: React.FC = () => {
         <span className="block w-16 h-1 bg-yellow-600 mx-auto mt-2"></span>
       </h2>
 
-      <div className="flex flex-wrap justify-center gap-6">
+      <div
+        className=""
+        style={{
+          display: "flex",
+          justifyContent: "space-evenly",
+          flexDirection: "row",
+          flexWrap: "wrap",
+        }}
+      >
         {socialPlatforms.map((platform) => (
           <div
             key={platform.name}

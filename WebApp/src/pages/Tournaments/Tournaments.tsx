@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
-  Bracket,
+ /*  Bracket, */
   Sanctions,
   TableCards,
   TableScorers,
   TableMatches,
   TablePosition,
 } from "./components";
-const rounds = [
+/* const rounds = [
   {
     name: "Octavos de Final",
     matches: [
@@ -55,7 +55,7 @@ const rounds = [
       { team1: "EL INTERIOR", team2: "DEFE DE VIEDMA", winner: "EL INTERIOR" },
     ],
   },
-];
+]; */
 
 type Match = {
   local: string;
@@ -487,10 +487,10 @@ export const Tournaments: React.FC = () => {
         </div>
       </div>
 
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+{/*       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <Bracket rounds={rounds} />
       </div>
-
+ */}
       {/* Mapa */}
       <div className="border border-gray-300 p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-bold mb-4">SEDE: CANCHAS CLUB MITRE</h2>

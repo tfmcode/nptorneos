@@ -40,7 +40,15 @@ const NewSections: React.FC = () => {
           <span className="block w-16 h-1 bg-yellow-600 mx-auto mt-2"></span>
         </h2>
 
-        <div className="flex flex-wrap justify-between gap-6">
+        <div
+          className=""
+          style={{
+            display: "flex",
+            justifyContent: "space-evenly",
+            flexDirection: "row",
+            flexWrap: "wrap",
+          }}
+        >
           {news.map((item, index) => (
             <div
               key={index}
@@ -77,7 +85,7 @@ const NewSections: React.FC = () => {
             <img
               src={stat.icon}
               alt={stat.label}
-              className="w-12 h-12 object-contain"
+              className=""
             />
             <div className="text-left">
               <strong className="block text-2xl">{stat.value}</strong>

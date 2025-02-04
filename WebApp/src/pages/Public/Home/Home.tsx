@@ -2,8 +2,8 @@ import React from "react";
 import {
   HeroCarousel,
   NewSections,
-  SocialMedia,
-  LogosCloud,
+/*   SocialMedia,
+ */  LogosCloud,
 } from "./components";
 
 const Home: React.FC = () => {
@@ -11,7 +11,7 @@ const Home: React.FC = () => {
     <>
       <HeroCarousel />
       <NewSections />
-      <SocialMedia />
+      {/* <SocialMedia /> */}
       <LogosCloud />
     </>
   );

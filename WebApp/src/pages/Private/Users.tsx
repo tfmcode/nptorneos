@@ -1,106 +1,75 @@
 import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
-  createUser,
-  getUsers,
-  deleteUser,
-  updateUser,
-  User,
-  UserInput,
-} from "../../services/userService";
+  fetchUsers,
+  createOrUpdateUser,
+  removeUser,
+} from "../../store/slices/userSlice";
+import { RootState, AppDispatch } from "../../store";
+import { User } from "../../api/userService";
 
 const Users: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [formData, setFormData] = useState<UserInput & { _id?: string }>({
+  const dispatch = useDispatch<AppDispatch>();
+  const { users, loading, error } = useSelector(
+    (state: RootState) => state.users
+  );
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
+    _id: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const data = await getUsers();
-      setUsers(data);
-      setError(""); // Limpiar errores previos
-    } catch {
-      setError("Error al obtener usuarios.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchUsers());
+  }, [dispatch]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleCreateOrUpdateUser = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setLoading(true);
-      if (formData._id) {
-        const updatedUser = await updateUser(formData._id, formData);
-        setUsers((prevUsers) =>
-          prevUsers.map((user) =>
-            user._id === formData._id ? { ...user, ...updatedUser } : user
-          )
-        );
-      } else {
-        const newUser = await createUser(formData);
-        setUsers((prevUsers) => [...prevUsers, newUser]);
-      }
-      setFormData({ name: "", email: "", password: "" });
-      setIsModalOpen(false);
-      setError(""); // Limpiar errores previos
-    } catch {
-      setError("Error al crear o actualizar el usuario.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleDeleteUser = async (id: string) => {
-    try {
-      setLoading(true);
-      await deleteUser(id);
-      setUsers((prevUsers) => prevUsers.filter((user) => user._id !== id));
-      setError(""); // Limpiar errores previos
-    } catch {
-      setError("Error al eliminar el usuario.");
-    } finally {
-      setLoading(false);
+    if (!formData.name || !formData.email || !formData.password) {
+      alert("Todos los campos son obligatorios.");
+      return;
     }
+
+    await dispatch(createOrUpdateUser(formData)).unwrap();
+    await dispatch(fetchUsers()); // ✅ Recarga la lista de usuarios inmediatamente
+    setIsModalOpen(false);
   };
 
   const handleEditUser = (user: User) => {
-    setFormData({ ...user });
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      password: user.password || "", // No mostramos la contraseña por seguridad
+      _id: user._id || "",
+    });
     setIsModalOpen(true);
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = searchTerm
+    ? users.filter(
+        (user) =>
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : users;
 
   return (
     <div className="p-6 bg-gray-100 h-screen flex justify-center items-center">
       <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-xl">
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-700">Usuarios</h2>
-          </div>
+          <h2 className="text-xl font-bold text-gray-700">Usuarios</h2>
           <button
             onClick={() => {
-              setFormData({ name: "", email: "", password: "" });
+              setFormData({ name: "", email: "", password: "", _id: "" });
               setIsModalOpen(true);
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -131,10 +100,10 @@ const Users: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user._id} className="border-t">
-                  <td className="px-4 py-2">{user.name}</td>
-                  <td className="px-4 py-2">{user.email}</td>
+              {filteredUsers.map((user, index) => (
+                <tr key={user._id || index} className="border-t">
+                  <td className="px-4 py-2">{user.name || "Sin nombre"}</td>
+                  <td className="px-4 py-2">{user.email || "Sin email"}</td>
                   <td className="px-4 py-2 text-right">
                     <button
                       onClick={() => handleEditUser(user)}
@@ -143,7 +112,7 @@ const Users: React.FC = () => {
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDeleteUser(user._id)}
+                      onClick={() => dispatch(removeUser(user._id))}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                     >
                       Eliminar
@@ -168,7 +137,7 @@ const Users: React.FC = () => {
             <h3 className="text-lg font-bold mb-4">
               {formData._id ? "Editar Usuario" : "Agregar Usuario"}
             </h3>
-            <form onSubmit={handleCreateOrUpdateUser}>
+            <form onSubmit={handleSubmit}>
               <div className="flex flex-col gap-4">
                 <input
                   type="text"

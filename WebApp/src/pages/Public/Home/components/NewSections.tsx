@@ -1,10 +1,10 @@
 import React from "react";
-import centroEntrenamientos from "../../../assets/escuela_futbol.jpg";
-import escuelaFutbol from "../../../assets/torneo_apertura.jpg";
-import infantoJuvenil from "../../../assets/infanto_juvenil.jpeg";
-import jugadoresIcon from "../../../assets/jugadores.png";
-import sedesIcon from "../../../assets/sedes.png";
-import equiposIcon from "../../../assets/equipos.png";
+import centroEntrenamientos from "../../../../assets/escuela_futbol.jpg";
+import escuelaFutbol from "../../../../assets/torneo_apertura.jpg";
+import infantoJuvenil from "../../../../assets/infanto_juvenil.jpeg";
+import jugadoresIcon from "../../../../assets/jugadores.png";
+import sedesIcon from "../../../../assets/sedes.png";
+import equiposIcon from "../../../../assets/equipos.png";
 
 const NewSections: React.FC = () => {
   const news = [

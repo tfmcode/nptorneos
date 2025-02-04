@@ -1,9 +1,9 @@
-import sponsor1 from "../../../assets/sponsor1.png";
-import sponsor2 from "../../../assets/sponsor2.jpeg";
-//import sponsor3 from "../../../assets/sponsor3.jpeg";
-import sponsor4 from "../../../assets/sponsor4.jpg";
-import sponsor5 from "../../../assets/sponsor5.jpeg";
-import sponsor6 from "../../../assets/sponsor6.png";
+import sponsor1 from "../../../../assets/sponsor1.png";
+import sponsor2 from "../../../../assets/sponsor2.jpeg";
+//import sponsor3 from "../../../../assets/sponsor3.jpeg";
+import sponsor4 from "../../../../assets/sponsor4.jpg";
+import sponsor5 from "../../../../assets/sponsor5.jpeg";
+import sponsor6 from "../../../../assets/sponsor6.png";
 
 const LogosCloud: React.FC = () => {
   const sponsors = [

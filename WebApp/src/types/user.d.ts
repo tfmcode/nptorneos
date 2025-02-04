@@ -2,8 +2,10 @@ export interface User {
   _id: string;
   name: string;
   email: string;
-  password?: string; // Opcional si no siempre necesitas enviar la contraseña
+  password: string;
+  [key: string]: unknown; // Permite cumplir con Record<string, unknown>
 }
+
 
 export interface UserInput {
   name: string;

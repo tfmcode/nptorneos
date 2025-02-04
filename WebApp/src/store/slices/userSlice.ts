@@ -4,9 +4,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  User,
-  UserInput,
 } from "../../api/userService";
+import { User, UserInput } from "../../types/user";
 
 // Estado inicial
 const initialState = {
@@ -15,7 +14,7 @@ const initialState = {
   error: null as string | null,
 };
 
-// Async Thunks (Manejo de peticiones asincrónicas con Redux Toolkit)
+// Async Thunks
 export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
   return await getUsers();
 });
@@ -51,7 +50,7 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload;
+        state.users = action.payload || []; // Maneja el caso en que `payload` sea undefined
       })
       .addCase(fetchUsers.rejected, (state) => {
         state.loading = false;
@@ -67,11 +66,9 @@ const userSlice = createSlice({
         );
 
         if (existingIndex !== -1) {
-          // ✅ Si el usuario existe, lo reemplazamos completamente en Redux
-          state.users[existingIndex] = updatedUser;
+          state.users[existingIndex] = updatedUser; // Actualiza usuario existente
         } else {
-          // ✅ Si es un usuario nuevo, lo agregamos a la lista
-          state.users.push(updatedUser);
+          state.users.push(updatedUser); // Agrega usuario nuevo
         }
       })
       .addCase(removeUser.fulfilled, (state, action) => {

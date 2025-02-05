@@ -16,7 +16,8 @@ const initialState = {
 
 // Async Thunks
 export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
-  return await getUsers();
+  const response = await getUsers();
+  return response ?? []; // Si `response` es undefined, retorna un array vacío
 });
 
 export const createOrUpdateUser = createAsyncThunk(
@@ -50,11 +51,11 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload || []; // Maneja el caso en que `payload` sea undefined
+        state.users = action.payload; // Siempre un array
       })
-      .addCase(fetchUsers.rejected, (state) => {
+      .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false;
-        state.error = "Error al obtener usuarios.";
+        state.error = action.error.message ?? "Error al obtener usuarios.";
       })
       .addCase(createOrUpdateUser.fulfilled, (state, action) => {
         const updatedUser = action.payload;

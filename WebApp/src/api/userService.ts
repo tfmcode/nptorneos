@@ -7,15 +7,15 @@ import { User, UserInput } from "../types/user";
  */
 const handleAxiosError = (error: unknown): never => {
   if (error instanceof AxiosError && error.response?.data) {
-    throw error.response.data; // Mensaje del servidor
+    console.error("API Error:", error.response.data);
+    throw error.response.data;
   }
+  console.error("Unexpected Error:", error);
   throw new Error("Ocurrió un error inesperado");
 };
 
 /**
  * Crea un nuevo usuario
- * @param data - Datos del nuevo usuario
- * @returns Usuario creado o undefined si ocurre un error
  */
 export const createUser = async (
   data: UserInput
@@ -25,27 +25,25 @@ export const createUser = async (
     return response.data.user;
   } catch (error) {
     handleAxiosError(error);
-    return undefined; // Ahora TypeScript sabe que puede devolver undefined
   }
+  return undefined; // ✅ Agregado para evitar el error de TypeScript
 };
 
 /**
  * Obtiene todos los usuarios
- * @returns Lista de usuarios o undefined si ocurre un error
  */
-export const getUsers = async (): Promise<User[] | undefined> => {
+export const getUsers = async (): Promise<User[]> => {
   try {
     const response = await API.get("/api/users");
-    return response.data;
+    return response.data ?? [];
   } catch (error) {
     handleAxiosError(error);
-    return undefined; // Solución para cumplir con el tipo de retorno
   }
+  return []; // ✅ Si hay error, retorna un array vacío
 };
 
 /**
  * Elimina un usuario por ID
- * @param id - ID del usuario a eliminar
  */
 export const deleteUser = async (id: string): Promise<void> => {
   try {
@@ -57,9 +55,6 @@ export const deleteUser = async (id: string): Promise<void> => {
 
 /**
  * Actualiza un usuario
- * @param id - ID del usuario a actualizar
- * @param data - Nuevos datos del usuario
- * @returns Usuario actualizado o undefined si ocurre un error
  */
 export const updateUser = async (
   id: string,
@@ -70,6 +65,6 @@ export const updateUser = async (
     return response.data.user;
   } catch (error) {
     handleAxiosError(error);
-    return undefined; // Cumple con el tipo de retorno esperado
   }
+  return undefined; // ✅ Agregado para corregir el error
 };

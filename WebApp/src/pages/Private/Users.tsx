@@ -1,15 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import { User } from "../../types/user";
+import DataTable from "../../components/tables/DataTable";
+import DynamicForm from "../../components/forms/DynamicForm";
+import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
   fetchUsers,
   createOrUpdateUser,
   removeUser,
 } from "../../store/slices/userSlice";
-import { RootState, AppDispatch } from "../../store";
-import { User } from "../../types/user";
-import DataTable from "../../components/tables/DataTable";
-import Modal from "../../components/modals/Modal";
-import InputField from "../../components/forms/InputField";
+import {
+  Modal,
+  PageHeader,
+  StatusMessage,
+  SearchField,
+} from "../../components/common";
+import { userColumns } from "../../components/tables";
+import { useCrudForm } from "../../components/hooks/useCrudForm";
 
 const Users: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -17,24 +25,28 @@ const Users: React.FC = () => {
     (state: RootState) => state.users
   );
 
-  const [formData, setFormData] = useState({
-    name: "",
+  const {
+    formData,
+    isModalOpen,
+    handleInputChange,
+    handleOpenModal,
+    handleCloseModal,
+  } = useCrudForm<User>({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
+    userId: 0,
+    role: "user",
+    enabled: true,
     _id: "",
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   useEffect(() => {
     dispatch(fetchUsers());
   }, [dispatch]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,102 +54,97 @@ const Users: React.FC = () => {
     handleCloseModal();
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setFormData({ name: "", email: "", password: "", _id: "" });
-  };
-
-  const handleCreateUser = () => {
-    setFormData({ name: "", email: "", password: "", _id: "" });
-    setIsModalOpen(true);
-  };
-
-  const handleEditUser = (user: User) => {
-    setFormData(user);
-    setIsModalOpen(true);
-  };
-
   const filteredUsers = users.filter(
     (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      `${user.firstName} ${user.lastName}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const columns = [
-    { header: "Nombre", accessor: "name" as keyof User },
-    { header: "Email", accessor: "email" as keyof User },
-  ];
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
       <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-700">Usuarios</h2>
-          <button
-            onClick={handleCreateUser}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            + Crear Usuario
-          </button>
-        </div>
+        <PageHeader
+          title="Usuarios"
+          actions={[
+            {
+              label: "Agregar Usuario",
+              onClick: () => handleOpenModal(),
+              icon: <PlusCircleIcon className="h-5 w-5" />,
+            },
+          ]}
+        />
 
-        <input
-          type="text"
+        <SearchField
           placeholder="Buscar por nombre o email"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="mb-4 p-2 border rounded w-full"
         />
 
-        {loading && (
-          <p className="text-gray-500 text-center mb-4">Cargando...</p>
-        )}
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        <StatusMessage loading={loading} error={error} />
 
         <DataTable<User>
-          columns={columns}
+          columns={userColumns}
           data={filteredUsers}
-          onEdit={(row) => handleEditUser(row as User)}
+          onEdit={(row) => handleOpenModal(row as User)}
           onDelete={(row) => dispatch(removeUser((row as User)._id))}
         />
-      </div>
 
-      {/* Modal para Crear/Editar Usuario */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title={formData._id ? "Editar Usuario" : "Crear Usuario"}
-      >
-        <form onSubmit={handleSubmit}>
-          <InputField
-            name="name"
-            type="text"
-            placeholder="Nombre"
-            value={formData.name}
+        <Modal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          title={formData._id ? "Editar Usuario" : "Crear Usuario"}
+        >
+          <DynamicForm
+            fields={[
+              {
+                name: "firstName",
+                type: "text",
+                placeholder: "Nombre",
+                value: formData.firstName,
+              },
+              {
+                name: "lastName",
+                type: "text",
+                placeholder: "Apellido",
+                value: formData.lastName,
+              },
+              {
+                name: "email",
+                type: "email",
+                placeholder: "Email",
+                value: formData.email,
+              },
+              {
+                name: "password",
+                type: "password",
+                placeholder: "Contraseña",
+                value: formData.password,
+              },
+              {
+                name: "role",
+                type: "select",
+                options: [
+                  { label: "Admin", value: "admin" },
+                  { label: "Staff", value: "staff" },
+                  { label: "User", value: "user" },
+                ],
+                value: formData.role,
+              },
+              {
+                name: "enabled",
+                type: "checkbox",
+                label: "Habilitado",
+                value: formData.enabled,
+              },
+            ]}
             onChange={handleInputChange}
+            onSubmit={handleSubmit}
+            submitLabel="Guardar"
           />
-          <InputField
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleInputChange}
-          />
-          <InputField
-            name="password"
-            type="password"
-            placeholder="Contraseña"
-            value={formData.password}
-            onChange={handleInputChange}
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white mt-4 p-2 rounded hover:bg-blue-700 w-full"
-          >
-            Guardar
-          </button>
-        </form>
-      </Modal>
+        </Modal>
+      </div>
     </div>
   );
 };

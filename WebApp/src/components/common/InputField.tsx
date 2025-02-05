@@ -16,7 +16,7 @@ const InputField: React.FC<InputFieldProps> = ({
   onChange,
 }) => {
   return (
-    <div className="mb-4 w-full"> {/* Espacio inferior añadido */}
+    <div className="mb-4 w-full">
       <input
         name={name}
         type={type}

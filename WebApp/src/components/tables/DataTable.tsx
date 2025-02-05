@@ -1,3 +1,6 @@
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon } from "@heroicons/react/24/solid";
+
 interface Column<T> {
   header: string;
   accessor: keyof T;
@@ -42,19 +45,16 @@ const DataTable = <T extends Record<string, unknown>>({
               {(onEdit || onDelete) && (
                 <td className="px-4 py-2 border">
                   {onEdit && (
-                    <button
-                      onClick={() => onEdit(row)}
-                      className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 mr-2"
-                    >
-                      Editar
+                    <button onClick={() => onEdit(row)} className="px-2 py-1  ">
+                      <PencilSquareIcon className="h-5 w-5" />
                     </button>
                   )}
                   {onDelete && (
                     <button
                       onClick={() => onDelete(row)}
-                      className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                      className="px-2 py-1 "
                     >
-                      Eliminar
+                      <TrashIcon className="h-5 w-5" />
                     </button>
                   )}
                 </td>

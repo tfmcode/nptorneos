@@ -1,34 +1,41 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import User from "../models/UserModel";
 
 // Crear usuario
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const users = Array.isArray(req.body) ? req.body : [req.body];
+    const { firstName, lastName, email, password, role, enabled } = req.body;
 
-    for (const user of users) {
-      const { firstName, lastName, email, password, role } = user;
-      if (!firstName || !lastName || !email || !password || !role) {
-        return res.status(400).json({
-          message: "Todos los campos obligatorios deben ser llenados.",
-          user,
-        });
-      }
+    if (!firstName || !lastName || !email || !password || !role) {
+      return res.status(400).json({
+        message: "Todos los campos obligatorios deben ser llenados.",
+      });
     }
 
-    const newUsers = await User.insertMany(users);
+    // Crear usuario sin _id (Mongo lo genera)
+    const newUser = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+      enabled,
+    });
+
+    await newUser.save();
     return res.status(201).json({
-      message: "Usuarios creados exitosamente.",
-      users: newUsers,
+      message: "Usuario creado exitosamente.",
+      user: newUser,
     });
   } catch (error: any) {
     if (error.code === 11000) {
       return res.status(400).json({
-        message: "Uno o más emails ya están registrados.",
+        message: "El email ya está registrado.",
         error,
       });
     }
-    return res.status(500).json({ message: "Error al crear usuarios.", error });
+    return res.status(500).json({ message: "Error al crear usuario.", error });
   }
 };
 
@@ -49,6 +56,11 @@ export const updateUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { firstName, lastName, email, password, role, enabled } = req.body;
+
+    // Validar ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID inválido." });
+    }
 
     // Validar campos obligatorios
     if (!firstName || !lastName || !email || !password || !role) {
@@ -83,6 +95,11 @@ export const updateUser = async (req: Request, res: Response) => {
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Validar ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID inválido." });
+    }
 
     const deletedUser = await User.findByIdAndDelete(id);
 

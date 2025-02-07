@@ -4,7 +4,6 @@ export interface User {
   lastName: string;
   email: string;
   password: string;
-  userId: number;
   role: "admin" | "staff" | "user";
   enabled: boolean;
   [key: string]: unknown; // Permite cumplir con Record<string, unknown>

@@ -4,37 +4,31 @@ import User from "../models/UserModel";
 // Crear usuario
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, password, role, enabled } = req.body;
+    const users = Array.isArray(req.body) ? req.body : [req.body];
 
-    // Validar campos obligatorios
-    if (!firstName || !lastName || !email || !password || !role) {
-      return res
-        .status(400)
-        .json({ message: "Todos los campos obligatorios deben ser llenados." });
+    for (const user of users) {
+      const { firstName, lastName, email, password, role } = user;
+      if (!firstName || !lastName || !email || !password || !role) {
+        return res.status(400).json({
+          message: "Todos los campos obligatorios deben ser llenados.",
+          user,
+        });
+      }
     }
 
-    // Crear nuevo usuario
-    const newUser = await User.create({
-      firstName,
-      lastName,
-      email,
-      password,
-      role,
-      enabled: enabled !== undefined ? enabled : true, // Habilitado por defecto
+    const newUsers = await User.insertMany(users);
+    return res.status(201).json({
+      message: "Usuarios creados exitosamente.",
+      users: newUsers,
     });
-
-    return res
-      .status(201)
-      .json({ message: "Usuario creado exitosamente.", user: newUser });
   } catch (error: any) {
     if (error.code === 11000) {
-      return res
-        .status(400)
-        .json({ message: "El email ya está registrado.", error });
+      return res.status(400).json({
+        message: "Uno o más emails ya están registrados.",
+        error,
+      });
     }
-    return res
-      .status(500)
-      .json({ message: "Error al crear el usuario.", error });
+    return res.status(500).json({ message: "Error al crear usuarios.", error });
   }
 };
 
@@ -74,12 +68,10 @@ export const updateUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Usuario no encontrado." });
     }
 
-    return res
-      .status(200)
-      .json({
-        message: "Usuario actualizado exitosamente.",
-        user: updatedUser,
-      });
+    return res.status(200).json({
+      message: "Usuario actualizado exitosamente.",
+      user: updatedUser,
+    });
   } catch (error) {
     return res
       .status(500)

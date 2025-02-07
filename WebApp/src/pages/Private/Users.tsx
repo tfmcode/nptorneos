@@ -37,7 +37,7 @@ const Users: React.FC = () => {
     email: "",
     password: "",
     userId: 0,
-    role: "user",
+    role: "admin",
     enabled: true,
     _id: "",
   });

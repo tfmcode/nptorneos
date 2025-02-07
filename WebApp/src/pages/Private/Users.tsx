@@ -36,7 +36,6 @@ const Users: React.FC = () => {
     lastName: "",
     email: "",
     password: "",
-    userId: 0,
     role: "admin",
     enabled: true,
     _id: "",
@@ -50,7 +49,10 @@ const Users: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await dispatch(createOrUpdateUser(formData)).unwrap();
+
+    const { ...userData } = formData; // Quita `_id` en caso de ser una creación
+    await dispatch(createOrUpdateUser(userData)).unwrap();
+
     handleCloseModal();
   };
 

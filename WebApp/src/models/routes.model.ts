@@ -4,13 +4,13 @@ export enum EPublicRoutes {
   CONTACT = "/contact",
   CONCENTS = "/concents",
   TOURNAMENTS = "/tournaments",
-  SISTEMA = "/sistema",
   LOGIN = "/login",
   REC_PASSWORD = "/recoverpassword",
 }
 
 export enum EPrivateRoutes {
   DASHBOARD = "/dashboard",
+  SISTEMA = "/sistema",
   PROFILE = "/profile",
 }
 

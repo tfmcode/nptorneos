@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { EPublicRoutes } from "./models";
+import { EPrivateRoutes, EPublicRoutes } from "./models";
+import PrivateRoute from "./routes/PrivateRoute";
 import { Layout } from "./layouts";
 import {
   Home,
@@ -27,9 +28,11 @@ function App() {
             <Route path={EPublicRoutes.TOURNAMENTS} element={<Tournaments />} />
             <Route path="*" element={<PageNotFound />} />
           </Route>
-          <Route path={EPublicRoutes.SISTEMA} element={<System />} />
           <Route path={EPublicRoutes.LOGIN} element={<Login />} />
           <Route path={EPublicRoutes.REC_PASSWORD} element={<RecPassword />} />
+          <Route element={<PrivateRoute />}>
+            <Route path={EPrivateRoutes.SISTEMA} element={<System />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </>

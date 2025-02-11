@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// Interfaz para tipar un documento de usuario
-export interface User extends Document {
+// 🔹 Renombramos la interfaz de usuario a `IUser`
+interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
@@ -26,6 +26,6 @@ const userSchema = new Schema(
 );
 
 // Crear el modelo
-const User = mongoose.model<User>("User", userSchema);
+const User = mongoose.model<IUser>("User", userSchema);
 
-export default User;
+export { User, IUser }; // ✅ Exportamos ambos correctamente

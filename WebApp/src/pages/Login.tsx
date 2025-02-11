@@ -1,79 +1,37 @@
-import React, { useEffect, useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
-
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { login } from "../store/slices/authSlice";
+import { RootState, AppDispatch } from "../store";
+import { useNavigate } from "react-router-dom";
 import { FaKey, FaUserAlt } from "react-icons/fa";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import logonew1 from "../assets/logonew1.png";
-import login from "../assets/login.jpg";
-import { EPublicRoutes } from "../models";
-// import { useAuthProvider } from "../context";
-// import { getLocalStorage } from "../utils";
-// import { ELocalStorage, ESecureRoutes, IRedirect } from "../models";
+import loginBg from "../assets/login.jpg";
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [isPasswordInvalid, setIsPasswordInvalid] = useState(false);
-  const [role, setRole] = useState(""); // Nuevo estado para el rol seleccionado
-  const [user, setUser] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { loading, error } = useSelector((state: RootState) => state.auth);
 
-  // const { actions, state } = useAuthProvider();
-
-  const handleShowPasswordClick = () => setShowPassword(!showPassword);
-
-  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRole(e.target.value);
-    setIsPasswordInvalid(false);
-  };
-
-  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsPasswordInvalid(false);
-    setUser(e.target.value);
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsPasswordInvalid(false);
-    setPassword(e.target.value);
-  };
-
-  const handleLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!role) {
-      setIsPasswordInvalid(true); // Muestra error si no se selecciona un rol
-      return;
+    try {
+      const result = await dispatch(login({ email, password })).unwrap();
+      if (result) {
+        navigate("/sistema");
+      }
+    } catch (err) {
+      console.error("Error en el login:", err);
     }
-    // actions.login({ username: user, password: password });
-    console.log({ role, user, password }); // Debug para probar la lógica
   };
-
-  useEffect(() => {
-    // Si el usuario ya está autenticado, redirige al dashboard
-    // if (state.isauthenticated) {
-    //   const savedLocation: IRedirect | null = getLocalStorage(
-    //     ELocalStorage.REDIRECT
-    //   );
-    //   navigate(savedLocation?.path || ESecureRoutes.DASHBOARD);
-    // }
-  }, [/* state.isauthenticated, */ navigate]);
-
-  useEffect(
-    () => {
-      // Muestra error si hay algún mensaje de error en el estado global
-      // if (state.error?.msg) {
-      //   setIsPasswordInvalid(true);
-      // }
-    },
-    [
-      /* state.error */
-    ]
-  );
 
   return (
     <div
       className="flex items-center justify-center min-h-screen bg-cover bg-center"
-      style={{ backgroundImage: `url(${login})` }}
+      style={{ backgroundImage: `url(${loginBg})` }}
     >
       <div className="bg-white bg-opacity-90 p-8 rounded-lg shadow-lg w-80 text-center">
         <h1 className="text-lg font-semibold text-gray-700 mb-4">
@@ -84,33 +42,15 @@ const Login: React.FC = () => {
           alt="Logo NP Torneos"
           className="w-36 h-auto mx-auto mb-6"
         />
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
-          <select
-            className={`w-full p-2 border rounded-md text-gray-700 bg-white ${
-              isPasswordInvalid && !role ? "border-red-500" : "border-gray-300"
-            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-            value={role}
-            onChange={handleRoleChange}
-            required
-          >
-            <option value="" disabled>
-              Seleccionar perfil
-            </option>
-            <option value="administrador">ADMINISTRADOR</option>
-            <option value="admin-web">ADMIN.WEB</option>
-            <option value="staff">STAFF</option>
-          </select>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <FaUserAlt className="absolute top-3 left-3 text-gray-400" />
             <input
-              type="text"
-              name="user"
-              value={user}
-              onChange={handleUserChange}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Usuario"
-              className={`w-full pl-10 p-2 border rounded-md text-gray-700 ${
-                isPasswordInvalid ? "border-red-500" : "border-gray-300"
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className="w-full pl-10 p-2 border rounded-md text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -118,18 +58,15 @@ const Login: React.FC = () => {
             <FaKey className="absolute top-3 left-3 text-gray-400" />
             <input
               type={showPassword ? "text" : "password"}
-              name="password"
               value={password}
-              onChange={handlePasswordChange}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
-              className={`w-full pl-10 p-2 border rounded-md text-gray-700 ${
-                isPasswordInvalid ? "border-red-500" : "border-gray-300"
-              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className="w-full pl-10 p-2 border rounded-md text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
             <button
               type="button"
-              onClick={handleShowPasswordClick}
+              onClick={() => setShowPassword(!showPassword)}
               className="absolute top-3 right-3 text-gray-400"
             >
               {showPassword ? (
@@ -139,30 +76,18 @@ const Login: React.FC = () => {
               )}
             </button>
           </div>
-          {isPasswordInvalid && (
-            <p className="text-red-500 text-sm">
-              Todos los campos son obligatorios.
-            </p>
-          )}
-
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
+            className={`w-full py-2 rounded-md text-white transition ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+            disabled={loading}
           >
-            <RouterLink to={EPublicRoutes.SISTEMA}>Iniciar Sesión</RouterLink>
+            {loading ? "Cargando..." : "Iniciar Sesión"}
           </button>
-
-          <div className="flex justify-between text-sm text-gray-500 mt-2">
-            <label className="flex items-center">
-              <input type="checkbox" className="mr-1" /> Recordar
-            </label>
-
-            <a href="#" className="text-blue-500 hover:underline">
-              <RouterLink to={EPublicRoutes.REC_PASSWORD}>
-                Olvido de clave
-              </RouterLink>
-            </a>
-          </div>
         </form>
       </div>
     </div>

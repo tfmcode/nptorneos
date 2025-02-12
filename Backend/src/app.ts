@@ -10,6 +10,7 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import userRoutes from "./routes/userRoutes";
+import championshipRoutes from "./routes/championshipRoutes";
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.get("/", (req: Request, res: Response) => {
 
 // Rutas
 app.use("/api/users", userRoutes); // Ahora las rutas estarán bajo "/api/users"
+app.use("/api/championships", championshipRoutes); // Ahora las rutas estarán bajo "/api/users"
 
 // Manejo de rutas no definidas
 app.use((req: Request, res: Response) => {

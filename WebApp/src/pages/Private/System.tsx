@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Users from "./Users";
-import Championship from "./Championship";
+import Championship from "./Championships";
 import Logo from "../../assets/logonew1.png";
 import { useDispatch } from "react-redux";
 import { logout } from "../../store/slices/authSlice";

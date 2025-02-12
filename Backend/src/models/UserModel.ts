@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// 🔹 Renombramos la interfaz de usuario a `IUser`
 interface IUser extends Document {
   firstName: string;
   lastName: string;
@@ -21,7 +20,7 @@ const userSchema = new Schema(
     enabled: { type: Boolean, default: true },
   },
   {
-    timestamps: true, // Añade createdAt y updatedAt automáticamente
+    timestamps: true, 
   }
 );
 

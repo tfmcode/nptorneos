@@ -3,22 +3,31 @@ import InputField from "../common/InputField";
 
 interface FieldOption {
   label: string;
-  value: string | number; // Ajustamos a `string | number` para evitar conflictos con `select`.
+  value: string | number;
 }
 
 interface FieldConfig {
   name: string;
-  type: "text" | "email" | "password" | "select" | "checkbox" | "date";
+  type:
+    | "text"
+    | "email"
+    | "password"
+    | "select"
+    | "checkbox"
+    | "date"
+    | "textarea";
   placeholder?: string;
-  value: string | boolean; // Los inputs y checkboxes pueden usar boolean.
-  options?: FieldOption[]; // Opciones solo aplican a selects.
-  label?: string; // Solo aplica a checkboxes.
+  value: string | boolean;
+  options?: FieldOption[];
+  label?: string;
 }
 
 interface DynamicFormProps {
   fields: FieldConfig[];
   onChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => void;
   onSubmit: (e: React.FormEvent) => void;
   submitLabel: string;
@@ -32,49 +41,71 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 }) => {
   return (
     <form onSubmit={onSubmit}>
-      {fields.map((field, index) => (
-        <div key={index} className="mb-4">
-          {field.type === "select" && field.options ? (
-            <select
-              name={field.name}
-              value={field.value as string} // Aseguramos que sea string.
-              onChange={onChange}
-              className="border p-2 rounded w-full"
-            >
-              {field.options.map((option, i) => (
-                <option key={i} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : field.type === "checkbox" ? (
-            <label className="flex items-center">
-              <input
-                name={field.name}
-                type="checkbox"
-                checked={field.value as boolean} // Para checkbox usamos boolean.
-                onChange={onChange}
-                className="mr-2"
-              />
-              {field.label}
+      {/* Sección de Inputs con Etiquetas Separadas */}
+      <div className="grid grid-cols-2 gap-4">
+        {fields.map((field, index) => (
+          <div
+            key={index}
+            className={`mb-2 ${field.type === "textarea" ? "col-span-2" : ""}`}
+          >
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              {field.placeholder}
             </label>
-          ) : (
-            <InputField
-              name={field.name}
-              type={field.type}
-              placeholder={field.placeholder || ""}
-              value={field.value as string}
-              onChange={onChange}
-            />
-          )}
-        </div>
-      ))}
-      <button
-        type="submit"
-        className="bg-blue-600 text-white mt-4 p-2 rounded hover:bg-blue-700 w-full"
-      >
-        {submitLabel}
-      </button>
+            {field.type === "select" && field.options ? (
+              <select
+                name={field.name}
+                value={field.value as string}
+                onChange={onChange}
+                className="border p-2 rounded w-full text-sm"
+              >
+                {field.options.map((option, i) => (
+                  <option key={i} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : field.type === "checkbox" ? (
+              <label className="flex items-center text-sm">
+                <input
+                  name={field.name}
+                  type="checkbox"
+                  checked={field.value as boolean}
+                  onChange={onChange}
+                  className="mr-2"
+                />
+                {field.label}
+              </label>
+            ) : field.type === "textarea" ? (
+              <textarea
+                name={field.name}
+                placeholder={field.placeholder || ""}
+                value={field.value as string}
+                onChange={onChange}
+                className="border p-2 rounded w-full resize-none text-sm"
+                rows={4}
+              />
+            ) : (
+              <InputField
+                name={field.name}
+                type={field.type}
+                placeholder={field.placeholder || ""}
+                value={field.value as string}
+                onChange={onChange}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Botón de Guardar */}
+      <div className="flex justify-end mt-4">
+        <button
+          type="submit"
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm"
+        >
+          {submitLabel}
+        </button>
+      </div>
     </form>
   );
 };

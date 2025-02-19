@@ -5,13 +5,14 @@ export const useCrudForm = <T extends Record<string, unknown>>(
 ) => {
   const [formData, setFormData] = React.useState<T>(initialState);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value, type } = e.target;
 
-    // Verifica si el target es un HTMLInputElement para usar `checked`.
+    // ✅ Maneja checkboxes correctamente
     const fieldValue =
       type === "checkbox" && e.target instanceof HTMLInputElement
         ? e.target.checked

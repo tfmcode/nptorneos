@@ -12,6 +12,7 @@ import compression from "compression";
 import userRoutes from "./routes/userRoutes";
 import championshipRoutes from "./routes/championshipRoutes";
 import playerRoutes from "./routes/playerRoutes";
+import venueRoutes from "./routes/venueRoutes";
 
 dotenv.config();
 
@@ -46,6 +47,8 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/users", userRoutes);
 app.use("/api/championships", championshipRoutes);
 app.use("/api/players", playerRoutes);
+app.use("/api/venues", venueRoutes);
+
 
 // Manejo de rutas no definidas
 app.use((req: Request, res: Response) => {

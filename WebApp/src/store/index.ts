@@ -3,6 +3,7 @@ import userReducer from "./slices/userSlice";
 import authReducer from "./slices/authSlice";
 import championshipReducer from "./slices/championshipSlice";
 import playerReducer from "./slices/playerSlice"; // ✅ Importamos el reducer de jugadores
+import venueReducer from "./slices/venueSlice";
 
 // 🔥 Configuración de Redux Store con middleware personalizado
 export const store = configureStore({
@@ -11,6 +12,7 @@ export const store = configureStore({
     auth: authReducer,
     championships: championshipReducer,
     players: playerReducer, // ✅ Agregamos el reducer de jugadores
+    venues: venueReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

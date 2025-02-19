@@ -5,9 +5,10 @@ import { logout } from "../../store/slices/authSlice";
 import { useNavigate } from "react-router-dom";
 import Users from "./Users";
 import Championships from "./Championships";
-import Players from "./Players"; // 🔥 Nuevo componente importado
+import Players from "./Players";
+import Venues from "./Venues"; // 🔥 Nuevo módulo agregado
 
-type Section = "users" | "championships" | "players" | null; // 🔥 Agregado "players"
+type Section = "users" | "championships" | "players" | "venues" | null; // 🔥 Agregado "venues"
 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<Section>(null);
@@ -18,8 +19,10 @@ const System: React.FC = () => {
         return <Users />;
       case "championships":
         return <Championships />;
-      case "players": // 🔥 Nueva opción para renderizar Players
+      case "players":
         return <Players />;
+      case "venues": // 🔥 Nueva opción para renderizar Venues
+        return <Venues />;
       default:
         return (
           <div className="text-center p-6">
@@ -65,7 +68,7 @@ const System: React.FC = () => {
             Campeonatos
           </button>
           <button
-            onClick={() => setActiveSection("players")} // 🔥 Botón para Players
+            onClick={() => setActiveSection("players")}
             className={`px-4 py-2 rounded ${
               activeSection === "players" ? "bg-blue-500" : "hover:bg-blue-400"
             }`}
@@ -73,8 +76,16 @@ const System: React.FC = () => {
             Jugadores
           </button>
           <button
+            onClick={() => setActiveSection("venues")} // 🔥 Botón para Sedes
+            className={`px-4 py-2 rounded ${
+              activeSection === "venues" ? "bg-blue-500" : "hover:bg-blue-400"
+            }`}
+          >
+            Sedes
+          </button>
+          <button
             onClick={handleLogout}
-            className=" px-4 py-2 rounded hover:bg-blue-400"
+            className="px-4 py-2 rounded hover:bg-blue-400"
           >
             Cerrar sesión
           </button>

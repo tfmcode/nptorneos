@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "../store/slices/authSlice";
 import { RootState, AppDispatch } from "../store";
@@ -12,19 +12,32 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null); // 🔥 Estado para errores locales
+
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state: RootState) => state.auth);
+  const { user, loading, error } = useSelector(
+    (state: RootState) => state.auth
+  );
+
+  // 🔥 Si el usuario ya está autenticado, lo redirigimos a "/sistema"
+  useEffect(() => {
+    if (user) {
+      navigate("/sistema");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null); // 🔥 Reseteamos errores previos
+
     try {
       const result = await dispatch(login({ email, password })).unwrap();
       if (result) {
         navigate("/sistema");
       }
     } catch (err) {
-      console.error("Error en el login:", err);
+      setLocalError(err as string); // 🔥 Mostramos el error en pantalla
     }
   };
 
@@ -76,15 +89,20 @@ const Login: React.FC = () => {
               )}
             </button>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+
+          {/* 🔥 Mostramos errores tanto del backend como del frontend */}
+          {(localError || error) && (
+            <p className="text-red-500 text-sm">{localError || error}</p>
+          )}
+
           <button
             type="submit"
             className={`w-full py-2 rounded-md text-white transition ${
-              loading
+              loading || !email || !password
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-700"
             }`}
-            disabled={loading}
+            disabled={loading || !email || !password} // 🔥 Deshabilitar si los campos están vacíos
           >
             {loading ? "Cargando..." : "Iniciar Sesión"}
           </button>

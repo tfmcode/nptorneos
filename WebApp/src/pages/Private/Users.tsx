@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { User } from "../../types/user";
@@ -7,7 +7,7 @@ import DynamicForm from "../../components/forms/DynamicForm";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
   fetchUsers,
-  createOrUpdateUser,
+  saveUserThunk,
   removeUser,
 } from "../../store/slices/userSlice";
 import {
@@ -17,7 +17,7 @@ import {
   SearchField,
 } from "../../components/common";
 import { userColumns } from "../../components/tables";
-import { useCrudForm } from "../../components/hooks/useCrudForm";
+import { useCrudForm } from "../../hooks/useCrudForm";
 
 const Users: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -41,7 +41,8 @@ const Users: React.FC = () => {
     _id: "",
   });
 
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [pendingSearchTerm, setPendingSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -49,20 +50,38 @@ const Users: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const { _id, ...userData } = formData;
+      await dispatch(saveUserThunk(_id ? formData : userData)).unwrap();
 
-    const { ...userData } = formData; // Quita `_id` en caso de ser una creación
-    await dispatch(createOrUpdateUser(userData)).unwrap();
+      // ✅ Actualiza Redux manualmente sin hacer otra petición
+      dispatch(fetchUsers()); // 🔥 Asegura actualización inmediata
 
-    handleCloseModal();
+      handleCloseModal();
+    } catch (err) {
+      console.error("Error al guardar usuario:", err);
+    }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      `${user.firstName} ${user.lastName}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDelete = async (user: User) => {
+    await dispatch(removeUser(user._id)).unwrap();
+    dispatch(fetchUsers()); // 🔥 Asegura actualización inmediata
+  };
+
+  const handleSearch = () => {
+    setSearchTerm(pendingSearchTerm);
+  };
+
+  // 🔥 Solo filtra cuando `searchTerm` cambia
+  const filteredUsers = searchTerm
+    ? users.filter(
+        (user) =>
+          `${user.firstName} ${user.lastName}`
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : users;
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
@@ -80,8 +99,9 @@ const Users: React.FC = () => {
 
         <SearchField
           placeholder="Buscar por nombre o email"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={pendingSearchTerm}
+          onChange={(e) => setPendingSearchTerm(e.target.value)}
+          onSearch={handleSearch} 
         />
 
         <StatusMessage loading={loading} error={error} />
@@ -90,7 +110,7 @@ const Users: React.FC = () => {
           columns={userColumns}
           data={filteredUsers}
           onEdit={(row) => handleOpenModal(row as User)}
-          onDelete={(row) => dispatch(removeUser((row as User)._id))}
+          onDelete={(row) => handleDelete(row as User)}
         />
 
         <Modal

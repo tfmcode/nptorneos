@@ -13,6 +13,3 @@ export enum EPrivateRoutes {
   SISTEMA = "/sistema",
   PROFILE = "/profile",
 }
-
-export const publicRoutes = [Object.values(EPublicRoutes) as string[]];
-export const privateRoutes = [Object.values(EPrivateRoutes) as string[]];

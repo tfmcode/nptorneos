@@ -13,10 +13,10 @@ export const loginUser = async (credentials: {
     const response = await API.post("/api/users/login", credentials);
     return response.data;
   } catch (error) {
-    const axiosError = error as AxiosError<APIErrorResponse>; // ✅ Tipamos `AxiosError` con `APIErrorResponse`
-    throw (
+    const axiosError = error as AxiosError<APIErrorResponse>; // ✅ Tipamos `AxiosError`
+    throw new Error(
       axiosError.response?.data?.message ||
-      "Error de red o servidor no disponible"
+        "Error de red o servidor no disponible"
     );
   }
 };

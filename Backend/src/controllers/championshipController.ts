@@ -2,25 +2,23 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Championship } from "../models/championshipModel";
 
-// 📌 Crear un campeonato (sin torneos, estos se asociarán después)
+// 📌 Crear un campeonato
 export const createChampionship = async (req: Request, res: Response) => {
   try {
-    const { name, sport, enabled } = req.body;
+    const { name, sport } = req.body;
 
     if (!name || !sport) {
-      return res.status(400).json({
-        message: "Todos los campos obligatorios deben ser llenados.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Todos los campos son requeridos." });
     }
 
-    // Crear el campeonato sin torneos asociados aún
-    const newChampionship = new Championship({
-      name,
-      sport,
-      enabled: enabled ?? true, // Si no se envía, por defecto `true`
-      tournaments: [], // ✅ Inicialmente sin torneos
-    });
+    const existingChampionship = await Championship.findOne({ name });
+    if (existingChampionship) {
+      return res.status(400).json({ message: "El campeonato ya existe." });
+    }
 
+    const newChampionship = new Championship({ name, sport });
     await newChampionship.save();
 
     return res.status(201).json({
@@ -28,18 +26,16 @@ export const createChampionship = async (req: Request, res: Response) => {
       championship: newChampionship,
     });
   } catch (error) {
-    console.error("Error en createChampionship:", error);
     return res
       .status(500)
-      .json({ message: "Error al crear campeonato.", error });
+      .json({ message: "Error al crear el campeonato.", error });
   }
 };
 
-// 📌 Obtener todos los campeonatos con sus torneos asociados
+// 📌 Obtener todos los campeonatos
 export const getChampionships = async (req: Request, res: Response) => {
   try {
-    const championships = await Championship.find().populate("tournaments");
-
+    const championships = await Championship.find();
     return res.status(200).json(championships);
   } catch (error) {
     console.error("Error en getChampionships:", error);
@@ -49,48 +45,32 @@ export const getChampionships = async (req: Request, res: Response) => {
   }
 };
 
-// 📌 Asociar un torneo a un campeonato existente
-export const addTournamentToChampionship = async (
-  req: Request,
-  res: Response
-) => {
+// 📌 Obtener un campeonato por ID
+export const getChampionshipById = async (req: Request, res: Response) => {
   try {
-    const { championshipId, tournamentId } = req.body;
+    const { id } = req.params;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(championshipId) ||
-      !mongoose.Types.ObjectId.isValid(tournamentId)
-    ) {
-      return res
-        .status(400)
-        .json({ message: "ID de campeonato o torneo inválido." });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID inválido." });
     }
 
-    const championship = await Championship.findById(championshipId);
+    const championship = await Championship.findById(id).populate(
+      "tournaments"
+    );
 
     if (!championship) {
       return res.status(404).json({ message: "Campeonato no encontrado." });
     }
 
-    // Agregar torneo solo si no está ya asociado
-    if (!championship.tournaments.includes(tournamentId)) {
-      championship.tournaments.push(tournamentId);
-      await championship.save();
-    }
-
-    return res.status(200).json({
-      message: "Torneo agregado al campeonato exitosamente.",
-      championship,
-    });
+    return res.status(200).json(championship);
   } catch (error) {
-    console.error("Error en addTournamentToChampionship:", error);
     return res
       .status(500)
-      .json({ message: "Error al agregar torneo al campeonato.", error });
+      .json({ message: "Error al obtener el campeonato.", error });
   }
 };
 
-// 📌 Actualizar un campeonato (sin tocar torneos, estos se gestionan aparte)
+// 📌 Actualizar un campeonato
 export const updateChampionship = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -98,12 +78,6 @@ export const updateChampionship = async (req: Request, res: Response) => {
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "ID inválido." });
-    }
-
-    if (!name || !sport) {
-      return res.status(400).json({
-        message: "Todos los campos obligatorios deben ser llenados.",
-      });
     }
 
     const updatedChampionship = await Championship.findByIdAndUpdate(
@@ -117,14 +91,13 @@ export const updateChampionship = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({
-      message: "Campeonato actualizado exitosamente.",
+      message: "Campeonato actualizado.",
       championship: updatedChampionship,
     });
   } catch (error) {
-    console.error("Error en updateChampionship:", error);
     return res
       .status(500)
-      .json({ message: "Error al actualizar campeonato.", error });
+      .json({ message: "Error al actualizar el campeonato.", error });
   }
 };
 
@@ -147,9 +120,8 @@ export const deleteChampionship = async (req: Request, res: Response) => {
       .status(200)
       .json({ message: "Campeonato eliminado exitosamente." });
   } catch (error) {
-    console.error("Error en deleteChampionship:", error);
     return res
       .status(500)
-      .json({ message: "Error al eliminar campeonato.", error });
+      .json({ message: "Error al eliminar el campeonato.", error });
   }
 };

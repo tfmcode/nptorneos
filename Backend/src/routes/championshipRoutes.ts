@@ -2,24 +2,36 @@ import express from "express";
 import {
   createChampionship,
   getChampionships,
+  getChampionshipById,
   updateChampionship,
-  addTournamentToChampionship,
   deleteChampionship,
 } from "../controllers/championshipController";
-import { authMiddleware } from "../middlewares/authMiddleware"; 
-import { asyncHandler } from "../middlewares/asyncHandler"; 
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { asyncHandler } from "../middlewares/asyncHandler";
 
 const router = express.Router();
 
-// Rutas de campeonatos
-router.post("/", asyncHandler(createChampionship)); // Crear campeonato
-router.get("/", authMiddleware, asyncHandler(getChampionships)); // Obtener todos los campeonatos
-router.put("/:id", authMiddleware, asyncHandler(updateChampionship)); // Editar campeonato
-router.delete("/:id", authMiddleware, asyncHandler(deleteChampionship)); // Eliminar campeonato
+// ✅ Rutas de campeonatos con manejo de errores y protección
 router.post(
-  "/add-tournament",
+  "/",
   authMiddleware,
-  asyncHandler(addTournamentToChampionship)
-); // Asociar torneo a campeonato
+  adminMiddleware,
+  asyncHandler(createChampionship)
+); // Crear campeonato
+router.get("/", authMiddleware, asyncHandler(getChampionships)); // Obtener todos los campeonatos
+router.get("/:id", authMiddleware, asyncHandler(getChampionshipById)); // Obtener un campeonato por ID
+router.put(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  asyncHandler(updateChampionship)
+); // Editar campeonato
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  asyncHandler(deleteChampionship)
+); // Eliminar campeonato
 
 export default router;

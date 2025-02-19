@@ -8,7 +8,7 @@ interface FieldOption {
 
 interface FieldConfig {
   name: string;
-  type: "text" | "email" | "password" | "select" | "checkbox";
+  type: "text" | "email" | "password" | "select" | "checkbox" | "date";
   placeholder?: string;
   value: string | boolean; // Los inputs y checkboxes pueden usar boolean.
   options?: FieldOption[]; // Opciones solo aplican a selects.

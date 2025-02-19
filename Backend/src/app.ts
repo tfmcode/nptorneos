@@ -11,6 +11,7 @@ import helmet from "helmet";
 import compression from "compression";
 import userRoutes from "./routes/userRoutes";
 import championshipRoutes from "./routes/championshipRoutes";
+import playerRoutes from "./routes/playerRoutes";
 
 dotenv.config();
 
@@ -30,9 +31,6 @@ app.use(
   })
 );
 
-app.listen(5001, "localhost", () => {
-  console.log("Servidor corriendo en http://localhost:5001");
-});
 
 // Middleware para parsear JSON
 app.use(express.json());
@@ -45,8 +43,9 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Rutas
-app.use("/api/users", userRoutes); // Ahora las rutas estarán bajo "/api/users"
-app.use("/api/championships", championshipRoutes); // Ahora las rutas estarán bajo "/api/users"
+app.use("/api/users", userRoutes);
+app.use("/api/championships", championshipRoutes);
+app.use("/api/players", playerRoutes);
 
 // Manejo de rutas no definidas
 app.use((req: Request, res: Response) => {
@@ -63,21 +62,5 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 };
 
 app.use(errorHandler);
-
-// Conexión a MongoDB
-const MONGO_URI =
-  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/nptorneosbackend";
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log(`✅ Conectado a MongoDB en ${MONGO_URI}`))
-  .catch((err) => console.error("❌ Error al conectar a MongoDB:", err));
-
-// Eventos de MongoDB
-mongoose.connection.on("disconnected", () =>
-  console.error("⚠️ Desconectado de MongoDB")
-);
-mongoose.connection.on("error", (err) =>
-  console.error("❌ Error en la conexión a MongoDB:", err)
-);
 
 export default app;

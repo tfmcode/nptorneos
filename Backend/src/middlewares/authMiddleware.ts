@@ -11,7 +11,7 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-  const token = req.header("Authorization");
+  let token = req.header("Authorization");
 
   if (!token) {
     return res
@@ -20,14 +20,22 @@ export const authMiddleware = (
   }
 
   try {
+    token = token.replace("Bearer ", "");
     const decoded = jwt.verify(
-      token.replace("Bearer ", ""),
+      token,
       process.env.JWT_SECRET || "claveSecreta"
-    );
+    ) as JwtPayload;
 
-    req.user = decoded as JwtPayload;
+    req.user = decoded;
     next();
-  } catch (error) {
-    return res.status(401).json({ message: "Token inválido o expirado." }); // 🔥 Ahora avisa si el token ya no sirve
+  } catch (error: any) {
+    if (error.name === "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ message: "Token expirado. Inicia sesión nuevamente." });
+    } else if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Token inválido." });
+    }
+    return res.status(500).json({ message: "Error de autenticación.", error });
   }
 };

@@ -1,29 +1,30 @@
 import mongoose, { Schema, Document } from "mongoose";
-import "./tournamentModel"; // ✅ Importar para registrar el modelo de torneos en Mongoose
+import { Tournament } from "./tournamentModel"; // 🔥 IMPORTANTE: Registrar el modelo antes de usar populate()
 
-// 📌 Interfaz para tipado interno (opcional en controllers)
 interface IChampionship extends Document {
   name: string;
   sport: "Futbol" | "Otro";
-  tournaments: mongoose.Types.ObjectId[]; // Se asocian después de crear el campeonato
+  tournaments: mongoose.Types.ObjectId[];
   enabled: boolean;
 }
 
-// 📌 Esquema del Campeonato
 const championshipSchema = new Schema<IChampionship>(
   {
-    name: { type: String, required: true },
-    sport: { type: String, required: true },
-    tournaments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tournament" }], // ✅ Se pueden asociar después
-    enabled: { type: Boolean, default: true }, // ✅ Por defecto activo
+    name: { type: String, required: true, unique: true, trim: true },
+    sport: {
+      type: String,
+      enum: ["Futbol", "Otro"],
+      required: true,
+    },
+    tournaments: [{ type: Schema.Types.ObjectId, ref: "Tournament" }], // 🔗 Referencia a Tournament
+    enabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-// 📌 Modelo del Campeonato
 const Championship = mongoose.model<IChampionship>(
   "Championship",
   championshipSchema
 );
 
-export { Championship, IChampionship }; // ✅ Exportamos ambos
+export { Championship, IChampionship };

@@ -7,7 +7,7 @@ import DynamicForm from "../../components/forms/DynamicForm";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
   fetchChampionships,
-  saveChampionship,
+  saveChampionshipThunk,
   removeChampionship,
 } from "../../store/slices/championshipSlice";
 import {
@@ -16,8 +16,8 @@ import {
   StatusMessage,
   SearchField,
 } from "../../components/common";
+import { useCrudForm } from "../../hooks/useCrudForm";
 import { championshipColumns } from "../../components/tables";
-import { useCrudForm } from "../../components/hooks/useCrudForm";
 
 const Championships: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -34,12 +34,12 @@ const Championships: React.FC = () => {
   } = useCrudForm<Championship>({
     name: "",
     sport: "Futbol",
-    tournaments: [],
     enabled: true,
     _id: "",
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [pendingSearchTerm, setPendingSearchTerm] = useState(""); // Estado temporal del input
+  const [searchTerm, setSearchTerm] = useState(""); // Estado aplicado al filtrar
 
   useEffect(() => {
     dispatch(fetchChampionships());
@@ -47,13 +47,37 @@ const Championships: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await dispatch(saveChampionship(formData)).unwrap();
-    handleCloseModal();
+    try {
+      const { _id, ...championshipData } = formData;
+      await dispatch(
+        saveChampionshipThunk(_id ? formData : championshipData)
+      ).unwrap();
+
+      // ✅ Actualiza Redux manualmente sin hacer otra petición
+      dispatch(fetchChampionships()); // 🔥 Asegura actualización inmediata
+
+      handleCloseModal();
+    } catch (err) {
+      console.error("Error al guardar campeonato:", err);
+    }
   };
 
-  const filteredChampionships = championships.filter((championship) =>
-    championship.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDelete = async (championship: Championship) => {
+    await dispatch(removeChampionship(championship._id)).unwrap();
+    dispatch(fetchChampionships()); // 🔥 Asegura actualización inmediata
+  };
+
+  // 🔥 Aplica el filtro solo cuando se presiona el botón
+  const handleSearch = () => {
+    setSearchTerm(pendingSearchTerm);
+  };
+
+  // 🔥 Solo filtra cuando `searchTerm` cambia
+  const filteredChampionships = searchTerm
+    ? championships.filter((c) =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : championships;
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
@@ -69,10 +93,12 @@ const Championships: React.FC = () => {
           ]}
         />
 
+        {/* 🔥 SearchField con botón integrado */}
         <SearchField
-          placeholder="Buscar por nombre"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar por nombre o email"
+          value={pendingSearchTerm}
+          onChange={(e) => setPendingSearchTerm(e.target.value)}
+          onSearch={handleSearch} // 🔥 Botón dispara la búsqueda
         />
 
         <StatusMessage loading={loading} error={error} />
@@ -81,9 +107,7 @@ const Championships: React.FC = () => {
           columns={championshipColumns}
           data={filteredChampionships}
           onEdit={(row) => handleOpenModal(row as Championship)}
-          onDelete={(row) =>
-            dispatch(removeChampionship((row as Championship)._id || ""))
-          }
+          onDelete={handleDelete}
         />
 
         <Modal
@@ -96,17 +120,17 @@ const Championships: React.FC = () => {
               {
                 name: "name",
                 type: "text",
-                placeholder: "Nombre del campeonato",
-                value: formData.name || "",
+                placeholder: "Nombre",
+                value: formData.name,
               },
               {
                 name: "sport",
                 type: "select",
                 options: [
-                  { label: "Fútbol", value: "Futbol" },
-                  { label: "Otro", value: " " },
+                  { label: "Futbol", value: "Futbol" },
+                  { label: "Otro", value: "Otro" },
                 ],
-                value: formData.sport || "Futbol",
+                value: formData.sport,
               },
               {
                 name: "enabled",

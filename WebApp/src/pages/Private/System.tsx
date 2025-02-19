@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import Users from "./Users";
-import Championship from "./Championships";
 import Logo from "../../assets/logonew1.png";
 import { useDispatch } from "react-redux";
 import { logout } from "../../store/slices/authSlice";
 import { useNavigate } from "react-router-dom";
+import Users from "./Users";
+import Championships from "./Championships";
+import Players from "./Players"; // 🔥 Nuevo componente importado
 
-type Section = "users" | "championships" | null;
+type Section = "users" | "championships" | "players" | null; // 🔥 Agregado "players"
 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<Section>(null);
@@ -16,7 +17,9 @@ const System: React.FC = () => {
       case "users":
         return <Users />;
       case "championships":
-        return <Championship />;
+        return <Championships />;
+      case "players": // 🔥 Nueva opción para renderizar Players
+        return <Players />;
       default:
         return (
           <div className="text-center p-6">
@@ -60,6 +63,14 @@ const System: React.FC = () => {
             }`}
           >
             Campeonatos
+          </button>
+          <button
+            onClick={() => setActiveSection("players")} // 🔥 Botón para Players
+            className={`px-4 py-2 rounded ${
+              activeSection === "players" ? "bg-blue-500" : "hover:bg-blue-400"
+            }`}
+          >
+            Jugadores
           </button>
           <button
             onClick={handleLogout}

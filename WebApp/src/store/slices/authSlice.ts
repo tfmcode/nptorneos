@@ -12,7 +12,9 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  user: null,
+  user: localStorage.getItem("user")
+    ? JSON.parse(localStorage.getItem("user")!)
+    : null,
   token: localStorage.getItem("token") || null,
   loading: false,
   error: null,
@@ -24,21 +26,22 @@ interface APIErrorResponse {
 }
 
 // Acción para hacer login
-export const login = createAsyncThunk(
-  "auth/login",
-  async (credentials: { email: string; password: string }, thunkAPI) => {
-    try {
-      const response = await loginUser(credentials);
-      return response;
-    } catch (error) {
-      const axiosError = error as AxiosError<APIErrorResponse>; // ✅ Tipamos correctamente el error
-      return thunkAPI.rejectWithValue(
-        axiosError.response?.data?.message ||
-          "Error de red o servidor no disponible"
-      );
-    }
+export const login = createAsyncThunk<
+  { user: User; token: string }, // ✅ Especificamos el tipo de `fulfilled`
+  { email: string; password: string }, // ✅ Definimos los argumentos esperados
+  { rejectValue: string } // ✅ Tipamos correctamente el `rejected`
+>("auth/login", async (credentials, thunkAPI) => {
+  try {
+    const response = await loginUser(credentials);
+    return response;
+  } catch (error) {
+    const axiosError = error as AxiosError<APIErrorResponse>;
+    return thunkAPI.rejectWithValue(
+      axiosError.response?.data?.message ||
+        "Error de red o servidor no disponible"
+    );
   }
-);
+});
 
 const authSlice = createSlice({
   name: "auth",
@@ -47,7 +50,9 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
+      state.error = null; // ✅ Limpiamos el error al cerrar sesión
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
     },
   },
   extraReducers: (builder) => {
@@ -61,13 +66,11 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         localStorage.setItem("token", action.payload.token);
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
-        state.error =
-          typeof action.payload === "string"
-            ? action.payload
-            : "Error desconocido";
+        state.error = action.payload ?? "Error desconocido"; // ✅ Manejo de errores mejorado
       });
   },
 });

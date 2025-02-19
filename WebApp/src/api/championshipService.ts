@@ -28,15 +28,13 @@ export const getChampionships = async (): Promise<Championship[]> => {
 };
 
 /**
- * Crea o actualiza un campeonato
+ * Crea un nuevo campeonato
  */
-export const createOrUpdateChampionship = async (
-  data: ChampionshipInput & { _id?: string }
+export const createChampionship = async (
+  data: ChampionshipInput
 ): Promise<Championship | undefined> => {
   try {
-    const response = data._id
-      ? await API.put(`/api/championships/${data._id}`, data)
-      : await API.post("/api/championships", data);
+    const response = await API.post("/api/championships", data);
     return response.data;
   } catch (error) {
     handleAxiosError(error);
@@ -45,7 +43,23 @@ export const createOrUpdateChampionship = async (
 };
 
 /**
- * Elimina un campeonato por ID
+ * Actualiza un campeonato
+ */
+export const updateChampionship = async (
+  id: string,
+  data: ChampionshipInput
+): Promise<Championship | undefined> => {
+  try {
+    const response = await API.put(`/api/championships/${id}`, data);
+    return response.data;
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return undefined;
+};
+
+/**
+ * Elimina un campeonato
  */
 export const deleteChampionship = async (id: string): Promise<void> => {
   try {

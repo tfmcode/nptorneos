@@ -8,25 +8,23 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Buscar usuario por email
-    const user = (await User.findOne({ email })) as IUser & {
-      _id: mongoose.Types.ObjectId;
-    };
+    // 🔹 Buscar usuario por email con el tipo correcto
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({ message: "Credenciales incorrectas." });
     }
 
-    // Comparar la contraseña ingresada con la almacenada
-    const isMatch = await bcrypt.compare(password, user.password);
+    // 🔹 Usar `comparePassword()` del modelo en lugar de `bcrypt.compare()`
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: "Credenciales incorrectas." });
     }
 
-    // ✅ Convertir _id correctamente a string
-    const userId = user._id.toHexString(); // toHexString() es más seguro para convertir ObjectId a string
+    // ✅ Convertir `_id` a string antes de generar el token
+    const userId = user._id.toString();
 
-    // Generar token
+    // Generar token JWT
     const token = generateToken(userId, user.email, user.role);
 
     res.status(200).json({

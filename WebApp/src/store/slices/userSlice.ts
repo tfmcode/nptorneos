@@ -1,10 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import {
-  getUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-} from "../../api/userService";
+import { getUsers, saveUser, deleteUser } from "../../api/userService";
 import { User, UserInput } from "../../types/user";
 
 // Estado inicial
@@ -16,18 +11,13 @@ const initialState = {
 
 // Async Thunks
 export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
-  const response = await getUsers();
-  return response ?? []; // Si `response` es undefined, retorna un array vacío
+  return await getUsers();
 });
 
-export const createOrUpdateUser = createAsyncThunk(
-  "users/createOrUpdateUser",
+export const saveUserThunk = createAsyncThunk(
+  "users/saveUser",
   async (userData: UserInput & { _id?: string }) => {
-    if (userData._id) {
-      return await updateUser(userData._id, userData);
-    } else {
-      return await createUser(userData);
-    }
+    return await saveUser(userData);
   }
 );
 
@@ -51,23 +41,19 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload; // Siempre un array
+        state.users = action.payload;
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? "Error al obtener usuarios.";
       })
-      .addCase(createOrUpdateUser.fulfilled, (state, action) => {
+      .addCase(saveUserThunk.fulfilled, (state, action) => {
         const updatedUser = action.payload;
-
         if (!updatedUser || !updatedUser._id) return;
 
-        const existingIndex = state.users.findIndex(
-          (u) => u._id === updatedUser._id
-        );
-
-        if (existingIndex !== -1) {
-          state.users[existingIndex] = updatedUser; // Actualiza usuario existente
+        const index = state.users.findIndex((u) => u._id === updatedUser._id);
+        if (index !== -1) {
+          state.users[index] = updatedUser; // Actualiza usuario existente
         } else {
           state.users.push(updatedUser); // Agrega usuario nuevo
         }

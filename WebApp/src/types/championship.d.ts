@@ -1,8 +1,8 @@
 export interface Championship {
   _id: string;
   name: string;
-  sport: "Futbol" | "";
-  tournaments: string[];
+  sport: "Futbol" | "Otro"; // 🔹 Se permiten más deportes
+  tournaments?: string[]; // IDs de torneos asociados
   enabled: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -11,7 +11,7 @@ export interface Championship {
 
 export interface ChampionshipInput {
   name: string;
-  sport: "Futbol" | "";
-  tournaments: string[];
+  sport: "Futbol" | "Otro"; // 🔹 Se mantiene coherencia con `Championship`
+  tournaments?: string[]; // 🔹 Opcional al crear un nuevo campeonato
   enabled: boolean;
 }

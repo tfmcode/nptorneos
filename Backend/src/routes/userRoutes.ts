@@ -8,16 +8,17 @@ import {
 } from "../controllers/userController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
+import { adminMiddleware } from "../middlewares/adminMiddleware";
 
 const router = express.Router();
 
 //  Rutas públicas
 router.post("/login", asyncHandler(loginUser)); // Iniciar sesión sin token
-router.post("/", asyncHandler(createUser)); // Crear usuario sin token
 
-//  Rutas protegidas (solo accesibles con token)
-router.get("/", authMiddleware, asyncHandler(getUsers));
-router.put("/:id", authMiddleware, asyncHandler(updateUser));
-router.delete("/:id", authMiddleware, asyncHandler(deleteUser));
+//  Rutas protegidas
+router.post("/", authMiddleware, adminMiddleware, asyncHandler(createUser));
+router.get("/", authMiddleware, adminMiddleware, asyncHandler(getUsers));
+router.put("/:id", authMiddleware, asyncHandler(updateUser)); // Un usuario puede actualizarse a sí mismo
+router.delete("/:id", authMiddleware, adminMiddleware, asyncHandler(deleteUser));
 
 export default router;

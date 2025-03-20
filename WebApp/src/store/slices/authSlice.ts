@@ -1,38 +1,47 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { loginUser } from "../../api/authService";
-import { User } from "../../types/user";
+import { loginUsuario } from "../../api/authService";
+import { Usuario } from "../../types/usuario";
 import { AxiosError } from "axios";
 
-// Estado inicial
+// Estado inicial de autenticación
 interface AuthState {
-  user: User | null;
+  user: Usuario | null;
   token: string | null;
   loading: boolean;
   error: string | null;
 }
 
+// Recuperar usuario y token desde localStorage
+const token = localStorage.getItem("token");
+const storedUser = localStorage.getItem("user");
+
 const initialState: AuthState = {
-  user: localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user")!)
-    : null,
-  token: localStorage.getItem("token") || null,
+  user: token && storedUser ? (JSON.parse(storedUser) as Usuario) : null,
+  token: token ?? null,
   loading: false,
   error: null,
 };
 
 // Definimos el tipo de error esperado en la API
 interface APIErrorResponse {
-  message?: string; // 👈 `message` es opcional
+  message?: string;
 }
 
 // Acción para hacer login
 export const login = createAsyncThunk<
-  { user: User; token: string }, // ✅ Especificamos el tipo de `fulfilled`
-  { email: string; password: string }, // ✅ Definimos los argumentos esperados
-  { rejectValue: string } // ✅ Tipamos correctamente el `rejected`
+  { user: Usuario; token: string },
+  { email: string; contrasenia: string },
+  { rejectValue: string }
 >("auth/login", async (credentials, thunkAPI) => {
   try {
-    const response = await loginUser(credentials);
+    const response = await loginUsuario(credentials);
+
+    // 🔹 Guardamos token y usuario solo si son válidos
+    if (response.token && response.user) {
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+    }
+
     return response;
   } catch (error) {
     const axiosError = error as AxiosError<APIErrorResponse>;
@@ -50,7 +59,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
-      state.error = null; // ✅ Limpiamos el error al cerrar sesión
+      state.error = null;
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
@@ -65,12 +74,10 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
-        localStorage.setItem("token", action.payload.token);
-        localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload ?? "Error desconocido"; // ✅ Manejo de errores mejorado
+        state.error = action.payload ?? "Credenciales incorrectas"; // 🔹 Manejo de errores mejorado
       });
   },
 });

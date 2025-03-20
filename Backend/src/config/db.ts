@@ -1,24 +1,27 @@
-import mongoose from "mongoose";
+import { Pool } from "pg";
+import dotenv from "dotenv";
 
+dotenv.config();
+
+const pool = new Pool({
+  user: process.env.DB_USER || "francis",
+  host: process.env.DB_HOST || "localhost",
+  database: process.env.DB_NAME || "postgres",
+  password: process.env.DB_PASSWORD || "fran12345",
+  port: Number(process.env.DB_PORT) || 5432,
+});
+
+// Verifica la conexión con una consulta simple
 const connectDB = async () => {
   try {
-    const MONGO_URI =
-      process.env.MONGO_URI || "mongodb://127.0.0.1:27017/nptorneosbackend";
-    await mongoose.connect(MONGO_URI);
-    console.log(`✅ Conectado a MongoDB en ${MONGO_URI}`);
+    const client = await pool.connect();
+    const res = await client.query("SELECT NOW()"); // Ejecuta una consulta para probar la conexión
+    console.log(`✅ Conectado a PostgreSQL - Hora actual: ${res.rows[0].now}`);
+    client.release(); // Libera la conexión
   } catch (err: any) {
-    // Asegurar que err tiene mensaje
-    console.error("❌ Error al conectar a MongoDB:", err.message);
+    console.error("❌ Error al conectar a PostgreSQL:", err.message);
     process.exit(1);
   }
 };
 
-// Eventos de MongoDB
-mongoose.connection.on("disconnected", () =>
-  console.error("⚠️ Desconectado de MongoDB")
-);
-mongoose.connection.on("error", (err) =>
-  console.error("❌ Error en la conexión a MongoDB:", err.message)
-);
-
-export default connectDB;
+export { pool, connectDB };

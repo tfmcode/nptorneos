@@ -10,9 +10,9 @@ import loginBg from "../assets/login.jpg";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [contrasenia, setContrasenia] = useState(""); // 🔹 Cambiado `password` → `contrasenia`
   const [showPassword, setShowPassword] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null); // 🔥 Estado para errores locales
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ const Login: React.FC = () => {
     (state: RootState) => state.auth
   );
 
-  // 🔥 Si el usuario ya está autenticado, lo redirigimos a "/sistema"
+  // 🔹 Si el usuario ya está autenticado, lo redirigimos a "/sistema"
   useEffect(() => {
     if (user) {
       navigate("/sistema");
@@ -29,15 +29,15 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocalError(null); // 🔥 Reseteamos errores previos
+    setLocalError(null); // 🔹 Limpiamos errores previos
 
     try {
-      const result = await dispatch(login({ email, password })).unwrap();
+      const result = await dispatch(login({ email, contrasenia })).unwrap(); // 🔹 Enviar `contrasenia`
       if (result) {
         navigate("/sistema");
       }
     } catch (err) {
-      setLocalError(err as string); // 🔥 Mostramos el error en pantalla
+      setLocalError(err as string); // 🔥 Mostramos error en pantalla
     }
   };
 
@@ -71,8 +71,8 @@ const Login: React.FC = () => {
             <FaKey className="absolute top-3 left-3 text-gray-400" />
             <input
               type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={contrasenia}
+              onChange={(e) => setContrasenia(e.target.value)}
               placeholder="Contraseña"
               className="w-full pl-10 p-2 border rounded-md text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
@@ -98,11 +98,11 @@ const Login: React.FC = () => {
           <button
             type="submit"
             className={`w-full py-2 rounded-md text-white transition ${
-              loading || !email || !password
+              loading || !email || !contrasenia
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-700"
             }`}
-            disabled={loading || !email || !password} // 🔥 Deshabilitar si los campos están vacíos
+            disabled={loading || !email || !contrasenia} // 🔥 Deshabilitar si los campos están vacíos
           >
             {loading ? "Cargando..." : "Iniciar Sesión"}
           </button>

@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config(); // ✅ Cargar variables de entorno antes de cualquier otra cosa
 
 import app from "./app";
-import connectDB from "./config/db";
+import { connectDB } from "./config/db";
 
 const PORT = Number(process.env.PORT) || 5001;
 

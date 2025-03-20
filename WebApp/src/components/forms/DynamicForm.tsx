@@ -15,9 +15,10 @@ interface FieldConfig {
     | "select"
     | "checkbox"
     | "date"
+    | "number"
     | "textarea";
   placeholder?: string;
-  value: string | boolean;
+  value: string | number | boolean; // ✅ Manejo de tipos mejorado
   options?: FieldOption[];
   label?: string;
 }
@@ -41,7 +42,6 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 }) => {
   return (
     <form onSubmit={onSubmit}>
-      {/* Sección de Inputs con Etiquetas Separadas */}
       <div className="grid grid-cols-2 gap-4">
         {fields.map((field, index) => (
           <div
@@ -54,7 +54,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             {field.type === "select" && field.options ? (
               <select
                 name={field.name}
-                value={field.value as string}
+                value={String(field.value)} // ✅ Asegura que los valores sean strings para evitar errores en `option`
                 onChange={onChange}
                 className="border p-2 rounded w-full text-sm"
               >
@@ -69,7 +69,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 <input
                   name={field.name}
                   type="checkbox"
-                  checked={field.value as boolean}
+                  checked={Boolean(field.value)} // ✅ Convierte correctamente `0 | 1` a booleano
                   onChange={onChange}
                   className="mr-2"
                 />
@@ -79,7 +79,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               <textarea
                 name={field.name}
                 placeholder={field.placeholder || ""}
-                value={field.value as string}
+                value={String(field.value)}
                 onChange={onChange}
                 className="border p-2 rounded w-full resize-none text-sm"
                 rows={4}
@@ -89,7 +89,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 name={field.name}
                 type={field.type}
                 placeholder={field.placeholder || ""}
-                value={field.value as string}
+                value={String(field.value)}
                 onChange={onChange}
               />
             )}
@@ -97,7 +97,6 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         ))}
       </div>
 
-      {/* Botón de Guardar */}
       <div className="flex justify-end mt-4">
         <button
           type="submit"

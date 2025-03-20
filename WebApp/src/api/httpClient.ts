@@ -1,22 +1,18 @@
 import axios from "axios";
-import { store } from "../store"; // Para acceder al estado global
+import { store } from "../store";
 import { logout } from "../store/slices/authSlice";
 
 const API = axios.create({
   baseURL: "http://localhost:5001",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 // ✅ Agregar el token automáticamente en cada petición protegida
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
 
@@ -26,8 +22,8 @@ API.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      store.dispatch(logout()); // Cerrar sesión si el token expira
-      window.location.href = "/login"; // Redirigir a login
+      store.dispatch(logout());
+      // ❌ En lugar de redirigir forzosamente, podemos usar un evento global o un contexto.
     }
     return Promise.reject(error);
   }

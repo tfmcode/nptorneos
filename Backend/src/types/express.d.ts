@@ -3,6 +3,10 @@ import { Request } from "express";
 
 declare module "express" {
   export interface Request {
-    user?: string | JwtPayload; // Ahora `req.user` puede contener datos del usuario
+    user?: JwtPayload & {
+      id: string;
+      email: string;
+      perfil: number;
+    }; // `req.user` ahora siempre tendrá estas propiedades
   }
 }

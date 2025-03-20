@@ -1,66 +1,43 @@
-import express, {
-  Request,
-  Response,
-  NextFunction,
-  ErrorRequestHandler,
-} from "express";
-import mongoose from "mongoose";
+import express, { Request, Response, ErrorRequestHandler } from "express";
 import dotenv from "dotenv";
-import cors from "cors";
-import helmet from "helmet";
-import compression from "compression";
-import userRoutes from "./routes/userRoutes";
-import championshipRoutes from "./routes/championshipRoutes";
-import playerRoutes from "./routes/playerRoutes";
-import venueRoutes from "./routes/venueRoutes";
+import { applyMiddlewares } from "./middlewares/global"; // ⬅️ Importa los middlewares globales
+import usuariosRoutes from "./routes/usuariosRoutes";
+import sedesRoutes from "./routes/sedesRoutes";
+import campeonatosRoutes from "./routes/campeonatosRoutes";
+import jugadoresRoutes from "./routes/jugadoresRoutes";
 
-dotenv.config();
+dotenv.config(); // ✅ Cargar variables de entorno
 
 const app = express();
 
-// Middlewares de seguridad y optimización
-app.use(helmet());
-app.use(compression());
+// ✅ **Aplica los Middlewares Globales desde `global.ts`**
+applyMiddlewares(app);
 
-// Middleware de CORS
-app.use(
-  cors({
-    origin: ["http://localhost:5173"], // Permite solo el frontend
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-
-// Middleware para parsear JSON
-app.use(express.json());
-
-// Ruta base de prueba
+// ✅ **Ruta base de prueba**
 app.get("/", (req: Request, res: Response) => {
   res
     .status(200)
-    .send("Bienvenido al servidor backend. Todo funciona correctamente.");
+    .json({ message: "Bienvenido al servidor backend con PostgreSQL. 🚀" });
 });
 
-// Rutas
-app.use("/api/users", userRoutes);
-app.use("/api/championships", championshipRoutes);
-app.use("/api/players", playerRoutes);
-app.use("/api/venues", venueRoutes);
+// ✅ **Definición de Rutas**
+app.use("/api/usuarios", usuariosRoutes);
+app.use("/api/sedes", sedesRoutes);
+app.use("/api/campeonatos", campeonatosRoutes);
+app.use("/api/jugadores", jugadoresRoutes);
 
-
-// Manejo de rutas no definidas
+// ✅ **Manejo de rutas no definidas**
 app.use((req: Request, res: Response) => {
-  res.status(404).json({ message: "Ruta no encontrada" });
+  res.status(404).json({ message: "Ruta no encontrada." });
 });
 
-// Middleware de manejo de errores
+// ✅ **Middleware Global de Manejo de Errores**
 const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  console.error("❌ Error en el servidor:", err);
+
   res.status(err.status || 500).json({
-    message: err.message || "Error interno del servidor",
-    error: process.env.NODE_ENV === "production" ? {} : err,
+    message: err.message || "Error interno del servidor.",
+    error: process.env.NODE_ENV === "production" ? {} : err, // Oculta detalles en producción
   });
 };
 

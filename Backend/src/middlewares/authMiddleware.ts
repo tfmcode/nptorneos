@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 
 // 🔹 Interfaz extendida para incluir `user`
 interface AuthRequest extends Request {
-  user?: JwtPayload;
+  user?: JwtPayload & { id: string; email: string; perfil: number };
 }
 
 export const authMiddleware = (
@@ -11,31 +11,48 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-  let token = req.header("Authorization");
+  const authHeader = req.header("Authorization");
 
-  if (!token) {
+  if (!authHeader) {
     return res
       .status(401)
       .json({ message: "Acceso denegado. Token no proporcionado." });
   }
 
-  try {
-    token = token.replace("Bearer ", "");
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "claveSecreta"
-    ) as JwtPayload;
+  // 🔹 Usamos regex para extraer el token correctamente
+  const tokenMatch = authHeader.match(/^Bearer\s(.+)$/);
+  const token = tokenMatch ? tokenMatch[1] : authHeader;
 
-    req.user = decoded;
+  try {
+    const secretKey = process.env.JWT_SECRET;
+    if (!secretKey) {
+      console.error(
+        "❌ Error: JWT_SECRET no está definido en las variables de entorno."
+      );
+      return res.status(500).json({ message: "Error interno del servidor." });
+    }
+
+    const decoded = jwt.verify(token, secretKey) as JwtPayload;
+
+    if (!decoded.id || !decoded.email || decoded.perfil === undefined) {
+      return res.status(401).json({ message: "Token inválido." });
+    }
+
+    req.user = decoded as AuthRequest["user"];
     next();
   } catch (error: any) {
+    console.error("❌ Error en authMiddleware:", error);
+
     if (error.name === "TokenExpiredError") {
       return res
         .status(401)
         .json({ message: "Token expirado. Inicia sesión nuevamente." });
-    } else if (error.name === "JsonWebTokenError") {
+    }
+
+    if (error.name === "JsonWebTokenError") {
       return res.status(401).json({ message: "Token inválido." });
     }
-    return res.status(500).json({ message: "Error de autenticación.", error });
+
+    return res.status(500).json({ message: "Error de autenticación." });
   }
 };

@@ -2,8 +2,16 @@ import axios from "axios";
 import { store } from "../store";
 import { logout } from "../store/slices/authSlice";
 
+// Obtener la baseURL desde las variables de entorno
+const baseURL = import.meta.env.VITE_API_URL;
+
+if (!baseURL) {
+  console.error("⚠️ Error: VITE_API_URL no está definido en el archivo .env");
+  throw new Error("Falta la variable de entorno VITE_API_URL");
+}
+
 const API = axios.create({
-  baseURL: "http://localhost:5001",
+  baseURL,
   headers: { "Content-Type": "application/json" },
 });
 

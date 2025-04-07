@@ -34,10 +34,6 @@ export const saveCampeonato = async (
   data: CampeonatoInput & { id?: number }
 ) => {
   try {
-    if (!data.nombre || data.coddeporte === undefined) {
-      throw new Error("Los campos nombre y coddeporte son obligatorios.");
-    }
-
     const response = data.id
       ? await API.put(`/api/campeonatos/${data.id}`, data)
       : await API.post("/api/campeonatos", data);
@@ -53,8 +49,6 @@ export const saveCampeonato = async (
  */
 export const deleteCampeonato = async (id: number): Promise<void> => {
   try {
-    if (!id)
-      throw new Error("El ID del campeonato es obligatorio para eliminar.");
     await API.delete(`/api/campeonatos/${id}`);
   } catch (error) {
     handleAxiosError(error);

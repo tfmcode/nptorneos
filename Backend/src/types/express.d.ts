@@ -7,6 +7,6 @@ declare module "express" {
       id: string;
       email: string;
       perfil: number;
-    }; // `req.user` ahora siempre tendrá estas propiedades
+    };
   }
 }

@@ -4,7 +4,7 @@ import usuarioReducer from "./slices/usuarioSlice"; // 🔹 Cambiado de userRedu
 import campeonatoReducer from "./slices/campeonatoSlice";
 import jugadoresReducer from "./slices/jugadoresSlice";
 import sedeReducer from "./slices/sedeSlice";
-
+import codificadorReducer from "./slices/codificadorSlice";
 
 // 🔥 Configuración de Redux Store con middleware personalizado
 export const store = configureStore({
@@ -14,6 +14,7 @@ export const store = configureStore({
     campeonatos: campeonatoReducer,
     jugadores: jugadoresReducer,
     sedes: sedeReducer,
+    codificadores: codificadorReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

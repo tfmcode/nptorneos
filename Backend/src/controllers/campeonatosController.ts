@@ -44,12 +44,6 @@ export const createCampeonatoController = async (
   try {
     const campeonato = req.body;
 
-    if (!campeonato.nombre || campeonato.coddeporte === undefined) {
-      return res
-        .status(400)
-        .json({ message: "Los campos nombre y coddeporte son obligatorios." });
-    }
-
     const newCampeonato = await createCampeonato(campeonato);
 
     return res.status(201).json({

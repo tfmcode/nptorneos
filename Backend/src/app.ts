@@ -5,6 +5,7 @@ import usuariosRoutes from "./routes/usuariosRoutes";
 import sedesRoutes from "./routes/sedesRoutes";
 import campeonatosRoutes from "./routes/campeonatosRoutes";
 import jugadoresRoutes from "./routes/jugadoresRoutes";
+import codificadoresRoutes from "./routes/codificadoresRoutes";
 
 dotenv.config(); // ✅ Cargar variables de entorno
 
@@ -25,6 +26,7 @@ app.use("/api/usuarios", usuariosRoutes);
 app.use("/api/sedes", sedesRoutes);
 app.use("/api/campeonatos", campeonatosRoutes);
 app.use("/api/jugadores", jugadoresRoutes);
+app.use("/api/codificadores", codificadoresRoutes);
 
 // ✅ **Manejo de rutas no definidas**
 app.use((req: Request, res: Response) => {

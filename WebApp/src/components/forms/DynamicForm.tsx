@@ -18,7 +18,7 @@ interface FieldConfig {
     | "number"
     | "textarea";
   placeholder?: string;
-  value: string | number | boolean; // ✅ Manejo de tipos mejorado
+  value: string | number | boolean;
   options?: FieldOption[];
   label?: string;
 }
@@ -48,15 +48,22 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             key={index}
             className={`mb-2 ${field.type === "textarea" ? "col-span-2" : ""}`}
           >
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              {field.placeholder}
-            </label>
+            {field.type !== "checkbox" && (
+              <label
+                htmlFor={field.name}
+                className="block text-xs font-medium text-gray-700 mb-1"
+              >
+                {field.label || field.placeholder || field.name}
+              </label>
+            )}
+
             {field.type === "select" && field.options ? (
               <select
                 name={field.name}
-                value={String(field.value)} // ✅ Asegura que los valores sean strings para evitar errores en `option`
+                id={field.name}
+                value={String(field.value)}
                 onChange={onChange}
-                className="border p-2 rounded w-full text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
               >
                 {field.options.map((option, i) => (
                   <option key={i} value={option.value}>
@@ -65,23 +72,25 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 ))}
               </select>
             ) : field.type === "checkbox" ? (
-              <label className="flex items-center text-sm">
+              <label className="flex items-center text-sm mt-2">
                 <input
                   name={field.name}
+                  id={field.name}
                   type="checkbox"
-                  checked={Boolean(field.value)} // ✅ Convierte correctamente `0 | 1` a booleano
+                  checked={Boolean(field.value)}
                   onChange={onChange}
                   className="mr-2"
                 />
-                {field.label}
+                {field.label || field.placeholder || field.name}
               </label>
             ) : field.type === "textarea" ? (
               <textarea
                 name={field.name}
+                id={field.name}
                 placeholder={field.placeholder || ""}
                 value={String(field.value)}
                 onChange={onChange}
-                className="border p-2 rounded w-full resize-none text-sm"
+                className="border border-gray-300 p-2 rounded w-full text-sm resize-none"
                 rows={4}
               />
             ) : (

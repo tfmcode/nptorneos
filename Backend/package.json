@@ -19,7 +19,8 @@
     "mongoose": "^8.9.5",
     "mongoose-sequence": "^6.0.1",
     "pg": "^8.13.3",
-    "pg-hstore": "^2.3.4"
+    "pg-hstore": "^2.3.4",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

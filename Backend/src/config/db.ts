@@ -11,13 +11,12 @@ const pool = new Pool({
   port: Number(process.env.DB_PORT) || 5432,
 });
 
-// Verifica la conexión con una consulta simple
 const connectDB = async () => {
   try {
     const client = await pool.connect();
-    const res = await client.query("SELECT NOW()"); // Ejecuta una consulta para probar la conexión
+    const res = await client.query("SELECT NOW()");
     console.log(`✅ Conectado a PostgreSQL - Hora actual: ${res.rows[0].now}`);
-    client.release(); // Libera la conexión
+    client.release();
   } catch (err: any) {
     console.error("❌ Error al conectar a PostgreSQL:", err.message);
     process.exit(1);

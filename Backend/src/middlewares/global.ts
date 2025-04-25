@@ -4,13 +4,12 @@ import compression from "compression";
 import express from "express";
 
 export const applyMiddlewares = (app: express.Application) => {
-  app.use(helmet()); // 🔒 Seguridad
-  app.use(compression()); // 🚀 Compresión Gzip
+  app.use(helmet());
+  app.use(compression());
 
-  // ✅ **Middleware de CORS**
   const allowedOrigins = process.env.FRONTEND_URL?.split(",") || [
     "http://localhost:5173",
-  ]; // Soporta múltiples orígenes
+  ];
   app.use(
     cors({
       origin: allowedOrigins, // Permite solo los orígenes especificados en `.env`
@@ -20,7 +19,6 @@ export const applyMiddlewares = (app: express.Application) => {
     })
   );
 
-  // ✅ **Middleware para parsear JSON**
   app.use(express.json());
-  app.use(express.urlencoded({ extended: true })); // 🔹 Soporta formularios URL-encoded
+  app.use(express.urlencoded({ extended: true }));
 };

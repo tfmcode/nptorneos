@@ -1,32 +1,35 @@
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/db";
-import { JwtPayload } from "jsonwebtoken";
+import { TokenPayload } from "../utils/jwt";
 
+// 🔹 Extendemos Request con user del token ya validado
 interface AuthRequest extends Request {
-  user?: JwtPayload & { id: string; email: string; perfil: number };
+  user?: TokenPayload;
 }
 
+/**
+ * 🔐 Middleware para verificar si el usuario es administrador (perfil = 1)
+ */
 export const adminMiddleware = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.user || !req.user.id || req.user.perfil === undefined) {
+  if (!req.user) {
     return res.status(401).json({ message: "No autorizado." });
   }
 
-  // Si ya tenemos el perfil en el token, evitamos consulta extra
-  if (req.user.perfil === 1) {
-    return next();
-  }
+  const { id, perfil } = req.user;
+
+  // Si ya viene en el token que es admin, seguimos
+  if (perfil === 1) return next();
 
   try {
-    const userId = Number(req.user.id);
+    const userId = Number(id);
     if (isNaN(userId)) {
       return res.status(400).json({ message: "ID de usuario inválido." });
     }
 
-    // 🔹 Optimizamos la consulta para traer solo el perfil
     const { rows } = await pool.query(
       "SELECT perfil FROM usuarios WHERE idusuario = $1;",
       [userId]
@@ -37,16 +40,16 @@ export const adminMiddleware = async (
     }
 
     if (rows[0].perfil !== 1) {
-      return res
-        .status(403)
-        .json({
-          message: "Acceso denegado. Se requiere rol de administrador.",
-        });
+      return res.status(403).json({
+        message: "Acceso denegado. Se requiere rol de administrador.",
+      });
     }
 
     next();
   } catch (error) {
     console.error("❌ Error en adminMiddleware:", error);
-    return res.status(500).json({ message: "Error en la autenticación." });
+    return res
+      .status(500)
+      .json({ message: "Error interno en la autenticación." });
   }
 };

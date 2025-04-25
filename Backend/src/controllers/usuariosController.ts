@@ -9,14 +9,11 @@ import {
   comparePassword,
 } from "../models/usuariosModel";
 import { generateToken } from "../utils/jwt";
+import { sanitizeUser } from "../utils/sanitize";
 import bcrypt from "bcryptjs";
 
-// 🔑 **Login de usuario**
-// 🔑 Login de usuario
 export const loginUsuario = async (req: Request, res: Response) => {
   try {
-    console.log("📥 Datos recibidos en login:", req.body);
-
     const { email, contrasenia } = req.body;
 
     if (!email || !contrasenia) {
@@ -27,18 +24,11 @@ export const loginUsuario = async (req: Request, res: Response) => {
 
     const usuario = await getUsuarioByEmail(email);
 
-    console.log("🔍 Usuario encontrado en BD:", usuario); // Muestra si se encontró el usuario
-
     if (!usuario || !usuario.contrasenia) {
       return res.status(400).json({ message: "Credenciales incorrectas." });
     }
 
-    console.log("🔐 Contraseña ingresada:", contrasenia);
-    console.log("🔐 Contraseña en BD (hash):", usuario.contrasenia);
-
     const isMatch = await comparePassword(contrasenia, usuario.contrasenia);
-
-    console.log("🔐 ¿Contraseña correcta?:", isMatch);
 
     if (!isMatch) {
       return res.status(400).json({ message: "Credenciales incorrectas." });
@@ -53,14 +43,7 @@ export const loginUsuario = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: "Login exitoso",
       token,
-      user: {
-        idusuario: usuario.idusuario,
-        nombre: usuario.nombre,
-        apellido: usuario.apellido,
-        email: usuario.email,
-        perfil: usuario.perfil,
-        habilitado: usuario.habilitado,
-      },
+      user: sanitizeUser(usuario),
     });
   } catch (error) {
     console.error("❌ Error al iniciar sesión:", error);
@@ -68,36 +51,20 @@ export const loginUsuario = async (req: Request, res: Response) => {
   }
 };
 
-// 🆕 **Crear usuario**
 export const createUsuarioController = async (req: Request, res: Response) => {
   try {
-    const { nombre, apellido, email, contrasenia, perfil, habilitado } =
-      req.body;
+    const { email } = req.body;
 
-    if (!nombre || !apellido || !email || !contrasenia) {
-      return res
-        .status(400)
-        .json({ message: "Todos los campos son obligatorios." });
-    }
-
-    // ❌ **Verificar si el email ya está en uso**
     const usuarioExistente = await getUsuarioByEmail(email);
     if (usuarioExistente) {
       return res.status(400).json({ message: "El email ya está registrado." });
     }
 
-    const newUser = await createUsuario({
-      nombre,
-      apellido,
-      email,
-      contrasenia,
-      perfil: perfil ?? 1,
-      habilitado: habilitado ?? 1,
-    });
+    const newUser = await createUsuario(req.body);
 
     return res.status(201).json({
       message: "Usuario creado exitosamente.",
-      user: newUser,
+      user: sanitizeUser(newUser),
     });
   } catch (error) {
     console.error("❌ Error al crear usuario:", error);
@@ -105,8 +72,7 @@ export const createUsuarioController = async (req: Request, res: Response) => {
   }
 };
 
-// 🔍 **Obtener todos los usuarios**
-export const getUsuarios = async (req: Request, res: Response) => {
+export const getUsuarios = async (_req: Request, res: Response) => {
   try {
     const usuarios = await getAllUsuarios();
     res.status(200).json(usuarios);
@@ -116,7 +82,6 @@ export const getUsuarios = async (req: Request, res: Response) => {
   }
 };
 
-// 🔍 **Obtener usuario por ID**
 export const getUsuario = async (req: Request, res: Response) => {
   try {
     const usuario = await getUsuarioById(Number(req.params.id));
@@ -132,7 +97,6 @@ export const getUsuario = async (req: Request, res: Response) => {
   }
 };
 
-// 🔄 **Actualizar usuario**
 export const updateUsuarioController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -143,12 +107,10 @@ export const updateUsuarioController = async (req: Request, res: Response) => {
     const { contrasenia, perfil, habilitado, ...restoDatos } = req.body;
     const usuarioActualizado: any = { ...restoDatos };
 
-    // ✅ **Convertimos `perfil` y `habilitado` a números si están presentes**
     if (perfil !== undefined) usuarioActualizado.perfil = Number(perfil);
     if (habilitado !== undefined)
       usuarioActualizado.habilitado = habilitado ? 1 : 0;
 
-    // ✅ **Hashear contraseña solo si se envió una nueva**
     if (typeof contrasenia === "string" && contrasenia.trim()) {
       usuarioActualizado.contrasenia = await bcrypt.hash(contrasenia, 10);
     }
@@ -160,7 +122,7 @@ export const updateUsuarioController = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       message: "Usuario actualizado exitosamente.",
-      user: updatedUser,
+      user: sanitizeUser(updatedUser),
     });
   } catch (error) {
     console.error("❌ Error al actualizar usuario:", error);
@@ -170,7 +132,6 @@ export const updateUsuarioController = async (req: Request, res: Response) => {
   }
 };
 
-// ❌ **Soft delete (marcar usuario como inactivo)**
 export const deleteUsuarioController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -178,11 +139,11 @@ export const deleteUsuarioController = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "ID de usuario inválido." });
     }
 
-    // ❌ **Evitar eliminar un usuario que ya está dado de baja**
     const usuario = await getUsuarioById(id);
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado." });
     }
+
     if (usuario.fhbaja) {
       return res
         .status(400)

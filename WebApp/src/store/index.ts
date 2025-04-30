@@ -5,6 +5,7 @@ import campeonatoReducer from "./slices/campeonatoSlice";
 import jugadoresReducer from "./slices/jugadoresSlice";
 import sedeReducer from "./slices/sedeSlice";
 import codificadorReducer from "./slices/codificadorSlice";
+import equipoSlice from "./slices/equiposSlice"; // 🔹 Importación del slice de equipos
 
 // 🔥 Configuración de Redux Store con middleware personalizado
 export const store = configureStore({
@@ -15,6 +16,7 @@ export const store = configureStore({
     jugadores: jugadoresReducer,
     sedes: sedeReducer,
     codificadores: codificadorReducer,
+    equipos: equipoSlice, // 🔹 Añadido el slice de equipos
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

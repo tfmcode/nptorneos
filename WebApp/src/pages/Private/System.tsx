@@ -5,6 +5,7 @@ import Campeonatos from "./Campeonatos";
 import Jugadores from "./Jugadores";
 import Sedes from "./Sedes";
 import Codificadores from "./Codificadores";
+import Equipos from "./Equipos";
 import { NavbarSystem } from "../../layouts/navbar/NavbarSystem";
 
 const System: React.FC = () => {
@@ -22,6 +23,8 @@ const System: React.FC = () => {
         return <Sedes />;
       case "Codificadores":
         return <Codificadores />;
+      case "Equipos":
+        return <Equipos />;
       default:
         return (
           <p className="text-center text-xl text-white">

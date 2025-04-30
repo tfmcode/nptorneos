@@ -1,11 +1,13 @@
 import express, { Request, Response, ErrorRequestHandler } from "express";
 import dotenv from "dotenv";
-import { applyMiddlewares } from "./middlewares/global"; 
+import { applyMiddlewares } from "./middlewares/global";
 import usuariosRoutes from "./routes/usuariosRoutes";
 import sedesRoutes from "./routes/sedesRoutes";
 import campeonatosRoutes from "./routes/campeonatosRoutes";
 import jugadoresRoutes from "./routes/jugadoresRoutes";
 import codificadoresRoutes from "./routes/codificadoresRoutes";
+import equiposRoutes from "./routes/equiposRoutes";
+import listaNegraRoutes from "./routes/listaNegraRoutes";
 
 dotenv.config(); // ✅ Cargar variables de entorno
 
@@ -24,6 +26,8 @@ app.use("/api/sedes", sedesRoutes);
 app.use("/api/campeonatos", campeonatosRoutes);
 app.use("/api/jugadores", jugadoresRoutes);
 app.use("/api/codificadores", codificadoresRoutes);
+app.use("/api/listanegra", listaNegraRoutes);
+app.use("/api/equipos", equiposRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Ruta no encontrada." });

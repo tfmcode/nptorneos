@@ -7,9 +7,8 @@ import campeonatosRoutes from "./routes/campeonatosRoutes";
 import jugadoresRoutes from "./routes/jugadoresRoutes";
 import codificadoresRoutes from "./routes/codificadoresRoutes";
 import equiposRoutes from "./routes/equiposRoutes";
-import listaNegraRoutes from "./routes/listaNegraRoutes";
 
-dotenv.config(); // ✅ Cargar variables de entorno
+dotenv.config();
 
 const app = express();
 
@@ -26,7 +25,6 @@ app.use("/api/sedes", sedesRoutes);
 app.use("/api/campeonatos", campeonatosRoutes);
 app.use("/api/jugadores", jugadoresRoutes);
 app.use("/api/codificadores", codificadoresRoutes);
-app.use("/api/listanegra", listaNegraRoutes);
 app.use("/api/equipos", equiposRoutes);
 
 app.use((req: Request, res: Response) => {

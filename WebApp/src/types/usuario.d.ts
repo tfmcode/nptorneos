@@ -4,9 +4,9 @@ export interface Usuario {
   apellido: string;
   email: string;
   contrasenia?: string;
-  habilitado: 0 | 1; // 🔹 Solo 0 o 1, sin números generales
+  habilitado: 0 | 1; 
   fhcarga?: string;
-  perfil: 1 | 2 | 3; // 🔹 Solo valores permitidos
+  perfil: 1 | 2 | 3;
   fhbaja?: string | null;
   [key: string]: unknown;
 }
@@ -16,6 +16,6 @@ export interface UsuarioInput {
   apellido: string;
   email: string;
   contrasenia?: string;
-  habilitado?: 0 | 1; // 🔹 Solo 0 o 1
-  perfil?: 1 | 2 | 3; // 🔹 Solo valores permitidos
+  habilitado?: 0 | 1; 
+  perfil?: 1 | 2 | 3; 
 }

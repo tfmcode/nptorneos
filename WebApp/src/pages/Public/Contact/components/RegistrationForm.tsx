@@ -116,7 +116,6 @@ const RegistrationForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Lista de Buena Fe */}
           <div>
             <h4 className="text-xl font-bold mb-4">Lista de Buena Fe</h4>
             <div className="space-y-4">

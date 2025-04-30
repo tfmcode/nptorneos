@@ -16,7 +16,7 @@ const RecPassword: React.FC = () => {
 
   const handleEmailChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(evt.target.value);
-    setIsEmailValid(null); // Resetea el mensaje de error al cambiar el valor
+    setIsEmailValid(null); 
   };
 
   const handlePasswordSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
@@ -25,7 +25,6 @@ const RecPassword: React.FC = () => {
       setIsEmailValid({ msg: "Por favor, introduce un correo válido." });
       return;
     }
-    // actions.recPassword(email);
     console.log("Recuperar contraseña para:", email);
   };
 

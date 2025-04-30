@@ -106,7 +106,6 @@ const Jugadores: React.FC = () => {
           onDelete={handleDelete}
         />
 
-        {/* 🔥 Agregando paginación */}
         <div className="flex justify-between items-center mt-4">
           <button
             disabled={page === 1}

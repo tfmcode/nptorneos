@@ -4,7 +4,6 @@ const ContactInfo: React.FC = () => {
   return (
     <div className="bg-gray-100 p-6 rounded-lg shadow-lg mt-10">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Ubicación y Horario */}
         <div>
           <h3 className="text-xl font-bold mb-4 text-center">
             Ubicación y Horario
@@ -26,7 +25,6 @@ const ContactInfo: React.FC = () => {
           ></iframe>
         </div>
 
-        {/* Información de Contacto */}
         <div>
           <h3 className="text-xl font-bold mb-4 text-center">
             Información de Contacto

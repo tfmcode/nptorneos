@@ -26,21 +26,18 @@ const Concents: React.FC = () => {
   const generatePDF = () => {
     const doc = new jsPDF();
 
-    // Título principal
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("CONSENTIMIENTO INFORMADO", 70, 20);
 
-    // Subtítulos con fondo gris
     const addSectionTitle = (text: string, y: number) => {
-      doc.setFillColor(231, 229, 229); // Color de fondo #e7e5e5 en RGB
-      doc.rect(20, y - 7, 170, 10, "F"); // Dibujar el rectángulo de fondo
+      doc.setFillColor(231, 229, 229); 
+      doc.rect(20, y - 7, 170, 10, "F"); 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       doc.text(text, 25, y);
     };
 
-    // Datos Personales
     addSectionTitle("DATOS PERSONALES", 40);
     doc.setFont("helvetica", "normal");
     doc.text(
@@ -55,20 +52,18 @@ const Concents: React.FC = () => {
     doc.text(`Obra Social: ${formData.obraSocial}`, 20, 100);
     doc.text(`Facebook: ${formData.facebook || "N/A"}`, 20, 110);
 
-    // Datos Equipo
     addSectionTitle("DATOS EQUIPO", 130);
     doc.text(`Equipo: ${formData.equipo}`, 20, 140);
     doc.text(`Tipo Torneo: ${formData.tipoTorneo}`, 20, 150);
     doc.text(`Sede: ${formData.sede}`, 20, 160);
 
-    // En caso de urgencia
     addSectionTitle("EN CASO DE URGENCIA AVISAR A:", 180);
     doc.text(`Apellido y Nombre: ${formData.urgenciaNombre}`, 20, 190);
     doc.text(`Relación / Parentesco: ${formData.urgenciaRelacion}`, 20, 200);
     doc.text(`Teléfono: ${formData.urgenciaTelefono}`, 20, 210);
 
     // Consentimiento general
-    let y = 230; // Posición inicial del contenido dinámico
+    let y = 230; 
     const content = [
       "Por medio de la presente NP TORNEOS informa a todos los participantes sobre los riesgos de la actividad deportiva a la que se exponen y aceptan de conformidad.",
       "",
@@ -140,7 +135,6 @@ const Concents: React.FC = () => {
       y + 50
     );
 
-    // Guardar PDF
     doc.save(`Consentimiento_${formData.apellido}.pdf`);
   };
 
@@ -151,7 +145,6 @@ const Concents: React.FC = () => {
       </h1>
 
       <form className="space-y-10">
-        {/* Datos Personales */}
         <div className="bg-gray-100 p-6 rounded-lg shadow-lg">
           <fieldset className="border border-gray-300 rounded-lg p-6 shadow-md">
             <legend className="text-xl font-semibold bg-gray-300 px-4 py-2 rounded">
@@ -202,7 +195,6 @@ const Concents: React.FC = () => {
           </fieldset>
         </div>
 
-        {/* Datos Equipo */}
         <div className="bg-gray-100 p-6 rounded-lg shadow-lg">
           <fieldset className="border border-gray-300 rounded-lg p-6 shadow-md">
             <legend className="text-xl font-semibold bg-gray-300 px-4 py-2 rounded">
@@ -240,7 +232,6 @@ const Concents: React.FC = () => {
           </fieldset>
         </div>
 
-        {/* En caso de urgencia */}
         <div className="bg-gray-100 p-6 rounded-lg shadow-lg">
           <fieldset className="border border-gray-300 rounded-lg p-6 shadow-md">
             <legend className="text-xl font-semibold bg-gray-300 px-4 py-2 rounded">
@@ -286,7 +277,6 @@ const Concents: React.FC = () => {
           </fieldset>
         </div>
 
-        {/* Botones */}
         <div className="flex justify-center gap-6">
           <button
             type="button"

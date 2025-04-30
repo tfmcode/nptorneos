@@ -3,7 +3,6 @@ import { loginUsuario } from "../../api/authService";
 import { Usuario } from "../../types/usuario";
 import { AxiosError } from "axios";
 
-// Estado inicial de autenticación
 interface AuthState {
   user: Usuario | null;
   token: string | null;
@@ -22,12 +21,10 @@ const initialState: AuthState = {
   error: null,
 };
 
-// Definimos el tipo de error esperado en la API
 interface APIErrorResponse {
   message?: string;
 }
 
-// Acción para hacer login
 export const login = createAsyncThunk<
   { user: Usuario; token: string },
   { email: string; contrasenia: string },
@@ -36,7 +33,6 @@ export const login = createAsyncThunk<
   try {
     const response = await loginUsuario(credentials);
 
-    // 🔹 Guardamos token y usuario solo si son válidos
     if (response.token && response.user) {
       localStorage.setItem("token", response.token);
       localStorage.setItem("user", JSON.stringify(response.user));
@@ -77,7 +73,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload ?? "Credenciales incorrectas"; // 🔹 Manejo de errores mejorado
+        state.error = action.payload ?? "Credenciales incorrectas"; 
       });
   },
 });

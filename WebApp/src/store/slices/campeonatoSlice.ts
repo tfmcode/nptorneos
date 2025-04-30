@@ -6,14 +6,12 @@ import {
 } from "../../api/campeonatosService";
 import { Campeonato, CampeonatoInput } from "../../types/campeonato";
 
-// Estado inicial
 const initialState = {
   campeonatos: [] as Campeonato[],
   loading: false,
   error: null as string | null,
 };
 
-// 🔍 Obtener campeonatos
 export const fetchCampeonatos = createAsyncThunk(
   "campeonatos/fetchCampeonatos",
   async (_, { rejectWithValue }) => {
@@ -27,7 +25,6 @@ export const fetchCampeonatos = createAsyncThunk(
   }
 );
 
-// 🆕 Crear o actualizar campeonato
 export const saveCampeonatoThunk = createAsyncThunk(
   "campeonatos/saveCampeonato",
   async (
@@ -44,7 +41,6 @@ export const saveCampeonatoThunk = createAsyncThunk(
   }
 );
 
-// ❌ Eliminar campeonato (Soft Delete)
 export const removeCampeonato = createAsyncThunk(
   "campeonatos/removeCampeonato",
   async (id: number, { rejectWithValue }) => {
@@ -59,7 +55,6 @@ export const removeCampeonato = createAsyncThunk(
   }
 );
 
-// 🏗 Slice de campeonatos
 const campeonatoSlice = createSlice({
   name: "campeonatos",
   initialState,

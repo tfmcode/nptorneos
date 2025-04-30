@@ -10,7 +10,7 @@ import loginBg from "../assets/login.jpg";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
-  const [contrasenia, setContrasenia] = useState(""); // 🔹 Cambiado `password` → `contrasenia`
+  const [contrasenia, setContrasenia] = useState(""); 
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -20,7 +20,6 @@ const Login: React.FC = () => {
     (state: RootState) => state.auth
   );
 
-  // 🔹 Si el usuario ya está autenticado, lo redirigimos a "/sistema"
   useEffect(() => {
     if (user) {
       navigate("/sistema");
@@ -29,15 +28,15 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocalError(null); // 🔹 Limpiamos errores previos
+    setLocalError(null); 
 
     try {
-      const result = await dispatch(login({ email, contrasenia })).unwrap(); // 🔹 Enviar `contrasenia`
+      const result = await dispatch(login({ email, contrasenia })).unwrap();
       if (result) {
         navigate("/sistema");
       }
     } catch (err) {
-      setLocalError(err as string); // 🔥 Mostramos error en pantalla
+      setLocalError(err as string); 
     }
   };
 
@@ -90,7 +89,6 @@ const Login: React.FC = () => {
             </button>
           </div>
 
-          {/* 🔥 Mostramos errores tanto del backend como del frontend */}
           {(localError || error) && (
             <p className="text-red-500 text-sm">{localError || error}</p>
           )}
@@ -102,7 +100,7 @@ const Login: React.FC = () => {
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-700"
             }`}
-            disabled={loading || !email || !contrasenia} // 🔥 Deshabilitar si los campos están vacíos
+            disabled={loading || !email || !contrasenia}
           >
             {loading ? "Cargando..." : "Iniciar Sesión"}
           </button>

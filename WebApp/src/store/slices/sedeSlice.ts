@@ -2,14 +2,12 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { getSedes, saveSede, deleteSede } from "../../api/sedesService";
 import { Sede, SedeInput } from "../../types/sede";
 
-// Estado inicial
 const initialState = {
   sedes: [] as Sede[],
   loading: false,
   error: null as string | null,
 };
 
-// 🔍 Obtener sedes
 export const fetchSedes = createAsyncThunk(
   "sedes/fetchSedes",
   async (_, { rejectWithValue }) => {
@@ -23,7 +21,6 @@ export const fetchSedes = createAsyncThunk(
   }
 );
 
-// 🆕 Crear o actualizar sede
 export const saveSedeThunk = createAsyncThunk(
   "sedes/saveSede",
   async (sedeData: SedeInput & { id?: number }, { rejectWithValue }) => {
@@ -37,7 +34,6 @@ export const saveSedeThunk = createAsyncThunk(
   }
 );
 
-// ❌ Eliminar sede (Soft Delete)
 export const removeSede = createAsyncThunk(
   "sedes/removeSede",
   async (id: number, { rejectWithValue }) => {

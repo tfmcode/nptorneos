@@ -7,7 +7,6 @@ import {
 } from "../../api/jugadoresService";
 import { Jugador, JugadorInput } from "../../types/jugadores";
 
-// Estado inicial
 const initialState = {
   jugadores: [] as Jugador[],
   total: 0,
@@ -18,7 +17,6 @@ const initialState = {
   searchTerm: "",
 };
 
-// 🔍 Obtener jugadores con paginación y búsqueda
 export const fetchJugadores = createAsyncThunk(
   "jugadores/fetchJugadores",
   async (
@@ -39,7 +37,6 @@ export const fetchJugadores = createAsyncThunk(
   }
 );
 
-// 🆕 Crear o actualizar jugador
 export const saveJugadorThunk = createAsyncThunk(
   "jugadores/saveJugador",
   async (jugadorData: JugadorInput & { id?: number }, { rejectWithValue }) => {
@@ -55,7 +52,6 @@ export const saveJugadorThunk = createAsyncThunk(
   }
 );
 
-// ❌ Eliminar jugador (Soft Delete)
 export const removeJugador = createAsyncThunk(
   "jugadores/removeJugador",
   async (id: number, { rejectWithValue }) => {
@@ -70,7 +66,6 @@ export const removeJugador = createAsyncThunk(
   }
 );
 
-// 🏗 Slice de jugadores
 const jugadoresSlice = createSlice({
   name: "jugadores",
   initialState,

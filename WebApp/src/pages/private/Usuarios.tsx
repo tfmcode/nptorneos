@@ -44,14 +44,12 @@ const Usuarios: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
 
-  // ✅ Ahora `useEffect` incluye `usuarios.length` en las dependencias para evitar la advertencia de ESLint.
   useEffect(() => {
     if (!usuarios.length) {
       dispatch(fetchUsuarios());
     }
   }, [dispatch, usuarios.length]);
 
-  // ✅ Función `onSearch` corregida y agregada en `SearchField`
   const handleSearch = () => {
     setSearchTerm(pendingSearchTerm);
   };
@@ -95,7 +93,6 @@ const Usuarios: React.FC = () => {
     }
   };
 
-  // ✅ Se asegura de que siempre haya un array válido de usuarios filtrados
   const filteredUsuarios = searchTerm
     ? usuarios.filter(
         (usuario) =>
@@ -114,18 +111,17 @@ const Usuarios: React.FC = () => {
           actions={[
             {
               label: "Agregar Usuario",
-              onClick: () => handleOpenModal(), // ✅ Se asegura de que no se pase `undefined`
+              onClick: () => handleOpenModal(),
               icon: <PlusCircleIcon className="h-5 w-5" />,
             },
           ]}
         />
 
-        {/* ✅ Se agregó `onSearch` en `SearchField` para corregir el error */}
         <SearchField
           placeholder="Buscar por nombre o email"
           value={pendingSearchTerm}
           onChange={(e) => setPendingSearchTerm(e.target.value)}
-          onSearch={handleSearch} // 🔹 Ahora `onSearch` está definido correctamente
+          onSearch={handleSearch}
         />
 
         <StatusMessage loading={loading} error={error} />
@@ -133,7 +129,7 @@ const Usuarios: React.FC = () => {
         <DataTable<Usuario>
           columns={usuarioColumns}
           data={filteredUsuarios}
-          onEdit={(row) => row && handleOpenModal(row as Usuario)} // ✅ Evita errores al abrir el modal
+          onEdit={(row) => row && handleOpenModal(row as Usuario)} 
           onDelete={(row) => row && handleDelete(row as Usuario)}
         />
 

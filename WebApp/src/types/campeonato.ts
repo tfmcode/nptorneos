@@ -3,10 +3,10 @@ export interface Campeonato {
   nombre: string;
   coddeporte: number;
   codestado?: number;
-  fhcarga?: string; // Fecha de creación
-  fhbaja?: string | null; // Soft delete
-  fhultmod?: string; // Última modificación
-  usrultmod?: number; // Usuario que modificó
+  fhcarga?: string; 
+  fhbaja?: string | null; 
+  fhultmod?: string; 
+  usrultmod?: number;
   [key: string]: unknown;
 }
 

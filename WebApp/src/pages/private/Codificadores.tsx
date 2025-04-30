@@ -1,4 +1,3 @@
-// src/pages/Codificadores.tsx
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
@@ -20,7 +19,6 @@ import {
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { codificadorColumns } from "../../components/tables/columns/codificadorColumns";
 
-// Opciones para el select de idcodificador
 const idCodificadorOptions = [
   { label: "Tipo Torneos", value: 3 },
   { label: "Gastos Varios", value: 4 },
@@ -87,7 +85,6 @@ const Codificadores: React.FC = () => {
       const payload = { ...formData };
 
       if (!isEditing) {
-        // Nuevo codificador: no enviar el campo id
         delete payload.id;
       }
 
@@ -138,7 +135,6 @@ const Codificadores: React.FC = () => {
           ]}
         />
 
-        {/* Filtros */}
         <div className="flex space-x-4 mb-4">
           <div className="flex-1">
             <select

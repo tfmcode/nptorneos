@@ -6,20 +6,18 @@ import {
 } from "../../api/usuarioService";
 import { Usuario, UsuarioInput } from "../../types/usuario";
 
-// Estado inicial
 const initialState = {
   usuarios: [] as Usuario[],
   loading: false,
   error: null as string | null,
 };
 
-// 🔍 Obtener usuarios
 export const fetchUsuarios = createAsyncThunk(
   "usuarios/fetchUsuarios",
   async (_, { rejectWithValue }) => {
     try {
       const response = await getUsuarios();
-      return response ?? []; // 🔹 Evita que `usuarios` sea `undefined`
+      return response ?? [];
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al obtener usuarios."
@@ -28,7 +26,6 @@ export const fetchUsuarios = createAsyncThunk(
   }
 );
 
-// 🆕 Crear o actualizar usuario
 export const saveUsuarioThunk = createAsyncThunk(
   "usuarios/saveUsuario",
   async (
@@ -40,16 +37,16 @@ export const saveUsuarioThunk = createAsyncThunk(
         ...usuarioData,
         perfil: [1, 2, 3].includes(Number(usuarioData.perfil))
           ? (usuarioData.perfil as 1 | 2 | 3)
-          : 1, // ✅ Solo valores permitidos
+          : 1,
 
         habilitado:
           usuarioData.habilitado !== undefined
             ? (usuarioData.habilitado as 0 | 1)
-            : 0, // ✅ Solo 0 o 1
+            : 0,
       };
 
       const response = await saveUsuario(usuarioPayload);
-      return response ?? null; // 🔹 Asegura que no retorne `undefined`
+      return response ?? null;
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al guardar usuario."
@@ -58,7 +55,6 @@ export const saveUsuarioThunk = createAsyncThunk(
   }
 );
 
-// ❌ Eliminar usuario (Soft Delete)
 export const removeUsuario = createAsyncThunk(
   "usuarios/removeUsuario",
   async (idusuario: number, { rejectWithValue }) => {
@@ -74,28 +70,25 @@ export const removeUsuario = createAsyncThunk(
   }
 );
 
-// 🏗 Slice de usuarios
 const usuarioSlice = createSlice({
   name: "usuarios",
   initialState,
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // 🔍 Obtener usuarios
       .addCase(fetchUsuarios.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchUsuarios.fulfilled, (state, action) => {
         state.loading = false;
-        state.usuarios = action.payload ?? []; // 🔹 Evita errores si la API devuelve `undefined`
+        state.usuarios = action.payload ?? [];
       })
       .addCase(fetchUsuarios.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
-      // 🆕 Crear o actualizar usuario
       .addCase(saveUsuarioThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -109,9 +102,9 @@ const usuarioSlice = createSlice({
           (u) => u.idusuario === updatedUsuario.idusuario
         );
         if (index !== -1) {
-          state.usuarios[index] = updatedUsuario; // ✅ Actualiza usuario existente
+          state.usuarios[index] = updatedUsuario;
         } else {
-          state.usuarios = [updatedUsuario, ...state.usuarios]; // ✅ Agrega usuario nuevo al inicio
+          state.usuarios = [updatedUsuario, ...state.usuarios];
         }
       })
       .addCase(saveUsuarioThunk.rejected, (state, action) => {
@@ -119,14 +112,13 @@ const usuarioSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // ❌ Eliminar usuario
       .addCase(removeUsuario.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(removeUsuario.fulfilled, (state, action) => {
         state.loading = false;
-        if (!action.payload) return; // 🔹 Evita eliminar `undefined`
+        if (!action.payload) return;
         state.usuarios = state.usuarios.filter(
           (usuario) => usuario.idusuario !== action.payload
         );

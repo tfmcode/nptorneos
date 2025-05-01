@@ -7,7 +7,6 @@ import {
   deleteJugador,
 } from "../models/jugadoresModel";
 
-// 🔍 Obtener jugadores con paginación (Corregido)
 export const getJugadores = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -23,7 +22,6 @@ export const getJugadores = async (req: Request, res: Response) => {
   }
 };
 
-// 🔍 Obtener jugador por ID
 export const getJugador = async (req: Request, res: Response) => {
   try {
     const jugador = await getJugadorById(Number(req.params.id));
@@ -37,7 +35,6 @@ export const getJugador = async (req: Request, res: Response) => {
   }
 };
 
-// 🆕 Crear un jugador
 export const createJugadorController = async (req: Request, res: Response) => {
   try {
     const newJugador = await createJugador(req.body);
@@ -50,7 +47,6 @@ export const createJugadorController = async (req: Request, res: Response) => {
   }
 };
 
-// 🔄 Actualizar jugador (Corregido)
 export const updateJugadorController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -71,7 +67,6 @@ export const updateJugadorController = async (req: Request, res: Response) => {
   }
 };
 
-// ❌ Soft delete (marcar jugador como dado de baja)
 export const deleteJugadorController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);

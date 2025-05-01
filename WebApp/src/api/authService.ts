@@ -1,4 +1,4 @@
-import API from "./httpClient"; // Asegúrate de que el import esté correcto
+import API from "./httpClient";
 import { AxiosError } from "axios";
 
 interface APIErrorResponse {
@@ -13,7 +13,6 @@ export const loginUsuario = async (credentials: {
     const response = await API.post("/api/usuarios/login", credentials);
     const { token, user } = response.data;
 
-    // ✅ Guardar el token en `localStorage` para mantener la sesión
     if (token) {
       localStorage.setItem("token", token);
     }

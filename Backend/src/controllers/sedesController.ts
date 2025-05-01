@@ -7,7 +7,6 @@ import {
   deleteSede,
 } from "../models/sedesModel";
 
-// 🔍 Obtener todas las sedes
 export const getSedes = async (req: Request, res: Response) => {
   try {
     const sedes = await getAllSedes();
@@ -18,7 +17,6 @@ export const getSedes = async (req: Request, res: Response) => {
   }
 };
 
-// 🔍 Obtener sede por ID
 export const getSede = async (req: Request, res: Response) => {
   try {
     const sede = await getSedeById(Number(req.params.id));
@@ -34,7 +32,6 @@ export const getSede = async (req: Request, res: Response) => {
   }
 };
 
-// 🆕 Crear una nueva sede
 export const createSedeController = async (req: Request, res: Response) => {
   try {
     const sede = req.body;
@@ -57,7 +54,6 @@ export const createSedeController = async (req: Request, res: Response) => {
   }
 };
 
-// 🔄 Actualizar una sede
 export const updateSedeController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -79,7 +75,6 @@ export const updateSedeController = async (req: Request, res: Response) => {
   }
 };
 
-// ❌ Soft delete (marcar sede como dada de baja)
 export const deleteSedeController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);

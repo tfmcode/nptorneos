@@ -2,9 +2,6 @@ import { AxiosError } from "axios";
 import API from "./httpClient";
 import { Jugador, JugadorInput } from "../types/jugadores";
 
-/**
- * 📌 Manejo de errores de Axios con mensajes más claros
- */
 const handleAxiosError = (error: unknown): never => {
   if (error instanceof AxiosError && error.response?.data?.message) {
     console.error("❌ API Error:", error.response.data.message);
@@ -14,9 +11,6 @@ const handleAxiosError = (error: unknown): never => {
   throw new Error("Ocurrió un error inesperado.");
 };
 
-/**
- * 🔍 Obtener jugadores con paginación y búsqueda
- */
 export const getJugadores = async (
   page = 1,
   limit = 10,
@@ -38,9 +32,6 @@ export const getJugadores = async (
   return { jugadores: [], total: 0, page, limit };
 };
 
-/**
- * 🔍 Obtener un jugador por ID
- */
 export const getJugadorById = async (
   id: number
 ): Promise<Jugador | undefined> => {
@@ -53,9 +44,6 @@ export const getJugadorById = async (
   return undefined;
 };
 
-/**
- * 🆕 Crear un nuevo jugador
- */
 export const createJugador = async (
   data: JugadorInput
 ): Promise<Jugador | undefined> => {
@@ -68,9 +56,6 @@ export const createJugador = async (
   return undefined;
 };
 
-/**
- * 🔄 Actualizar un jugador
- */
 export const updateJugador = async (
   id: number,
   data: JugadorInput
@@ -84,9 +69,6 @@ export const updateJugador = async (
   return undefined;
 };
 
-/**
- * ❌ Eliminar un jugador (Soft Delete)
- */
 export const deleteJugador = async (id: number): Promise<void> => {
   try {
     await API.delete(`/api/jugadores/${id}`);

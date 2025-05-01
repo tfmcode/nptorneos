@@ -28,7 +28,6 @@ export interface IEquipo {
   fhultmod?: Date;
 }
 
-// Obtener todos los equipos con paginación y búsqueda
 export const getAllEquipos = async (
   page: number,
   limit: number,
@@ -66,7 +65,6 @@ export const getAllEquipos = async (
   return { equipos: rows, total: parseInt(totalRes.rows[0].count, 10) };
 };
 
-// Obtener equipo por ID
 export const getEquipoById = async (id: number): Promise<IEquipo | null> => {
   const { rows } = await pool.query(
     `SELECT e.id, e.nombre, e.abrev, e.contacto, e.emailcto, e.telefonocto, e.celularcto,
@@ -84,7 +82,6 @@ export const getEquipoById = async (id: number): Promise<IEquipo | null> => {
   return rows.length ? rows[0] : null;
 };
 
-// Crear equipo
 export const createEquipo = async (equipo: IEquipo): Promise<IEquipo> => {
   const { rows } = await pool.query(
     `INSERT INTO equipos (
@@ -122,7 +119,6 @@ export const createEquipo = async (equipo: IEquipo): Promise<IEquipo> => {
   return rows[0];
 };
 
-// Actualizar equipo
 export const updateEquipo = async (
   id: number,
   equipo: Partial<IEquipo>
@@ -135,7 +131,7 @@ export const updateEquipo = async (
     if (
       equipo[key as keyof IEquipo] !== undefined &&
       key !== "fhultmod" &&
-      key !== "sede_nombre" // 💥 importante: NO actualizar campos virtuales
+      key !== "sede_nombre" 
     ) {
       updates.push(`${key} = $${i}`);
       values.push(equipo[key as keyof IEquipo]);
@@ -156,7 +152,6 @@ export const updateEquipo = async (
   return rows.length ? rows[0] : null;
 };
 
-// Eliminar equipo (soft delete)
 export const deleteEquipo = async (id: number): Promise<boolean> => {
   const result = await pool.query(
     `UPDATE equipos SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;`,

@@ -1,10 +1,7 @@
 import { AxiosError } from "axios";
-import API from "./httpClient"; // Configuración de Axios
+import API from "./httpClient";
 import { Campeonato, CampeonatoInput } from "../types/campeonato";
 
-/**
- * Manejo de errores de Axios para obtener mensajes claros
- */
 const handleAxiosError = (error: unknown): never => {
   if (error instanceof AxiosError && error.response?.data?.message) {
     console.error("❌ API Error:", error.response.data.message);
@@ -14,9 +11,6 @@ const handleAxiosError = (error: unknown): never => {
   throw new Error("Ocurrió un error inesperado.");
 };
 
-/**
- * Obtiene todos los campeonatos
- */
 export const getCampeonatos = async (): Promise<Campeonato[]> => {
   try {
     const response = await API.get("/api/campeonatos");
@@ -27,9 +21,6 @@ export const getCampeonatos = async (): Promise<Campeonato[]> => {
   return [];
 };
 
-/**
- * Crea o actualiza un campeonato
- */
 export const saveCampeonato = async (
   data: CampeonatoInput & { id?: number }
 ) => {
@@ -44,9 +35,6 @@ export const saveCampeonato = async (
   }
 };
 
-/**
- * Elimina un campeonato por ID (Soft Delete)
- */
 export const deleteCampeonato = async (id: number): Promise<void> => {
   try {
     await API.delete(`/api/campeonatos/${id}`);

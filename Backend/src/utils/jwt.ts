@@ -3,14 +3,12 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// 🔐 Aseguramos que la clave esté definida
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
   console.error("⚠️ Error: JWT_SECRET no está definido en el archivo .env");
   throw new Error("Falta la clave secreta JWT en el archivo .env");
 }
 
-// 🎯 Tipo de datos que va a tener nuestro token
 export interface TokenPayload extends JwtPayload {
   id: string;
   email: string;

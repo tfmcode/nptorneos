@@ -8,7 +8,6 @@ import {
   deleteCodificador,
 } from "../models/codificadoresModel";
 
-// 🔍 Obtener todos los codificadores
 export const getCodificadores = async (req: Request, res: Response) => {
   try {
     const codificadores = await getAllCodificadores();
@@ -21,7 +20,6 @@ export const getCodificadores = async (req: Request, res: Response) => {
   }
 };
 
-// 🆕 Crear un nuevo codificador
 export const createCodificadorController = async (
   req: Request,
   res: Response
@@ -42,7 +40,6 @@ export const createCodificadorController = async (
   }
 };
 
-// 🔄 Actualizar un codificador
 export const updateCodificadorController = async (
   req: Request,
   res: Response
@@ -72,7 +69,6 @@ export const updateCodificadorController = async (
   }
 };
 
-// ❌ Soft delete (marcar codificador como dado de baja)
 export const deleteCodificadorController = async (
   req: Request,
   res: Response
@@ -97,4 +93,3 @@ export const deleteCodificadorController = async (
   }
 };
 
-// Ajustar rutas en app.js o route

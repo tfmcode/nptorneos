@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 
-dotenv.config(); // Cargar variables de entorno antes de cualquier otra cosa
+dotenv.config(); 
 
 import app from "./app";
 import { connectDB } from "./config/db";

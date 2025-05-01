@@ -1,4 +1,3 @@
-// routes/codificadoresRoutes.ts
 import express from "express";
 import {
   createCodificadorController,
@@ -14,10 +13,8 @@ import { body, param } from "express-validator";
 
 const router = express.Router();
 
-// 🔐 Obtener todos los codificadores
 router.get("/", authMiddleware, asyncHandler(getCodificadores));
 
-// 🆕 Crear un nuevo codificador (solo admin)
 router.post(
   "/",
   authMiddleware,
@@ -40,7 +37,6 @@ router.post(
   asyncHandler(createCodificadorController)
 );
 
-// 🔄 Editar un codificador (por ID + IDCodificador)
 router.put(
   "/:id/:idcodificador",
   authMiddleware,
@@ -64,7 +60,6 @@ router.put(
   asyncHandler(updateCodificadorController)
 );
 
-// ❌ Soft delete de codificador
 router.delete(
   "/:id/:idcodificador",
   authMiddleware,

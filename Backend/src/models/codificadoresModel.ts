@@ -1,4 +1,3 @@
-// codificadoresModel.ts
 import { pool } from "../config/db";
 
 export interface ICodificador {
@@ -10,7 +9,6 @@ export interface ICodificador {
   fhbaja?: Date | null;
 }
 
-// 🔍 Obtener todos los codificadores activos
 export const getAllCodificadores = async (): Promise<ICodificador[]> => {
   const { rows } = await pool.query(
     `SELECT * FROM codificadores WHERE fhbaja IS NULL ORDER BY idcodificador, id;`
@@ -18,7 +16,6 @@ export const getAllCodificadores = async (): Promise<ICodificador[]> => {
   return rows;
 };
 
-// 🔍 Obtener un codificador por ID e idcodificador
 export const getCodificadorById = async (
   id: number,
   idcodificador: number
@@ -30,12 +27,9 @@ export const getCodificadorById = async (
   return rows.length > 0 ? rows[0] : null;
 };
 
-// 🆕 Crear un codificador
-// models/codificadoresModel.ts
 export const createCodificador = async (
   codificador: Omit<ICodificador, "id" | "fhcarga">
 ): Promise<ICodificador> => {
-  // ✅ calcular el próximo ID válido dentro del idcodificador
   const { rows: maxIdRows } = await pool.query(
     `SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM codificadores WHERE idcodificador = $1;`,
     [codificador.idcodificador]
@@ -57,7 +51,6 @@ export const createCodificador = async (
   return rows[0];
 };
 
-// 🔄 Actualizar un codificador
 export const updateCodificador = async (
   id: number,
   idcodificador: number,
@@ -88,7 +81,6 @@ export const updateCodificador = async (
   return rows.length > 0 ? rows[0] : null;
 };
 
-// ❌ Soft Delete (Marcar codificador como dado de baja)
 export const deleteCodificador = async (
   id: number,
   idcodificador: number

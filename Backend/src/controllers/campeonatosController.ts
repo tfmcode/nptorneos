@@ -7,7 +7,6 @@ import {
   deleteCampeonato,
 } from "../models/campeonatosModel";
 
-// 🔍 Obtener todos los campeonatos
 export const getCampeonatos = async (req: Request, res: Response) => {
   try {
     const campeonatos = await getAllCampeonatos();
@@ -20,7 +19,6 @@ export const getCampeonatos = async (req: Request, res: Response) => {
   }
 };
 
-// 🔍 Obtener campeonato por ID
 export const getCampeonato = async (req: Request, res: Response) => {
   try {
     const campeonato = await getCampeonatoById(Number(req.params.id));
@@ -36,7 +34,6 @@ export const getCampeonato = async (req: Request, res: Response) => {
   }
 };
 
-// 🆕 Crear un nuevo campeonato
 export const createCampeonatoController = async (
   req: Request,
   res: Response
@@ -58,7 +55,6 @@ export const createCampeonatoController = async (
   }
 };
 
-// 🔄 Actualizar un campeonato
 export const updateCampeonatoController = async (
   req: Request,
   res: Response
@@ -83,7 +79,6 @@ export const updateCampeonatoController = async (
   }
 };
 
-// ❌ Soft delete (marcar campeonato como dado de baja)
 export const deleteCampeonatoController = async (
   req: Request,
   res: Response

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/db";
 import { TokenPayload } from "../utils/jwt";
 
-// 🔹 Extendemos Request con user del token ya validado
+//  Extendemos Request con user del token ya validado
 interface AuthRequest extends Request {
   user?: TokenPayload;
 }

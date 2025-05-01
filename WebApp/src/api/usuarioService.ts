@@ -1,10 +1,7 @@
 import { AxiosError } from "axios";
-import API from "./httpClient"; // Asegúrate de que el import está correcto
+import API from "./httpClient";
 import { Usuario, UsuarioInput } from "../types/usuario";
 
-/**
- * Maneja errores de Axios y arroja mensajes claros
- */
 const handleAxiosError = (error: unknown): string => {
   if (error instanceof AxiosError && error.response?.data?.message) {
     console.error("❌ API Error:", error.response.data.message);
@@ -14,9 +11,6 @@ const handleAxiosError = (error: unknown): string => {
   return "Ocurrió un error inesperado.";
 };
 
-/**
- * Crea o actualiza un usuario
- */
 export const saveUsuario = async (
   data: UsuarioInput & { idusuario?: number }
 ) => {
@@ -27,11 +21,10 @@ export const saveUsuario = async (
 
     const usuarioPayload = {
       ...data,
-      perfil: Number(data.perfil) || 1, // ✅ Convertimos perfil a número (evita valores inválidos)
-      habilitado: data.habilitado ? 1 : 0, // ✅ Convertimos habilitado a número (1 o 0)
+      perfil: Number(data.perfil) || 1,
+      habilitado: data.habilitado ? 1 : 0,
     };
 
-    // ✅ Si la contraseña es una cadena vacía, la eliminamos para que no se actualice incorrectamente
     if (data.contrasenia?.trim() === "") {
       delete usuarioPayload.contrasenia;
     }
@@ -46,9 +39,6 @@ export const saveUsuario = async (
   }
 };
 
-/**
- * Obtiene todos los usuarios
- */
 export const getUsuarios = async (): Promise<Usuario[]> => {
   try {
     const response = await API.get("/api/usuarios");
@@ -59,9 +49,6 @@ export const getUsuarios = async (): Promise<Usuario[]> => {
   return [];
 };
 
-/**
- * Elimina un usuario por ID (Soft Delete)
- */
 export const deleteUsuario = async (idusuario: number): Promise<void> => {
   try {
     if (!idusuario)

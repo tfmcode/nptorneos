@@ -24,8 +24,6 @@ export interface IJugador {
   foto?: string;
 }
 
-// 🔍 Obtener jugadores con paginación
-// 🔍 Obtener un jugador por ID (Forzamos el formato de `fhnacimiento`)
 export const getJugadorById = async (id: number): Promise<IJugador | null> => {
   const { rows } = await pool.query(
     `SELECT id, nombres, apellido, 
@@ -39,7 +37,6 @@ export const getJugadorById = async (id: number): Promise<IJugador | null> => {
   return rows.length > 0 ? rows[0] : null;
 };
 
-// 🔍 Obtener jugadores con paginación (Forzamos el formato de `fhnacimiento`)
 export const getAllJugadores = async (
   page: number,
   limit: number,
@@ -75,7 +72,6 @@ export const getAllJugadores = async (
   };
 };
 
-// 🆕 Crear un jugador
 export const createJugador = async (jugador: IJugador): Promise<IJugador> => {
   let fechaNacimiento: string | null = null;
 
@@ -95,7 +91,7 @@ export const createJugador = async (jugador: IJugador): Promise<IJugador> => {
     [
       jugador.nombres,
       jugador.apellido,
-      fechaNacimiento, // ✅ Se asegura de estar en `YYYY-MM-DD`
+      fechaNacimiento, 
       jugador.docnro,
       jugador.telefono,
       jugador.email,
@@ -115,7 +111,6 @@ export const createJugador = async (jugador: IJugador): Promise<IJugador> => {
   return rows[0];
 };
 
-// 🔄 Actualizar jugador (corrige error en `fhultmod`)
 export const updateJugador = async (
   id: number,
   jugador: Partial<IJugador>
@@ -145,7 +140,6 @@ export const updateJugador = async (
     throw new Error("No hay datos para actualizar.");
   }
 
-  // ✅ Asegurar que `fhultmod` se actualiza correctamente sin duplicados
   updates.push(`fhultmod = NOW()`);
   values.push(id);
 
@@ -156,7 +150,6 @@ export const updateJugador = async (
   return rows.length > 0 ? rows[0] : null;
 };
 
-// ❌ **Soft Delete (Marcar como dado de baja)**
 export const deleteJugador = async (id: number): Promise<boolean> => {
   const result = await pool.query(
     "UPDATE jugadores SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;",

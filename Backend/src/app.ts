@@ -36,7 +36,7 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 
   res.status(err.status || 500).json({
     message: err.message || "Error interno del servidor.",
-    error: process.env.NODE_ENV === "production" ? {} : err, // Oculta detalles en producción
+    error: process.env.NODE_ENV === "production" ? {} : err, 
   });
 };
 

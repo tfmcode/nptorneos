@@ -12,7 +12,7 @@ export const applyMiddlewares = (app: express.Application) => {
   ];
   app.use(
     cors({
-      origin: allowedOrigins, // Permite solo los orígenes especificados en `.env`
+      origin: allowedOrigins, 
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization"],

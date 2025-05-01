@@ -22,7 +22,6 @@ export interface ISede {
   fhbaja?: Date | null;
 }
 
-// 🔍 Obtener todas las sedes activas
 export const getAllSedes = async (): Promise<ISede[]> => {
   const { rows } = await pool.query(
     `SELECT * FROM wsedes WHERE fhbaja IS NULL ORDER BY id DESC;`
@@ -30,7 +29,6 @@ export const getAllSedes = async (): Promise<ISede[]> => {
   return rows;
 };
 
-// 🔍 Obtener una sede por ID
 export const getSedeById = async (id: number): Promise<ISede | null> => {
   const { rows } = await pool.query(
     `SELECT * FROM wsdes WHERE id = $1 AND fhbaja IS NULL;`,
@@ -39,7 +37,6 @@ export const getSedeById = async (id: number): Promise<ISede | null> => {
   return rows.length > 0 ? rows[0] : null;
 };
 
-// 🆕 Crear una sede
 export const createSede = async (sede: ISede): Promise<ISede> => {
   const { rows } = await pool.query(
     `INSERT INTO wsedes (nombre, domicilio, provincia, localidad, cpostal, telefono, email, contacto, emailcto, telefonocto, celularcto, longitud, latitud, descripcion, mapa, codestado) 
@@ -67,7 +64,6 @@ export const createSede = async (sede: ISede): Promise<ISede> => {
   return rows[0];
 };
 
-// 🔄 Actualizar una sede
 export const updateSede = async (
   id: number,
   sede: Partial<ISede>
@@ -97,7 +93,6 @@ export const updateSede = async (
   return rows.length > 0 ? rows[0] : null;
 };
 
-// ❌ **Soft Delete (Marcar sede como dada de baja)**
 export const deleteSede = async (id: number): Promise<boolean> => {
   try {
     const result = await pool.query(
@@ -105,7 +100,7 @@ export const deleteSede = async (id: number): Promise<boolean> => {
       [id]
     );
 
-    return (result.rowCount ?? 0) > 0; // ✅ Aseguramos que nunca sea null
+    return (result.rowCount ?? 0) > 0; 
   } catch (error) {
     console.error("❌ Error al eliminar sede:", error);
     throw new Error("Error al eliminar la sede.");

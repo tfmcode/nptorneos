@@ -11,7 +11,6 @@ export interface ICampeonato {
   usrultmod?: number;
 }
 
-// 🔍 Obtener todos los campeonatos activos
 export const getAllCampeonatos = async (): Promise<ICampeonato[]> => {
   const { rows } = await pool.query(
     `SELECT * FROM campeonatos WHERE fhbaja IS NULL ORDER BY id DESC;`
@@ -19,7 +18,6 @@ export const getAllCampeonatos = async (): Promise<ICampeonato[]> => {
   return rows;
 };
 
-// 🔍 Obtener un campeonato por ID
 export const getCampeonatoById = async (
   id: number
 ): Promise<ICampeonato | null> => {
@@ -30,7 +28,6 @@ export const getCampeonatoById = async (
   return rows.length > 0 ? rows[0] : null;
 };
 
-// 🆕 Crear un campeonato
 export const createCampeonato = async (
   campeonato: ICampeonato
 ): Promise<ICampeonato> => {
@@ -48,7 +45,6 @@ export const createCampeonato = async (
   return rows[0];
 };
 
-// 🔄 Actualizar un campeonato
 export const updateCampeonato = async (
   id: number,
   campeonato: Partial<ICampeonato>
@@ -72,7 +68,6 @@ export const updateCampeonato = async (
     throw new Error("No hay datos para actualizar.");
   }
 
-  // Agregamos `fhultmod` manualmente para evitar duplicación
   updates.push(`fhultmod = NOW()`);
 
   values.push(id);
@@ -84,7 +79,6 @@ export const updateCampeonato = async (
   return rows.length > 0 ? rows[0] : null;
 };
 
-// ❌ **Soft Delete (Marcar campeonato como dado de baja)**
 export const deleteCampeonato = async (id: number): Promise<boolean> => {
   try {
     const result = await pool.query(
@@ -92,7 +86,7 @@ export const deleteCampeonato = async (id: number): Promise<boolean> => {
       [id]
     );
 
-    return (result.rowCount ?? 0) > 0; // ✅ Aseguramos que nunca sea null
+    return (result.rowCount ?? 0) > 0; 
   } catch (error) {
     console.error("❌ Error al eliminar campeonato:", error);
     throw new Error("Error al eliminar el campeonato.");

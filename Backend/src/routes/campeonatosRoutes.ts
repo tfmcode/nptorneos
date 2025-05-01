@@ -14,7 +14,6 @@ import { body, param } from "express-validator";
 
 const router = express.Router();
 
-// 🔐 Rutas protegidas con autenticación
 router.get("/", authMiddleware, asyncHandler(getCampeonatos));
 router.get(
   "/:id",
@@ -24,7 +23,6 @@ router.get(
   asyncHandler(getCampeonato)
 );
 
-// 🆕 Solo admins pueden crear y eliminar campeonatos
 router.post(
   "/",
   authMiddleware,
@@ -40,18 +38,18 @@ router.post(
       .isInt()
       .withMessage("El código de deporte debe ser un número entero."),
     body("codestado")
-      .optional({ nullable: true }) // Permite null explícitamente
+      .optional({ nullable: true }) 
       .custom((value) => {
-        if (value === null) return true; // Acepta null
+        if (value === null) return true; 
         if (!Number.isInteger(value)) {
           throw new Error("El código de estado debe ser un número entero.");
         }
         return true;
       }),
     body("usrultmod")
-      .optional({ nullable: true }) // Permite null explícitamente
+      .optional({ nullable: true })
       .custom((value) => {
-        if (value === null) return true; // Acepta null
+        if (value === null) return true; 
         if (!Number.isInteger(value)) {
           throw new Error(
             "El usuario de última modificación debe ser un número entero."
@@ -82,18 +80,18 @@ router.put(
       .isInt()
       .withMessage("El código de deporte debe ser un número entero."),
     body("codestado")
-      .optional({ nullable: true }) // Permite null explícitamente
+      .optional({ nullable: true }) 
       .custom((value) => {
-        if (value === null) return true; // Acepta null
+        if (value === null) return true; 
         if (!Number.isInteger(value)) {
           throw new Error("El código de estado debe ser un número entero.");
         }
         return true;
       }),
     body("usrultmod")
-      .optional({ nullable: true }) // Permite null explícitamente
+      .optional({ nullable: true })
       .custom((value) => {
-        if (value === null) return true; // Acepta null
+        if (value === null) return true; 
         if (!Number.isInteger(value)) {
           throw new Error(
             "El usuario de última modificación debe ser un número entero."

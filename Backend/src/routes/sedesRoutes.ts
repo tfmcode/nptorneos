@@ -12,11 +12,9 @@ import { adminMiddleware } from "../middlewares/adminMiddleware";
 
 const router = express.Router();
 
-// 🔐 Rutas protegidas con autenticación
 router.get("/", authMiddleware, asyncHandler(getSedes));
 router.get("/:id", authMiddleware, asyncHandler(getSede));
 
-// 🆕 Solo admins pueden crear y eliminar sedes
 router.post(
   "/",
   authMiddleware,

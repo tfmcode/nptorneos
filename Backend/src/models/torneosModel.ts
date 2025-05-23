@@ -45,23 +45,41 @@ export const getAllTorneos = async (
   searchTerm: string
 ): Promise<{ torneos: ITorneo[]; total: number }> => {
   const offset = (page - 1) * limit;
-  const searchQuery = searchTerm
-    ? `AND (LOWER(nombre) LIKE LOWER($3) OR LOWER(abrev) LIKE LOWER($3))`
-    : "";
+  
+  let totalQuery: string;
+  let torneosQuery: string;
+  let params: any[];
 
-  const totalQuery = `SELECT COUNT(*) FROM wtorneos WHERE fhbaja IS NULL ${searchQuery};`;
-  const torneosQuery = `
-    SELECT id, nombre, abrev, anio, idcampeonato, idsede, codestado, codtipoestado, cposicion, cpromedio, codmodelo, codtipo, cantmin, torneodefault, fotojugador, idpadre, idgaleria, valor_insc, valor_fecha, individual, valor_arbitro, valor_cancha, valor_medico, excluir_res, fhcarga, idusuario, sas FROM wtorneos WHERE fhbaja IS NULL 
-    ${searchQuery} ORDER BY fhcarga DESC LIMIT $1 OFFSET $2;`
+  if (searchTerm) {
+    totalQuery = `SELECT COUNT(*) FROM wtorneos WHERE fhbaja IS NULL AND (LOWER(nombre) LIKE LOWER($1) OR LOWER(abrev) LIKE LOWER($1));`;
+    torneosQuery = `
+      SELECT id, nombre, abrev, anio, idcampeonato, idsede, codestado, codtipoestado, 
+             cposicion, cpromedio, codmodelo, codtipo, cantmin, torneodefault, 
+             fotojugador, idpadre, idgaleria, valor_insc, valor_fecha, individual, 
+             valor_arbitro, valor_cancha, valor_medico, excluir_res, fhcarga, 
+             idusuario, sas 
+      FROM wtorneos 
+      WHERE fhbaja IS NULL AND (LOWER(nombre) LIKE LOWER($1) OR LOWER(abrev) LIKE LOWER($1))
+      ORDER BY fhcarga DESC 
+      LIMIT $2 OFFSET $3;`;
+    params = [`%${searchTerm}%`, limit, offset];
+  } else {
+    totalQuery = `SELECT COUNT(*) FROM wtorneos WHERE fhbaja IS NULL;`;
+    torneosQuery = `
+      SELECT id, nombre, abrev, anio, idcampeonato, idsede, codestado, codtipoestado, 
+             cposicion, cpromedio, codmodelo, codtipo, cantmin, torneodefault, 
+             fotojugador, idpadre, idgaleria, valor_insc, valor_fecha, individual, 
+             valor_arbitro, valor_cancha, valor_medico, excluir_res, fhcarga, 
+             idusuario, sas 
+      FROM wtorneos 
+      WHERE fhbaja IS NULL
+      ORDER BY fhcarga DESC 
+      LIMIT $1 OFFSET $2;`;
+    params = [limit, offset];
+  }
 
-  const totalResult = await pool.query(
-    totalQuery,
-    searchTerm ? [`%${searchTerm}%`] : []
-  );
-  const { rows } = await pool.query(
-    torneosQuery,
-    searchTerm ? [limit, offset, `%${searchTerm}%`] : [limit, offset]
-  );
+  const totalResult = await pool.query(totalQuery, searchTerm ? [`%${searchTerm}%`] : []);
+  const { rows } = await pool.query(torneosQuery, params);
 
   return {
     torneos: rows,

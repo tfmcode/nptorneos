@@ -16,14 +16,14 @@ const InputField: React.FC<InputFieldProps> = ({
   onChange,
 }) => {
   return (
-    <div className="mb-4 w-full">
+    <div className="w-full">
       <input
         name={name}
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:outline-none rounded-lg p-3 w-full bg-gray-50 text-gray-700 placeholder-gray-400 transition duration-300"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
       />
     </div>
   );

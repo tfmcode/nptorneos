@@ -6,6 +6,7 @@ import Jugadores from "./Jugadores";
 import Sedes from "./Sedes";
 import Codificadores from "./Codificadores";
 import Equipos from "./Equipos";
+import Torneos from "./Torneos";
 import { NavbarSystem } from "../../layouts/navbar/NavbarSystem";
 
 const System: React.FC = () => {
@@ -25,13 +26,15 @@ const System: React.FC = () => {
         return <Codificadores />;
       case "Equipos":
         return <Equipos />;
+      case "Torneos":
+        return <Torneos />;
       default:
         return (
           <p className="text-center text-xl text-white">
             Bienvenido al sistema
           </p>
-        );
-    }
+      );
+  }
   };
 
   return (

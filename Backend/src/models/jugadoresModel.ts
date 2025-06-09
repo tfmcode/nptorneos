@@ -43,28 +43,41 @@ export const getAllJugadores = async (
   searchTerm: string
 ): Promise<{ jugadores: IJugador[]; total: number }> => {
   const offset = (page - 1) * limit;
-  const searchQuery = searchTerm
-    ? `AND (LOWER(nombres) LIKE LOWER($3) OR LOWER(apellido) LIKE LOWER($3))`
-    : "";
+  
+  let totalQuery: string;
+  let jugadoresQuery: string;
+  let params: any[];
 
-  const totalQuery = `SELECT COUNT(*) FROM jugadores WHERE fhbaja IS NULL ${searchQuery};`;
-  const jugadoresQuery = `
-    SELECT id, nombres, apellido, 
-        TO_CHAR(fhnacimiento, 'YYYY-MM-DD') as fhnacimiento, 
-        docnro, telefono, email, facebook, twitter, 
-        peso, altura, apodo, posicion, categoria, 
-        piernahabil, codestado, fhcarga, fhbaja, fhultmod, usrultmod, foto
-    FROM jugadores WHERE fhbaja IS NULL 
-    ${searchQuery} ORDER BY fhcarga DESC LIMIT $1 OFFSET $2;`;
+  if (searchTerm) {
+    totalQuery = `SELECT COUNT(*) FROM jugadores WHERE fhbaja IS NULL AND (LOWER(nombres) LIKE LOWER($1) OR LOWER(apellido) LIKE LOWER($1));`;
+    jugadoresQuery = `
+      SELECT id, nombres, apellido, 
+          TO_CHAR(fhnacimiento, 'YYYY-MM-DD') as fhnacimiento, 
+          docnro, telefono, email, facebook, twitter, 
+          peso, altura, apodo, posicion, categoria, 
+          piernahabil, codestado, fhcarga, fhbaja, fhultmod, usrultmod, foto
+      FROM jugadores 
+      WHERE fhbaja IS NULL AND (LOWER(nombres) LIKE LOWER($1) OR LOWER(apellido) LIKE LOWER($1))
+      ORDER BY fhcarga DESC 
+      LIMIT $2 OFFSET $3;`;
+    params = [`%${searchTerm}%`, limit, offset];
+  } else {
+    totalQuery = `SELECT COUNT(*) FROM jugadores WHERE fhbaja IS NULL;`;
+    jugadoresQuery = `
+      SELECT id, nombres, apellido, 
+          TO_CHAR(fhnacimiento, 'YYYY-MM-DD') as fhnacimiento, 
+          docnro, telefono, email, facebook, twitter, 
+          peso, altura, apodo, posicion, categoria, 
+          piernahabil, codestado, fhcarga, fhbaja, fhultmod, usrultmod, foto
+      FROM jugadores 
+      WHERE fhbaja IS NULL
+      ORDER BY fhcarga DESC 
+      LIMIT $1 OFFSET $2;`;
+    params = [limit, offset];
+  }
 
-  const totalResult = await pool.query(
-    totalQuery,
-    searchTerm ? [`%${searchTerm}%`] : []
-  );
-  const { rows } = await pool.query(
-    jugadoresQuery,
-    searchTerm ? [limit, offset, `%${searchTerm}%`] : [limit, offset]
-  );
+  const totalResult = await pool.query(totalQuery, searchTerm ? [`%${searchTerm}%`] : []);
+  const { rows } = await pool.query(jugadoresQuery, params);
 
   return {
     jugadores: rows,

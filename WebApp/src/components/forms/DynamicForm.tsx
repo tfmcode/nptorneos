@@ -1,12 +1,13 @@
 import React from "react";
 import InputField from "../common/InputField";
+import MoneyInputField from "../common/MoneyInputField";
 
 interface FieldOption {
   label: string;
   value: string | number;
 }
 
-interface FieldConfig {
+export interface FieldConfig {
   name: string;
   type:
     | "text"
@@ -16,11 +17,13 @@ interface FieldConfig {
     | "checkbox"
     | "date"
     | "number"
-    | "textarea";
+    | "textarea"
+    | "money"
   placeholder?: string;
   value: string | number | boolean;
   options?: FieldOption[];
   label?: string;
+  colSpan?: number;
 }
 
 interface DynamicFormProps {
@@ -46,7 +49,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         {fields.map((field, index) => (
           <div
             key={index}
-            className={`mb-2 ${field.type === "textarea" ? "col-span-2" : ""}`}
+            className={`mb-2 ${
+              field.type === "textarea"
+                ? "col-span-2"
+                : field.colSpan
+                ? `col-span-${field.colSpan}`
+                : ""
+            } ${field.type === "checkbox" ? "flex items-center" : ""}`}
           >
             {field.type !== "checkbox" && (
               <label
@@ -65,6 +74,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 onChange={onChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
               >
+                <option value="0" disabled>
+                  Seleccionar...
+                </option>
                 {field.options.map((option, i) => (
                   <option key={i} value={option.value}>
                     {option.label}
@@ -90,8 +102,16 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 placeholder={field.placeholder || ""}
                 value={String(field.value)}
                 onChange={onChange}
-                className="border border-gray-300 p-2 rounded w-full text-sm resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 resize-none"
                 rows={4}
+              />
+            ) : field.type === "money" ? (
+              <MoneyInputField
+                name={field.name}
+                type={field.type === "money" ? "number" : field.type}
+                placeholder={field.placeholder || "0.00"}
+                value={String(field.value)}
+                onChange={onChange}
               />
             ) : (
               <InputField

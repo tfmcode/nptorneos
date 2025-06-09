@@ -5,3 +5,4 @@ export { default as Jugadores } from './Jugadores';
 export { default as Sedes } from './Sedes';
 export { default as System } from './System';
 export { default as Usuarios } from './Usuarios';
+export { default as Torneos } from './Torneos';

@@ -17,46 +17,46 @@ export const fetchTorneos = createAsyncThunk(
     {
       page,
       limit,
-      searchTerm
+      searchTerm,
     }: { page: number; limit: number; searchTerm: string },
     { rejectWithValue }
   ) => {
     try {
-      return await getTorneos(page, limit, searchTerm)
+      return await getTorneos(page, limit, searchTerm);
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al obtener torneos."
-      )
+      );
     }
   }
-)
+);
 
 export const saveTorneoThunk = createAsyncThunk(
   "torneos/saveTorneo",
   async (torneoData: TorneoInput & { id?: number }, { rejectWithValue }) => {
     try {
-      return await saveTorneo(torneoData)
+      return await saveTorneo(torneoData);
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al guardar torneo."
-      )
+      );
     }
   }
-)
+);
 
 export const removeTorneo = createAsyncThunk(
   "torneos/removeTorneo",
   async (id: number, { rejectWithValue }) => {
     try {
-      await deleteTorneo(id)
-      return id
+      await deleteTorneo(id);
+      return id;
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al eliminar torneo."
-      )
+      );
     }
   }
-)
+);
 
 const torneoSlice = createSlice({
   name: "torneos",
@@ -65,29 +65,28 @@ const torneoSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchTorneos.pending, (state) => {
-        state.loading = true
-        state.error = null
+        state.loading = true;
+        state.error = null;
       })
       .addCase(fetchTorneos.fulfilled, (state, action) => {
-        state.loading = false
-        state.torneos = action.payload.torneos
-        state.total = action.payload.total
-        state.page = action.payload.page
-        state.limit = action.payload.limit
+        state.loading = false;
+        state.torneos = action.payload.torneos;
+        state.total = action.payload.total;
+        state.page = action.payload.page;
+        state.limit = action.payload.limit;
       })
       .addCase(fetchTorneos.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.payload as string
+        state.loading = false;
+        state.error = action.payload as string;
       })
-
       .addCase(saveTorneoThunk.fulfilled, (state, action) => {
-        state.loading = false
-        const updatedTorneo = action.payload
-        if (!updatedTorneo || !updatedTorneo.id) return
+        state.loading = false;
+        const updatedTorneo = action.payload;
+        if (!updatedTorneo || !updatedTorneo.id) return;
 
-        const index = state.torneos.findIndex((c) => c.id === updatedTorneo.id)
+        const index = state.torneos.findIndex((c) => c.id === updatedTorneo.id);
         if (index !== -1) {
-          state.torneos[index] = updatedTorneo
+          state.torneos[index] = updatedTorneo;
         } else {
           state.torneos.unshift(updatedTorneo);
         }
@@ -112,7 +111,7 @@ const torneoSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       });
-  }
+  },
 });
 
 export default torneoSlice.reducer;

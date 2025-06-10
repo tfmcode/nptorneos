@@ -5,18 +5,25 @@ import {
   createTorneo,
   updateTorneo,
   deleteTorneo,
+  getTorneosByCampeonato,
 } from "../models/torneosModel";
 
 export const getTorneos = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const searchTerm = req.query.searchTerm
-      ? String(req.query.searchTerm)
-      : "";
+    const searchTerm = req.query.searchTerm ? String(req.query.searchTerm) : "";
+    const idcampeonato = req.query.idcampeonato
+      ? Number(req.query.idcampeonato)
+      : 0;
 
-    const { torneos, total } = await getAllTorneos(page, limit, searchTerm);
-    res.status(200).json({ torneos, total, page, limit });
+    if (idcampeonato !== 0) {
+      const torneos = await getTorneosByCampeonato(idcampeonato);
+      res.status(200).json(torneos);
+    } else {
+      const { torneos, total } = await getAllTorneos(page, limit, searchTerm);
+      res.status(200).json({ torneos, total, page, limit });
+    }
   } catch (error) {
     console.error("❌ Error al obtener los torneos:", error);
     res.status(500).json({ message: "Error al obtener los torneos.", error });

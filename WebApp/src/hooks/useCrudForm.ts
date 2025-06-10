@@ -27,7 +27,7 @@ export const useCrudForm = <T extends Record<string, unknown>>(
 
     setFormData((prevData) => ({ ...prevData, [name]: fieldValue }));
   };
-  
+
   const handleOpenModal = (data?: T) => {
     setFormData(
       data
@@ -62,6 +62,7 @@ export const useCrudForm = <T extends Record<string, unknown>>(
   return {
     formData,
     isModalOpen,
+    setFormData,
     handleInputChange,
     handleOpenModal,
     handleCloseModal,

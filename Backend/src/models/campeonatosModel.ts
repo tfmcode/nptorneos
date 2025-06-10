@@ -18,6 +18,17 @@ export const getAllCampeonatos = async (): Promise<ICampeonato[]> => {
   return rows;
 };
 
+export const getCampeonatosGaleria = async (): Promise<ICampeonato[]> => {
+  const { rows } = await pool.query(
+    `SELECT c.id, c.nombre FROM campeonatos c
+  INNER JOIN wtorneos t ON c.id = t.idcampeonato
+  WHERE t.idgaleria IS NOT NULL OR idgaleria != 0
+  GROUP BY c.id, c.nombre
+  ORDER BY c.nombre;`
+  );
+  return rows;
+};
+
 export const getCampeonatoById = async (
   id: number
 ): Promise<ICampeonato | null> => {
@@ -86,7 +97,7 @@ export const deleteCampeonato = async (id: number): Promise<boolean> => {
       [id]
     );
 
-    return (result.rowCount ?? 0) > 0; 
+    return (result.rowCount ?? 0) > 0;
   } catch (error) {
     console.error("❌ Error al eliminar campeonato:", error);
     throw new Error("Error al eliminar el campeonato.");

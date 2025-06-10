@@ -7,6 +7,10 @@ import sedeReducer from "./slices/sedeSlice";
 import codificadorReducer from "./slices/codificadorSlice";
 import equipoSlice from "./slices/equiposSlice"; // 🔹 Importación del slice de equipos
 import torneoSlice from "./slices/torneoSlice";
+import zonaSlice from "./slices/zonaSlice";
+import zonasEquiposSlice from "./slices/zonasEquiposSlice";
+import partidoSlice from "./slices/partidoSlice";
+import torneosImagenSlice from "./slices/torneosImagenSlice";
 
 // 🔥 Configuración de Redux Store con middleware personalizado
 export const store = configureStore({
@@ -18,7 +22,11 @@ export const store = configureStore({
     sedes: sedeReducer,
     codificadores: codificadorReducer,
     equipos: equipoSlice, // 🔹 Añadido el slice de equipos
-    torneos: torneoSlice
+    torneos: torneoSlice,
+    zonas: zonaSlice,
+    zonasEquipos: zonasEquiposSlice,
+    partidos: partidoSlice,
+    torneosImagenes: torneosImagenSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

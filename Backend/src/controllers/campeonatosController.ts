@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   getAllCampeonatos,
+  getCampeonatosGaleria,
   getCampeonatoById,
   createCampeonato,
   updateCampeonato,
@@ -9,7 +10,10 @@ import {
 
 export const getCampeonatos = async (req: Request, res: Response) => {
   try {
-    const campeonatos = await getAllCampeonatos();
+    const galeria = req.query.galeria ? Boolean(req.query.galeria) : false;
+    const campeonatos = galeria
+      ? await getCampeonatosGaleria()
+      : await getAllCampeonatos();
     res.status(200).json(campeonatos);
   } catch (error) {
     console.error("❌ Error al obtener los campeonatos:", error);

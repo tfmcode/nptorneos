@@ -8,6 +8,10 @@ import jugadoresRoutes from "./routes/jugadoresRoutes";
 import codificadoresRoutes from "./routes/codificadoresRoutes";
 import equiposRoutes from "./routes/equiposRoutes";
 import torneosRoutes from "./routes/torneosRoutes";
+import zonasRoutes from "./routes/zonasRoutes";
+import zonasEquiposRoutes from "./routes/zonasEquiposRoutes";
+import partidosRoutes from "./routes/partidosRoutes";
+import torneosImagenesRoutes from "./routes/torneosImagenesRoutes";
 
 dotenv.config();
 
@@ -28,6 +32,10 @@ app.use("/api/jugadores", jugadoresRoutes);
 app.use("/api/codificadores", codificadoresRoutes);
 app.use("/api/equipos", equiposRoutes);
 app.use("/api/torneos", torneosRoutes);
+app.use("/api/zonas", zonasRoutes);
+app.use("/api/zonas-equipos", zonasEquiposRoutes);
+app.use("/api/partidos", partidosRoutes);
+app.use("/api/torneos-imagenes", torneosImagenesRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Ruta no encontrada." });
@@ -39,7 +47,7 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   res.status(err.status || 500).json({
     message: err.message || "Error interno del servidor.",
     error: process.env.NODE_ENV === "production" ? {} : err,
-  }); 
+  });
 };
 
 app.use(errorHandler);

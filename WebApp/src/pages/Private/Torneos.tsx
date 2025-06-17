@@ -1,49 +1,40 @@
-import React, { useEffect, useState } from "react"
-import { useSelector, useDispatch } from "react-redux"
-import { RootState, AppDispatch } from "../../store"
-import { Torneo } from "../../types/torneos"
-import DataTable from "../../components/tables/DataTable"
-import DynamicForm, { FieldConfig } from "../../components/forms/DynamicForm"
-import { PlusCircleIcon } from "@heroicons/react/20/solid"
-import {
-  fetchTorneos,
-  saveTorneoThunk,
-  removeTorneo
-} from "../../store/slices/torneoSlice"
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store/index";
+import { Torneo } from "../../types/torneos";
+import DataTable from "../../components/tables/DataTable";
+import { PlusCircleIcon } from "@heroicons/react/20/solid";
+import { fetchTorneos, removeTorneo } from "../../store/slices/torneoSlice";
 import {
   Modal,
   PageHeader,
   StatusMessage,
-  SearchField
-} from "../../components/common"
-import { useCrudForm } from "../../hooks/useCrudForm"
-import { torneoColumns } from "../../components/tables"
-import { fetchCampeonatos } from "../../store/slices/campeonatoSlice"
-import { fetchSedes } from "../../store/slices/sedeSlice"
-import { fetchCodificadores } from "../../store/slices/codificadorSlice"
-import { AccordionItem } from "../../components/common/Accordion"
-import { Accordion } from "../../components/common/Accordion"
+  SearchField,
+} from "../../components/common";
+import { useCrudForm } from "../../hooks/useCrudForm";
+import { torneoColumns } from "../../components/tables";
+import { AccordionItem } from "../../components/common/Accordion";
+import { Accordion } from "../../components/common/Accordion";
+import DatosBasicos from "../../components/torneos/DatosBasicos";
+import Zonas from "../../components/torneos/Zonas";
+import ZonasEquipos from "../../components/torneos/ZonasEquipos";
+import Partidos from "../../components/torneos/Partidos";
+import Imagenes from "../../components/torneos/Imagenes";
 
 const Torneos: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>()
+  const dispatch = useDispatch<AppDispatch>();
 
+  const { user } = useSelector((state: RootState) => state.auth);
   const { torneos, loading, error, page, limit, total } = useSelector(
     (state: RootState) => state.torneos
-  )
-
-  const { user } = useSelector((state: RootState) => state.auth)
-  const { campeonatos } = useSelector((state: RootState) => state.campeonatos)
-  const { sedes } = useSelector((state: RootState) => state.sedes)
-  const { codificadores } = useSelector(
-    (state: RootState) => state.codificadores
-  )
+  );
 
   const {
     formData,
     isModalOpen,
     handleInputChange,
     handleOpenModal,
-    handleCloseModal
+    handleCloseModal,
   } = useCrudForm<Torneo>({
     id: undefined,
     nombre: "",
@@ -72,222 +63,31 @@ const Torneos: React.FC = () => {
     fhcarga: undefined,
     fhbaja: undefined,
     idusuario: user?.idusuario ?? 0,
-    sas: 0
-  })
+    sas: 0,
+  });
 
-  const [pendingSearchTerm, setPendingSearchTerm] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
+  const [pendingSearchTerm, setPendingSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    dispatch(fetchTorneos({ page, limit, searchTerm }))
-    dispatch(fetchCampeonatos())
-    dispatch(fetchSedes())
-    dispatch(fetchCodificadores())
-  }, [dispatch, page, limit, searchTerm])
+    dispatch(fetchTorneos({ page, limit, searchTerm }));
+  }, [dispatch, page, limit, searchTerm]);
 
   const handleSearch = () => {
-    dispatch(fetchTorneos({ page: 1, limit, searchTerm: pendingSearchTerm }))
-    setSearchTerm(pendingSearchTerm)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      const { id, ...torneoData } = formData
-      await dispatch(saveTorneoThunk(id ? formData : torneoData)).unwrap()
-      dispatch(fetchTorneos({ page, limit, searchTerm }))
-      handleCloseModal()
-    } catch (err) {
-      console.error("Error al guardar torneo:", err)
-    }
-  }
+    dispatch(fetchTorneos({ page: 1, limit, searchTerm: pendingSearchTerm }));
+    setSearchTerm(pendingSearchTerm);
+  };
 
   const handleDelete = async (torneo: Torneo) => {
-    await dispatch(removeTorneo(torneo.id!)).unwrap()
-    dispatch(fetchTorneos({ page, limit, searchTerm }))
-  }
+    await dispatch(removeTorneo(torneo.id!)).unwrap();
+    dispatch(fetchTorneos({ page, limit, searchTerm }));
+  };
 
   const filteredTorneos = Array.isArray(torneos)
     ? torneos.filter((torneo) =>
         torneo.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
       )
-    : []
-
-  const torneoFields: FieldConfig[] = [
-    {
-      name: "nombre",
-      type: "text",
-      placeholder: "Nombre del Torneo",
-      value: formData.nombre ?? "",
-      colSpan: 2
-    },
-    {
-      name: "abrev",
-      type: "text",
-      placeholder: "Abreviatura del Torneo",
-      value: formData.abrev ?? ""
-    },
-    {
-      name: "sas",
-      type: "checkbox",
-      value: formData.sas ?? 0,
-      label: "Torneo Sas"
-    },
-    {
-      name: "idcampeonato",
-      type: "select",
-      options: campeonatos
-        .filter((campeonato) => campeonato.codestado === 1)
-        .map((campeonato) => ({
-          label: campeonato.nombre,
-          value: campeonato.id ?? 0
-        })),
-      value: formData.idcampeonato ?? 0,
-      label: "Campeonato"
-    },
-    {
-      name: "idsede",
-      type: "select",
-      options: sedes.map((sede) => ({
-        label: sede.nombre,
-        value: sede.id ?? 1
-      })),
-      value: formData.idsede ?? 0,
-      label: "Sede"
-    },
-    {
-      name: "codmodelo",
-      type: "select",
-      options: [
-        { label: "Regular", value: 1 },
-        { label: "Playoff", value: 2 }
-      ],
-      value: formData.codmodelo ?? 1,
-      label: "Modelo de Torneo"
-    },
-    {
-      name: "idpadre",
-      type: "select",
-      options: torneos
-        .filter((torneo) => torneo.codestado === 1)
-        .map((torneo) => ({
-          label: torneo.nombre,
-          value: torneo.id ?? 1
-        })),
-      value: formData.idpadre ?? 0,
-      label: "Torneo Padre"
-    },
-    {
-      name: "anio",
-      type: "number",
-      value: formData.anio ?? 1,
-      label: "Año"
-    },
-    {
-      name: "codestado",
-      type: "select",
-      options: [
-        { label: "Activo", value: 1 },
-        { label: "Inactivo", value: 0 }
-      ],
-      value: formData.codestado ?? 1,
-      label: "Estado"
-    },
-    {
-      name: "codtipo",
-      type: "select",
-      options: codificadores
-        .filter(
-          (codificador) =>
-            codificador.habilitado === "1" && codificador.idcodificador === 3
-        )
-        .map((codificador) => ({
-          label: codificador.descripcion ?? "",
-          value: codificador.id ?? 1
-        })),
-      value: formData.codtipo ?? 0,
-      label: "Tipo de Torneo"
-    },
-    {
-      name: "cantmin",
-      type: "number",
-      value: formData.cantmin ?? 1,
-      label: "Cant. Mínima"
-    },
-    {
-      name: "cposicion",
-      type: "checkbox",
-      value: formData.cposicion ?? 1,
-      label: "Calc. Posiciones"
-    },
-    {
-      name: "cpromedio",
-      type: "checkbox",
-      value: formData.cpromedio ?? 1,
-      label: "Calc. Promedio"
-    },
-    {
-      name: "torneodefault",
-      type: "checkbox",
-      value: formData.torneodefault ?? 0,
-      label: "Torneo Default"
-    },
-    {
-      name: "fotojugador",
-      type: "checkbox",
-      value: formData.fotojugador ?? 0,
-      label: "Foto Jugador"
-    },
-    {
-      name: "excluir_res",
-      type: "checkbox",
-      value: formData.excluir_res ?? 0,
-      label: "Excluir Resultados"
-    },
-    {
-      name: "individual",
-      type: "checkbox",
-      value: formData.individual ?? 0,
-      label: "Individual"
-    },
-    {
-      name: "idgaleria",
-      type: "select",
-      options: [],
-      value: formData.idgaleria ?? 0,
-      label: "Galeria"
-    },
-    {
-      name: "valor_insc",
-      type: "money",
-      value: formData.valor_insc ?? 0,
-      label: "Inscripción"
-    },
-    {
-      name: "valor_arbitro",
-      type: "money",
-      value: formData.valor_arbitro ?? 1,
-      label: "Valor Árbitro"
-    },
-    {
-      name: "valor_cancha",
-      type: "money",
-      value: formData.valor_cancha ?? 1,
-      label: "Valor Cancha"
-    },
-    {
-      name: "valor_fecha",
-      type: "money",
-      value: formData.valor_fecha ?? 1,
-      label: "Valor Fecha"
-    },
-    {
-      name: "valor_medico",
-      type: "money",
-      value: formData.valor_medico ?? 1,
-      label: "Valor Médico"
-    }
-  ]
+    : [];
 
   return (
     <div className="flex justify-center items-center">
@@ -298,8 +98,8 @@ const Torneos: React.FC = () => {
             {
               label: "Agregar Torneo",
               onClick: () => handleOpenModal(),
-              icon: <PlusCircleIcon className="h-5 w-5" />
-            }
+              icon: <PlusCircleIcon className="h-5 w-5" />,
+            },
           ]}
         />
 
@@ -350,32 +150,22 @@ const Torneos: React.FC = () => {
         >
           <Accordion>
             <AccordionItem title="Datos Básicos" defaultOpen={true}>
-              <DynamicForm
-                fields={torneoFields}
-                onChange={handleInputChange}
-                onSubmit={handleSubmit}
-                submitLabel="Guardar"
-              />
+              <DatosBasicos formData={formData} onChange={handleInputChange} />
             </AccordionItem>
             <AccordionItem title="Zonas" defaultOpen={false}>
-              <div>
-                <h1>Zonas</h1>
-              </div>
+              <Zonas idtorneo={formData.id ?? 0} />
             </AccordionItem>
             <AccordionItem title="Equipos" defaultOpen={false}>
-              <div>
-                <h1>Equipos</h1>
-              </div>
+              <ZonasEquipos
+                idtorneo={formData.id ?? 0}
+                valor_fecha={formData.valor_fecha ?? 0}
+              />
             </AccordionItem>
             <AccordionItem title="Fixture" defaultOpen={false}>
-              <div>
-                <h1>Fixture</h1>
-              </div>
+              <Partidos idtorneo={formData.id ?? 0} />
             </AccordionItem>
             <AccordionItem title="Imágenes" defaultOpen={false}>
-              <div>
-                <h1>Imágenes</h1>
-              </div>
+              <Imagenes idtorneo={formData.id ?? 0} />
             </AccordionItem>
           </Accordion>
         </Modal>

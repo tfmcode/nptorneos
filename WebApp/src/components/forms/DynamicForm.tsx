@@ -7,7 +7,7 @@ interface FieldOption {
   value: string | number;
 }
 
-export interface FieldConfig {
+interface FieldConfig {
   name: string;
   type:
     | "text"
@@ -19,6 +19,7 @@ export interface FieldConfig {
     | "number"
     | "textarea"
     | "money"
+    | "file";
   placeholder?: string;
   value: string | number | boolean;
   options?: FieldOption[];
@@ -112,6 +113,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 placeholder={field.placeholder || "0.00"}
                 value={String(field.value)}
                 onChange={onChange}
+              />
+            ) : field.type === "file" ? (
+              <input
+                name={field.name}
+                type="file"
+                onChange={onChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
               />
             ) : (
               <InputField

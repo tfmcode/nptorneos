@@ -1,34 +1,34 @@
 import { pool } from "../config/db";
 
 export interface ITorneo {
-  id?: number
-  nombre: string
-  abrev: string
-  anio: number
-  idcampeonato: number
-  idsede: number
-  codestado: number
-  codtipoestado: number
-  cposicion: number
-  cpromedio: number
-  codmodelo: number
-  codtipo: number
-  cantmin: number
-  torneodefault: number
-  fotojugador: number
-  idpadre?: number
-  idgaleria?: number
-  valor_insc?: number
-  valor_fecha?: number
-  individual: number
-  valor_arbitro?: number
-  valor_cancha?: number
-  valor_medico?: number
-  excluir_res: number
-  fhcarga?: string
-  fhbaja?: string
-  idusuario: number
-  sas: number
+  id?: number;
+  nombre: string;
+  abrev: string;
+  anio: number;
+  idcampeonato: number;
+  idsede: number;
+  codestado: number;
+  codtipoestado: number;
+  cposicion: number;
+  cpromedio: number;
+  codmodelo: number;
+  codtipo: number;
+  cantmin: number;
+  torneodefault: number;
+  fotojugador: number;
+  idpadre?: number;
+  idgaleria?: number;
+  valor_insc?: number;
+  valor_fecha?: number;
+  individual: number;
+  valor_arbitro?: number;
+  valor_cancha?: number;
+  valor_medico?: number;
+  excluir_res: number;
+  fhcarga?: string;
+  fhbaja?: string;
+  idusuario: number;
+  sas: number;
 }
 
 export const getTorneoById = async (id: number): Promise<ITorneo | null> => {
@@ -39,13 +39,23 @@ export const getTorneoById = async (id: number): Promise<ITorneo | null> => {
   return rows.length > 0 ? rows[0] : null;
 };
 
+export const getTorneosByCampeonato = async (
+  idcampeonato: number
+): Promise<ITorneo[]> => {
+  const { rows } = await pool.query(
+    `SELECT id, nombre, abrev, anio, idcampeonato, idsede, codestado, codtipoestado, cposicion, cpromedio, codmodelo, codtipo, cantmin, torneodefault, fotojugador, idpadre, idgaleria, valor_insc, valor_fecha, individual, valor_arbitro, valor_cancha, valor_medico, excluir_res, fhcarga, idusuario, sas FROM wtorneos WHERE idcampeonato = $1 AND fhbaja IS NULL;`,
+    [idcampeonato]
+  );
+  return rows;
+};
+
 export const getAllTorneos = async (
   page: number,
   limit: number,
   searchTerm: string
 ): Promise<{ torneos: ITorneo[]; total: number }> => {
   const offset = (page - 1) * limit;
-  
+
   let totalQuery: string;
   let torneosQuery: string;
   let params: any[];
@@ -78,7 +88,10 @@ export const getAllTorneos = async (
     params = [limit, offset];
   }
 
-  const totalResult = await pool.query(totalQuery, searchTerm ? [`%${searchTerm}%`] : []);
+  const totalResult = await pool.query(
+    totalQuery,
+    searchTerm ? [`%${searchTerm}%`] : []
+  );
   const { rows } = await pool.query(torneosQuery, params);
 
   return {
@@ -126,7 +139,7 @@ export const createTorneo = async (torneo: ITorneo): Promise<ITorneo> => {
       torneo.valor_medico,
       torneo.excluir_res,
       torneo.idusuario,
-      torneo.sas
+      torneo.sas,
     ]
   );
   return rows[0];

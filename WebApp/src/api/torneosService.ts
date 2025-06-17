@@ -32,6 +32,18 @@ export const getTorneos = async (
   return { torneos: [], total: 0, page, limit };
 };
 
+export const getTorneosCampeonato = async (
+  idcampeonato: number
+): Promise<Torneo[]> => {
+  try {
+    const response = await API.get(`/api/torneos?idcampeonato=${idcampeonato}`);
+    return response.data;
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return [];
+};
+
 export const saveTorneo = async (data: TorneoInput & { id?: number }) => {
   try {
     const response = data.id

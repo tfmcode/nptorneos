@@ -21,6 +21,16 @@ export const getCampeonatos = async (): Promise<Campeonato[]> => {
   return [];
 };
 
+export const getCampeonatosGaleria = async (): Promise<Campeonato[]> => {
+  try {
+    const response = await API.get("/api/campeonatos?galeria=true");
+    return response.data ?? [];
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return [];
+};
+
 export const saveCampeonato = async (
   data: CampeonatoInput & { id?: number }
 ) => {

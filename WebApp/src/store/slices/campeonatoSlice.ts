@@ -3,11 +3,13 @@ import {
   getCampeonatos,
   saveCampeonato,
   deleteCampeonato,
+  getCampeonatosGaleria,
 } from "../../api/campeonatosService";
 import { Campeonato, CampeonatoInput } from "../../types/campeonato";
 
 const initialState = {
   campeonatos: [] as Campeonato[],
+  campeonatosGaleria: [] as Campeonato[],
   loading: false,
   error: null as string | null,
 };
@@ -17,6 +19,19 @@ export const fetchCampeonatos = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await getCampeonatos();
+    } catch (error: unknown) {
+      return rejectWithValue(
+        (error as Error).message || "Error al obtener campeonatos."
+      );
+    }
+  }
+);
+
+export const fetchCampeonatosGaleria = createAsyncThunk(
+  "campeonatos/fetchCampeonatosGaleria",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getCampeonatosGaleria();
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al obtener campeonatos."
@@ -73,7 +88,18 @@ const campeonatoSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-
+      .addCase(fetchCampeonatosGaleria.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCampeonatosGaleria.fulfilled, (state, action) => {
+        state.loading = false;
+        state.campeonatosGaleria = action.payload;
+      })
+      .addCase(fetchCampeonatosGaleria.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
       .addCase(saveCampeonatoThunk.fulfilled, (state, action) => {
         state.loading = false;
         const updatedCampeonato = action.payload;

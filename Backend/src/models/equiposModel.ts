@@ -38,7 +38,7 @@ export const getAllEquipos = async (
     ? `AND (LOWER(e.nombre) LIKE LOWER($3) OR LOWER(e.abrev) LIKE LOWER($3))`
     : "";
 
-  const totalQuery = `SELECT COUNT(*) FROM equipos e WHERE e.fhbaja IS NULL ${searchClause};`;
+  const totalQuery = `SELECT COUNT(*) FROM wequipos e WHERE e.fhbaja IS NULL ${searchClause};`;
   const dataQuery = `
     SELECT e.id, e.nombre, e.abrev, e.contacto, e.emailcto, e.telefonocto, e.celularcto,
       e.contrasenia, e.buenafe, e.codcateg, e.coddeporte, e.iniciales, e.codestado,
@@ -47,7 +47,7 @@ export const getAllEquipos = async (
       TO_CHAR(e.fhbaja, 'YYYY-MM-DD') as fhbaja,
       e.idusuario, e.foto, e.observ, e.saldodeposito, TO_CHAR(e.fhultmod, 'YYYY-MM-DD') as fhultmod,
       s.nombre AS sede_nombre
-    FROM equipos e
+    FROM wequipos e
     LEFT JOIN wsedes s ON s.id = e.idsede
     WHERE e.fhbaja IS NULL ${searchClause}
     ORDER BY e.fhcarga DESC LIMIT $1 OFFSET $2;`;
@@ -74,7 +74,7 @@ export const getEquipoById = async (id: number): Promise<IEquipo | null> => {
       TO_CHAR(e.fhbaja, 'YYYY-MM-DD') as fhbaja,
       e.idusuario, e.foto, e.observ, e.saldodeposito, TO_CHAR(e.fhultmod, 'YYYY-MM-DD') as fhultmod,
       s.nombre AS sede_nombre
-     FROM equipos e
+     FROM wequipos e
      LEFT JOIN wsedes s ON s.id = e.idsede
      WHERE e.id = $1 AND e.fhbaja IS NULL;`,
     [id]
@@ -84,7 +84,7 @@ export const getEquipoById = async (id: number): Promise<IEquipo | null> => {
 
 export const createEquipo = async (equipo: IEquipo): Promise<IEquipo> => {
   const { rows } = await pool.query(
-    `INSERT INTO equipos (
+    `INSERT INTO wequipos (
       nombre, abrev, contacto, emailcto, telefonocto, celularcto, contrasenia,
       buenafe, codcateg, coddeporte, iniciales, codestado, archivoubic,
       archivosize, archivonom, idsede, fhcarga, idusuario, foto, observ, saldodeposito
@@ -131,7 +131,7 @@ export const updateEquipo = async (
     if (
       equipo[key as keyof IEquipo] !== undefined &&
       key !== "fhultmod" &&
-      key !== "sede_nombre" 
+      key !== "sede_nombre"
     ) {
       updates.push(`${key} = $${i}`);
       values.push(equipo[key as keyof IEquipo]);
@@ -144,7 +144,7 @@ export const updateEquipo = async (
   updates.push(`fhultmod = NOW()`);
   values.push(id);
 
-  const query = `UPDATE equipos SET ${updates.join(
+  const query = `UPDATE wequipos SET ${updates.join(
     ", "
   )} WHERE id = $${i} RETURNING *;`;
 
@@ -154,7 +154,7 @@ export const updateEquipo = async (
 
 export const deleteEquipo = async (id: number): Promise<boolean> => {
   const result = await pool.query(
-    `UPDATE equipos SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;`,
+    `UPDATE wequipos SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;`,
     [id]
   );
   return (result.rowCount ?? 0) > 0;

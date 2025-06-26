@@ -22,51 +22,27 @@ export const getEquipos = async (
   limit: number;
 }> => {
   try {
-    const response = await API.get(
+    const res = await API.get(
       `/api/equipos?page=${page}&limit=${limit}&searchTerm=${searchTerm}`
     );
-    return response.data;
+    return res.data;
   } catch (error) {
     handleAxiosError(error);
   }
   return { equipos: [], total: 0, page, limit };
 };
 
-export const getEquipoById = async (
-  id: number
+export const saveEquipo = async (
+  data: EquipoInput & { id?: number }
 ): Promise<Equipo | undefined> => {
   try {
-    const response = await API.get(`/api/equipos/${id}`);
-    return response.data;
+    const res = data.id
+      ? await API.put(`/api/equipos/${data.id}`, data)
+      : await API.post("/api/equipos", data);
+    return res.data.equipo;
   } catch (error) {
     handleAxiosError(error);
   }
-  return undefined;
-};
-
-export const createEquipo = async (
-  data: EquipoInput
-): Promise<Equipo | undefined> => {
-  try {
-    const response = await API.post("/api/equipos", data);
-    return response.data.equipo;
-  } catch (error) {
-    handleAxiosError(error);
-  }
-  return undefined;
-};
-
-export const updateEquipo = async (
-  id: number,
-  data: EquipoInput
-): Promise<Equipo | undefined> => {
-  try {
-    const response = await API.put(`/api/equipos/${id}`, data);
-    return response.data.equipo;
-  } catch (error) {
-    handleAxiosError(error);
-  }
-  return undefined;
 };
 
 export const deleteEquipo = async (id: number): Promise<void> => {

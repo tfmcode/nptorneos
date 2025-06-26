@@ -1,31 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { Equipo } from "../../types/equipos";
-import {
-  fetchEquipos,
-  saveEquipoThunk,
-  removeEquipo,
-} from "../../store/slices/equiposSlice";
-import { fetchSedes } from "../../store/slices/sedeSlice";
-import { useCrudForm } from "../../hooks/useCrudForm";
-import { equipoColumns } from "../../components/tables/columns/equiposColumns";
+import { fetchEquipos, removeEquipo } from "../../store/slices/equiposSlice";
 import DataTable from "../../components/tables/DataTable";
-import DynamicForm from "../../components/forms/DynamicForm";
 import {
   Modal,
   PageHeader,
   StatusMessage,
   SearchField,
 } from "../../components/common";
+import { useCrudForm } from "../../hooks/useCrudForm";
+import { equipoColumns } from "../../components/tables";
+import { Accordion, AccordionItem } from "../../components/common/Accordion";
+import DatosBasicos from "../../components/equipos/DatosBasicos";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 const Equipos: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+
+  const { user } = useSelector((state: RootState) => state.auth);
   const { equipos, loading, error, page, limit, total } = useSelector(
     (state: RootState) => state.equipos
   );
-  const { sedes } = useSelector((state: RootState) => state.sedes);
 
   const {
     formData,
@@ -34,12 +31,21 @@ const Equipos: React.FC = () => {
     handleOpenModal,
     handleCloseModal,
   } = useCrudForm<Equipo>({
+    id: undefined,
     nombre: "",
     abrev: "",
+    contacto: "",
+    telefonocto: "",
+    celularcto: "",
+    emailcto: "",
+    contrasenia: "",
     iniciales: "",
-    coddeporte: 1,
+    codestado: 1,
     idsede: 0,
-    id: undefined,
+    foto: "",
+    observ: "",
+    saldodeposito: 0,
+    idusuario: user?.idusuario ?? 0,
   });
 
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
@@ -47,19 +53,11 @@ const Equipos: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchEquipos({ page, limit, searchTerm }));
-    dispatch(fetchSedes());
   }, [dispatch, page, limit, searchTerm]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { id, ...equipoData } = formData;
-      await dispatch(saveEquipoThunk(id ? formData : equipoData)).unwrap();
-      handleCloseModal();
-      dispatch(fetchEquipos({ page, limit, searchTerm }));
-    } catch (err) {
-      console.error("Error al guardar equipo:", err);
-    }
+  const handleSearch = () => {
+    dispatch(fetchEquipos({ page: 1, limit, searchTerm: pendingSearchTerm }));
+    setSearchTerm(pendingSearchTerm);
   };
 
   const handleDelete = async (equipo: Equipo) => {
@@ -67,10 +65,11 @@ const Equipos: React.FC = () => {
     dispatch(fetchEquipos({ page, limit, searchTerm }));
   };
 
-  const handleSearch = () => {
-    dispatch(fetchEquipos({ page: 1, limit, searchTerm: pendingSearchTerm }));
-    setSearchTerm(pendingSearchTerm);
-  };
+  const filteredEquipos = Array.isArray(equipos)
+    ? equipos.filter((eq) =>
+        eq.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   return (
     <div className="flex justify-center items-center">
@@ -87,7 +86,7 @@ const Equipos: React.FC = () => {
         />
 
         <SearchField
-          placeholder="Buscar por nombre o abreviatura"
+          placeholder="Buscar por nombre"
           value={pendingSearchTerm}
           onChange={(e) => setPendingSearchTerm(e.target.value)}
           onSearch={handleSearch}
@@ -97,9 +96,9 @@ const Equipos: React.FC = () => {
 
         <DataTable<Equipo>
           columns={equipoColumns}
-          data={equipos}
-          onEdit={(row) => handleOpenModal(row)}
-          onDelete={handleDelete}
+          data={filteredEquipos}
+          onEdit={(row) => handleOpenModal(row as Equipo)}
+          onDelete={(row) => handleDelete(row as Equipo)}
         />
 
         <div className="flex justify-between items-center mt-4">
@@ -131,50 +130,12 @@ const Equipos: React.FC = () => {
           onClose={handleCloseModal}
           title={formData.id ? "Editar Equipo" : "Crear Equipo"}
         >
-          <DynamicForm
-            fields={[
-              {
-                name: "nombre",
-                type: "text",
-                placeholder: "Nombre del Equipo",
-                value: formData.nombre ?? "",
-              },
-              {
-                name: "abrev",
-                type: "text",
-                placeholder: "Abreviatura",
-                value: formData.abrev ?? "",
-              },
-              {
-                name: "iniciales",
-                type: "text",
-                placeholder: "Iniciales",
-                value: formData.iniciales ?? "",
-              },
-              {
-                name: "coddeporte",
-                type: "number",
-                placeholder: "Código de Deporte",
-                value: formData.coddeporte ?? 1,
-              },
-              {
-                name: "idsede",
-                type: "select",
-                placeholder: "Seleccione una sede",
-                value: formData.idsede ?? "",
-                options: [
-                  { label: "Seleccionar sede...", value: "" },
-                  ...sedes.map((sede) => ({
-                    label: sede.nombre,
-                    value: sede.id!,
-                  })),
-                ],
-              },
-            ]}
-            onChange={handleInputChange}
-            onSubmit={handleSubmit}
-            submitLabel="Guardar"
-          />
+          <Accordion>
+            <AccordionItem title="Datos Básicos" defaultOpen={true}>
+              <DatosBasicos formData={formData} onChange={handleInputChange} />
+            </AccordionItem>
+            {/* A futuro: más submódulos como Buenafe, Jugadores, Torneos, Imagenes, Cuenta Corriente */}
+          </Accordion>
         </Modal>
       </div>
     </div>

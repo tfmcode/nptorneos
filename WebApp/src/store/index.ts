@@ -12,7 +12,6 @@ import zonasEquiposSlice from "./slices/zonasEquiposSlice";
 import partidoSlice from "./slices/partidoSlice";
 import torneosImagenSlice from "./slices/torneosImagenSlice";
 
-// 🔥 Configuración de Redux Store con middleware personalizado
 export const store = configureStore({
   reducer: {
     usuarios: usuarioReducer, // 🔹 Reemplazamos `users` → `usuarios`
@@ -21,7 +20,7 @@ export const store = configureStore({
     jugadores: jugadoresReducer,
     sedes: sedeReducer,
     codificadores: codificadorReducer,
-    equipos: equipoSlice, // 🔹 Añadido el slice de equipos
+    equipos: equipoSlice, 
     torneos: torneoSlice,
     zonas: zonaSlice,
     zonasEquipos: zonasEquiposSlice,

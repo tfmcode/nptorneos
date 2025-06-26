@@ -1,30 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import {
-  getEquipos,
-  createEquipo,
-  updateEquipo,
-  deleteEquipo,
-} from "../../api/equiposService";
+import { getEquipos, saveEquipo, deleteEquipo } from "../../api/equiposService";
 import { Equipo, EquipoInput } from "../../types/equipos";
 
-interface EquiposState {
-  equipos: Equipo[];
-  total: number;
-  page: number;
-  limit: number;
-  loading: boolean;
-  error: string | null;
-  searchTerm: string;
-}
-
-const initialState: EquiposState = {
-  equipos: [],
+const initialState = {
+  equipos: [] as Equipo[],
   total: 0,
   page: 1,
   limit: 10,
   loading: false,
-  error: null,
-  searchTerm: "",
+  error: null as string | null,
 };
 
 export const fetchEquipos = createAsyncThunk(
@@ -51,9 +35,7 @@ export const saveEquipoThunk = createAsyncThunk(
   "equipos/saveEquipo",
   async (equipoData: EquipoInput & { id?: number }, { rejectWithValue }) => {
     try {
-      return equipoData.id
-        ? await updateEquipo(equipoData.id, equipoData)
-        : await createEquipo(equipoData);
+      return await saveEquipo(equipoData);
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al guardar equipo."
@@ -79,11 +61,7 @@ export const removeEquipo = createAsyncThunk(
 const equiposSlice = createSlice({
   name: "equipos",
   initialState,
-  reducers: {
-    setSearchTerm(state, action) {
-      state.searchTerm = action.payload;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchEquipos.pending, (state) => {
@@ -102,36 +80,35 @@ const equiposSlice = createSlice({
         state.error = action.payload as string;
       })
 
+      .addCase(saveEquipoThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        if (!updated || !updated.id) return;
+
+        const idx = state.equipos.findIndex((e) => e.id === updated.id);
+        if (idx !== -1) {
+          state.equipos[idx] = updated;
+        } else {
+          state.equipos.unshift(updated);
+        }
+      })
+
       .addCase(saveEquipoThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
-      })
-      .addCase(saveEquipoThunk.fulfilled, (state, action) => {
-        state.loading = false;
-        const updatedEquipo = action.payload;
-        if (!updatedEquipo || !updatedEquipo.id) return;
-
-        const index = state.equipos.findIndex((e) => e.id === updatedEquipo.id);
-        if (index !== -1) {
-          state.equipos[index] = updatedEquipo;
-        } else {
-          state.equipos.unshift(updatedEquipo);
-        }
       })
       .addCase(saveEquipoThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
+      .addCase(removeEquipo.fulfilled, (state, action) => {
+        state.loading = false;
+        state.equipos = state.equipos.filter((e) => e.id !== action.payload);
+      })
       .addCase(removeEquipo.pending, (state) => {
         state.loading = true;
         state.error = null;
-      })
-      .addCase(removeEquipo.fulfilled, (state, action) => {
-        state.loading = false;
-        state.equipos = state.equipos.filter(
-          (equipo) => equipo.id !== action.payload
-        );
       })
       .addCase(removeEquipo.rejected, (state, action) => {
         state.loading = false;
@@ -140,5 +117,4 @@ const equiposSlice = createSlice({
   },
 });
 
-export const { setSearchTerm } = equiposSlice.actions;
 export default equiposSlice.reducer;

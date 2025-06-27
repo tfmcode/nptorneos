@@ -11,109 +11,122 @@ export interface IEquipo {
   contrasenia?: string;
   buenafe?: number;
   codcateg?: number;
-  coddeporte: number;
+  coddeporte?: number;
   iniciales?: string;
   codestado?: number;
   archivoubic?: string;
   archivosize?: number;
   archivonom?: string;
   idsede?: number;
-  sede_nombre?: string;
-  fhcarga?: Date;
-  fhbaja?: Date | null;
+  fhcarga?: Date | string;
+  fhbaja?: Date | string | null;
   idusuario?: number;
   foto?: string;
   observ?: string;
   saldodeposito?: number;
-  fhultmod?: Date;
+  fhultmod?: Date | string;
 }
-
-export const getAllEquipos = async (
-  page: number,
-  limit: number,
-  searchTerm: string
-): Promise<{ equipos: IEquipo[]; total: number }> => {
-  const offset = (page - 1) * limit;
-  const searchClause = searchTerm
-    ? `AND (LOWER(e.nombre) LIKE LOWER($3) OR LOWER(e.abrev) LIKE LOWER($3))`
-    : "";
-
-  const totalQuery = `SELECT COUNT(*) FROM wequipos e WHERE e.fhbaja IS NULL ${searchClause};`;
-  const dataQuery = `
-    SELECT e.id, e.nombre, e.abrev, e.contacto, e.emailcto, e.telefonocto, e.celularcto,
-      e.contrasenia, e.buenafe, e.codcateg, e.coddeporte, e.iniciales, e.codestado,
-      e.archivoubic, e.archivosize, e.archivonom, e.idsede,
-      TO_CHAR(e.fhcarga, 'YYYY-MM-DD') as fhcarga,
-      TO_CHAR(e.fhbaja, 'YYYY-MM-DD') as fhbaja,
-      e.idusuario, e.foto, e.observ, e.saldodeposito, TO_CHAR(e.fhultmod, 'YYYY-MM-DD') as fhultmod,
-      s.nombre AS sede_nombre
-    FROM wequipos e
-    LEFT JOIN wsedes s ON s.id = e.idsede
-    WHERE e.fhbaja IS NULL ${searchClause}
-    ORDER BY e.fhcarga DESC LIMIT $1 OFFSET $2;`;
-
-  const totalRes = await pool.query(
-    totalQuery,
-    searchTerm ? [`%${searchTerm}%`] : []
-  );
-
-  const { rows } = await pool.query(
-    dataQuery,
-    searchTerm ? [limit, offset, `%${searchTerm}%`] : [limit, offset]
-  );
-
-  return { equipos: rows, total: parseInt(totalRes.rows[0].count, 10) };
-};
 
 export const getEquipoById = async (id: number): Promise<IEquipo | null> => {
   const { rows } = await pool.query(
-    `SELECT e.id, e.nombre, e.abrev, e.contacto, e.emailcto, e.telefonocto, e.celularcto,
-      e.contrasenia, e.buenafe, e.codcateg, e.coddeporte, e.iniciales, e.codestado,
-      e.archivoubic, e.archivosize, e.archivonom, e.idsede,
-      TO_CHAR(e.fhcarga, 'YYYY-MM-DD') as fhcarga,
-      TO_CHAR(e.fhbaja, 'YYYY-MM-DD') as fhbaja,
-      e.idusuario, e.foto, e.observ, e.saldodeposito, TO_CHAR(e.fhultmod, 'YYYY-MM-DD') as fhultmod,
-      s.nombre AS sede_nombre
-     FROM wequipos e
-     LEFT JOIN wsedes s ON s.id = e.idsede
-     WHERE e.id = $1 AND e.fhbaja IS NULL;`,
+    `SELECT * FROM wequipos WHERE id = $1 AND fhbaja IS NULL;`,
     [id]
   );
   return rows.length ? rows[0] : null;
 };
 
-export const createEquipo = async (equipo: IEquipo): Promise<IEquipo> => {
+export const getAllEquipos = async (
+  page: number,
+  limit: number,
+  searchTerm = ""
+): Promise<{ equipos: IEquipo[]; total: number }> => {
+  const offset = (page - 1) * limit;
+
+  const like = `%${searchTerm.toLowerCase()}%`;
+  const params: any[] = searchTerm
+    ? [like, like, limit, offset]
+    : [limit, offset];
+
+  const totalQuery = searchTerm
+    ? `SELECT COUNT(*) FROM wequipos
+       WHERE fhbaja IS NULL AND (LOWER(nombre) LIKE $1 OR LOWER(abrev) LIKE $2);`
+    : `SELECT COUNT(*) FROM wequipos WHERE fhbaja IS NULL;`;
+
+  const dataQuery = searchTerm
+    ? `SELECT * FROM wequipos
+       WHERE fhbaja IS NULL AND (LOWER(nombre) LIKE $1 OR LOWER(abrev) LIKE $2)
+       ORDER BY fhcarga DESC
+       LIMIT $3 OFFSET $4;`
+    : `SELECT * FROM wequipos
+       WHERE fhbaja IS NULL
+       ORDER BY fhcarga DESC
+       LIMIT $1 OFFSET $2;`;
+
+  const totalRes = await pool.query(totalQuery, searchTerm ? [like, like] : []);
+  const { rows } = await pool.query(dataQuery, params);
+
+  return {
+    equipos: rows,
+    total: parseInt(totalRes.rows[0].count, 10),
+  };
+};
+
+export const createEquipo = async (data: IEquipo): Promise<IEquipo> => {
+  const {
+    nombre,
+    abrev,
+    contacto,
+    emailcto,
+    telefonocto,
+    celularcto,
+    contrasenia,
+    buenafe,
+    codcateg,
+    coddeporte,
+    iniciales,
+    codestado = 1,
+    archivoubic,
+    archivosize,
+    archivonom,
+    idsede,
+    idusuario,
+    foto,
+    observ,
+    saldodeposito = 0,
+  } = data;
+
   const { rows } = await pool.query(
     `INSERT INTO wequipos (
       nombre, abrev, contacto, emailcto, telefonocto, celularcto, contrasenia,
       buenafe, codcateg, coddeporte, iniciales, codestado, archivoubic,
       archivosize, archivonom, idsede, fhcarga, idusuario, foto, observ, saldodeposito
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13,
-      $14, $15, $16, NOW(), $17, $18, $19, $20
-    ) RETURNING *;`,
+      $1,$2,$3,$4,$5,$6,$7,
+      $8,$9,$10,$11,$12,$13,
+      $14,$15,$16,NOW(),$17,$18,$19,$20
+    )
+    RETURNING *;`,
     [
-      equipo.nombre,
-      equipo.abrev ?? "",
-      equipo.contacto ?? "",
-      equipo.emailcto ?? "",
-      equipo.telefonocto ?? "",
-      equipo.celularcto ?? "",
-      equipo.contrasenia ?? "",
-      equipo.buenafe ?? 0,
-      equipo.codcateg ?? null,
-      equipo.coddeporte,
-      equipo.iniciales ?? "",
-      equipo.codestado ?? null,
-      equipo.archivoubic ?? "",
-      equipo.archivosize ?? 0,
-      equipo.archivonom ?? "",
-      equipo.idsede ?? null,
-      equipo.idusuario ?? null,
-      equipo.foto ?? "",
-      equipo.observ ?? "",
-      equipo.saldodeposito ?? 0,
+      nombre,
+      abrev,
+      contacto,
+      emailcto,
+      telefonocto,
+      celularcto,
+      contrasenia,
+      buenafe,
+      codcateg,
+      coddeporte,
+      iniciales,
+      codestado,
+      archivoubic,
+      archivosize,
+      archivonom,
+      idsede,
+      idusuario,
+      foto,
+      observ,
+      saldodeposito,
     ]
   );
   return rows[0];
@@ -121,41 +134,61 @@ export const createEquipo = async (equipo: IEquipo): Promise<IEquipo> => {
 
 export const updateEquipo = async (
   id: number,
-  equipo: Partial<IEquipo>
+  data: Partial<IEquipo>
 ): Promise<IEquipo | null> => {
+  const camposValidos = [
+    "nombre",
+    "abrev",
+    "contacto",
+    "emailcto",
+    "telefonocto",
+    "celularcto",
+    "contrasenia",
+    "buenafe",
+    "codcateg",
+    "coddeporte",
+    "iniciales",
+    "codestado",
+    "archivoubic",
+    "archivosize",
+    "archivonom",
+    "idsede",
+    "idusuario",
+    "foto",
+    "observ",
+    "saldodeposito",
+  ];
+
   const updates: string[] = [];
   const values: any[] = [];
-  let i = 1;
+  let idx = 1;
 
-  for (const key in equipo) {
-    if (
-      equipo[key as keyof IEquipo] !== undefined &&
-      key !== "fhultmod" &&
-      key !== "sede_nombre"
-    ) {
-      updates.push(`${key} = $${i}`);
-      values.push(equipo[key as keyof IEquipo]);
-      i++;
+  for (const campo of camposValidos) {
+    const val = data[campo as keyof IEquipo];
+    if (val !== undefined) {
+      updates.push(`${campo} = $${idx}`);
+      values.push(val);
+      idx++;
     }
   }
 
   if (!updates.length) throw new Error("No hay datos para actualizar.");
 
-  updates.push(`fhultmod = NOW()`);
+  updates.push(`fhultmod = NOW()`); 
   values.push(id);
 
-  const query = `UPDATE wequipos SET ${updates.join(
+  const q = `UPDATE wequipos SET ${updates.join(
     ", "
-  )} WHERE id = $${i} RETURNING *;`;
+  )} WHERE id = $${idx} RETURNING *;`;
+  const { rows } = await pool.query(q, values);
 
-  const { rows } = await pool.query(query, values);
   return rows.length ? rows[0] : null;
 };
 
 export const deleteEquipo = async (id: number): Promise<boolean> => {
-  const result = await pool.query(
+  const res = await pool.query(
     `UPDATE wequipos SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;`,
     [id]
   );
-  return (result.rowCount ?? 0) > 0;
+  return (res.rowCount ?? 0) > 0; 
 };

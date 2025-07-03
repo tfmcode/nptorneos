@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
-import usuarioReducer from "./slices/usuarioSlice"; 
+import usuarioReducer from "./slices/usuarioSlice";
 import campeonatoReducer from "./slices/campeonatoSlice";
 import jugadoresReducer from "./slices/jugadoresSlice";
 import sedeReducer from "./slices/sedeSlice";
@@ -12,27 +12,28 @@ import zonasEquiposSlice from "./slices/zonasEquiposSlice";
 import partidoSlice from "./slices/partidoSlice";
 import torneosImagenSlice from "./slices/torneosImagenSlice";
 import listaNegraSlice from "./slices/listaNegraSlice";
+import proveedoresSlice from "./slices/proveedoresSlice";
 
 export const store = configureStore({
   reducer: {
-    usuarios: usuarioReducer, 
+    usuarios: usuarioReducer,
     auth: authReducer,
     campeonatos: campeonatoReducer,
     jugadores: jugadoresReducer,
     sedes: sedeReducer,
     codificadores: codificadorReducer,
-    equipos: equipoSlice, 
+    equipos: equipoSlice,
     torneos: torneoSlice,
     zonas: zonaSlice,
     zonasEquipos: zonasEquiposSlice,
     partidos: partidoSlice,
     torneosImagenes: torneosImagenSlice,
-    listaNegra: listaNegraSlice, 
-
+    listaNegra: listaNegraSlice,
+    proveedores: proveedoresSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, 
+      serializableCheck: false,
     }),
   devTools: process.env.NODE_ENV !== "production", // ✅ Habilita Redux DevTools solo en desarrollo
 });

@@ -8,6 +8,7 @@ import Codificadores from "./Codificadores";
 import Equipos from "./Equipos";
 import Torneos from "./Torneos";
 import ListaNegra from "./ListaNegra";
+import Proveedores from "./Proveedores";
 import { NavbarSystem } from "../../layouts/navbar/NavbarSystem";
 
 const System: React.FC = () => {
@@ -31,6 +32,8 @@ const System: React.FC = () => {
         return <Torneos />;
       case "Lista Negra":
         return <ListaNegra />;
+      case "Proveedores":
+        return <Proveedores />;
       default:
         return (
           <p className="text-center text-xl text-white">

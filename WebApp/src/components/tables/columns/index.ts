@@ -1,5 +1,6 @@
 export * from './campeonatoColumns';
 export * from './codificadorColumns';
+export * from './consentimientoColumns';
 export * from './equipoJugadoresColumns';
 export * from './equiposColumns';
 export * from './jugadorColumns';

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import DynamicForm from "../forms/DynamicForm";
+import { useEffect, useState } from "react";
+import JugadorAutocomplete from "../forms/JugadorAutocomplete";
 import { StatusMessage } from "../common";
 import { DataTable, equipoJugadoresColumns } from "..";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,7 +11,6 @@ import {
   saveEquipoJugadorThunk,
   setEquiposJugadoresError,
 } from "../../store/slices/equiposJugadoresSlice";
-import { fetchJugadores } from "../../store/slices/jugadoresSlice";
 
 interface EquiposJugadoresProps {
   idequipo: number;
@@ -19,30 +18,20 @@ interface EquiposJugadoresProps {
 
 function EquiposJugadores({ idequipo }: EquiposJugadoresProps) {
   const dispatch = useDispatch<AppDispatch>();
-
   const { user } = useSelector((state: RootState) => state.auth);
-  const { jugadores } = useSelector((state: RootState) => state.jugadores);
   const { equiposJugadores, loading, error } = useSelector(
     (state: RootState) => state.equiposJugadores
   );
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedJugadorId, setSelectedJugadorId] = useState<number>(0);
 
   useEffect(() => {
-    dispatch(fetchJugadores({ page: 1, limit: 1000, searchTerm: "" }));
     dispatch(fetchEquipoJugadoresByEquipo(idequipo));
   }, [dispatch, idequipo]);
 
-  const handleAddJugador = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleAddJugador = async () => {
     if (!selectedJugadorId) {
-      dispatch(
-        setEquiposJugadoresError(
-          "Debe ingresar y seleccionar un jugador válido."
-        )
-      );
+      dispatch(setEquiposJugadoresError("Debe seleccionar un jugador válido."));
       return;
     }
 
@@ -58,7 +47,6 @@ function EquiposJugadores({ idequipo }: EquiposJugadoresProps) {
         })
       ).unwrap();
       dispatch(fetchEquipoJugadoresByEquipo(idequipo));
-      setSearchTerm("");
       setSelectedJugadorId(0);
     } catch (error) {
       console.error("Error al agregar jugador:", error);
@@ -78,7 +66,7 @@ function EquiposJugadores({ idequipo }: EquiposJugadoresProps) {
           idjugador: jugador.idjugador,
           idequipo,
           capitan: !jugador.capitan,
-          subcapitan: false, // al marcar capitán, quitamos subcapitán
+          subcapitan: false,
           codestado: jugador.codestado ?? 1,
           idusuario: user?.idusuario ?? 0,
         })
@@ -96,7 +84,7 @@ function EquiposJugadores({ idequipo }: EquiposJugadoresProps) {
           id: jugador.id,
           idjugador: jugador.idjugador,
           idequipo,
-          capitan: false, // al marcar subcapitán, quitamos capitán
+          capitan: false,
           subcapitan: !jugador.subcapitan,
           codestado: jugador.codestado ?? 1,
           idusuario: user?.idusuario ?? 0,
@@ -109,37 +97,23 @@ function EquiposJugadores({ idequipo }: EquiposJugadoresProps) {
   };
 
   return (
-    <div>
-      <DynamicForm
-        fields={[
-          {
-            name: "idjugador",
-            type: "select",
-            value: selectedJugadorId,
-            label: "Jugador",
-            options: jugadores
-              .filter((j) =>
-                `${j.apellido} ${j.nombres} ${j.docnro}`
-                  .toLowerCase()
-                  .includes(searchTerm.toLowerCase())
-              )
-              .map((j) => ({
-                value: j.id ?? 0,
-                label: `${j.apellido} ${j.nombres} - ${j.docnro}`,
-              })),
-          },
-        ]}
-        onChange={(e) => {
-          if (e.target.name === "idjugador") {
-            const selectedId = parseInt(e.target.value);
-            setSelectedJugadorId(isNaN(selectedId) ? 0 : selectedId);
-          } else {
-            setSearchTerm(e.target.value);
-          }
-        }}
-        onSubmit={handleAddJugador}
-        submitLabel="Agregar"
-      />
+    <div className="space-y-4">
+      {/* ✅ Componente JugadorAutocomplete reemplazando el select */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <JugadorAutocomplete
+            value={selectedJugadorId}
+            onChange={(jugador) => setSelectedJugadorId(jugador.id ?? 0)}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleAddJugador}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm"
+        >
+          Agregar
+        </button>
+      </div>
 
       <StatusMessage loading={loading} error={error} />
 

@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
-import usuarioReducer from "./slices/usuarioSlice"; // 🔹 Cambiado de userReducer a usuarioReducer
+import usuarioReducer from "./slices/usuarioSlice"; 
 import campeonatoReducer from "./slices/campeonatoSlice";
 import jugadoresReducer from "./slices/jugadoresSlice";
 import sedeReducer from "./slices/sedeSlice";
@@ -12,10 +12,11 @@ import zonasEquiposSlice from "./slices/zonasEquiposSlice";
 import partidoSlice from "./slices/partidoSlice";
 import torneosImagenSlice from "./slices/torneosImagenSlice";
 import equiposJugadoresSlice from "./slices/equiposJugadoresSlice";
+import listaNegraSlice from "./slices/listaNegraSlice";
 
 export const store = configureStore({
   reducer: {
-    usuarios: usuarioReducer, // 🔹 Reemplazamos `users` → `usuarios`
+    usuarios: usuarioReducer, 
     auth: authReducer,
     campeonatos: campeonatoReducer,
     jugadores: jugadoresReducer,
@@ -28,10 +29,11 @@ export const store = configureStore({
     partidos: partidoSlice,
     torneosImagenes: torneosImagenSlice,
     equiposJugadores: equiposJugadoresSlice,
+    listaNegra: listaNegraSlice, 
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // ✅ Evita errores con datos no serializables
+      serializableCheck: false, 
     }),
   devTools: process.env.NODE_ENV !== "production", // ✅ Habilita Redux DevTools solo en desarrollo
 });

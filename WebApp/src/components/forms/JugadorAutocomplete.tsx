@@ -45,7 +45,7 @@ const JugadorAutocomplete: React.FC<Props> = ({ value, onChange }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -67,7 +67,10 @@ const JugadorAutocomplete: React.FC<Props> = ({ value, onChange }) => {
       </div>
 
       {showDropdown && sugerencias.length > 0 && (
-        <ul className="absolute z-10 bg-white border rounded w-full shadow max-h-60 overflow-y-auto">
+        <ul
+          className="absolute top-full left-0 w-full bg-white border rounded shadow max-h-60 overflow-y-auto z-[9999]"
+          style={{ marginTop: "2px" }}
+        >
           {sugerencias.map((jugador) => (
             <li
               key={jugador.id}

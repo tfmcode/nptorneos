@@ -14,6 +14,7 @@ import { useCrudForm } from "../../hooks/useCrudForm";
 import { equipoColumns } from "../../components/tables";
 import { Accordion, AccordionItem } from "../../components/common/Accordion";
 import DatosBasicos from "../../components/equipos/DatosBasicos";
+import Jugadores from "../../components/equipos/Jugadores";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 const Equipos: React.FC = () => {
@@ -134,7 +135,9 @@ const Equipos: React.FC = () => {
             <AccordionItem title="Datos Básicos" defaultOpen={true}>
               <DatosBasicos formData={formData} onChange={handleInputChange} />
             </AccordionItem>
-            {/* A futuro: más submódulos como Buenafe, Jugadores, Torneos, Imagenes, Cuenta Corriente */}
+            <AccordionItem title="Jugadores" defaultOpen={false}>
+              <Jugadores idequipo={formData.id ?? 0} />
+            </AccordionItem>
           </Accordion>
         </Modal>
       </div>

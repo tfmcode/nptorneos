@@ -5,12 +5,13 @@ import campeonatoReducer from "./slices/campeonatoSlice";
 import jugadoresReducer from "./slices/jugadoresSlice";
 import sedeReducer from "./slices/sedeSlice";
 import codificadorReducer from "./slices/codificadorSlice";
-import equipoSlice from "./slices/equiposSlice"; // 🔹 Importación del slice de equipos
+import equipoSlice from "./slices/equiposSlice";
 import torneoSlice from "./slices/torneoSlice";
 import zonaSlice from "./slices/zonaSlice";
 import zonasEquiposSlice from "./slices/zonasEquiposSlice";
 import partidoSlice from "./slices/partidoSlice";
 import torneosImagenSlice from "./slices/torneosImagenSlice";
+import equiposJugadoresSlice from "./slices/equiposJugadoresSlice";
 
 export const store = configureStore({
   reducer: {
@@ -20,12 +21,13 @@ export const store = configureStore({
     jugadores: jugadoresReducer,
     sedes: sedeReducer,
     codificadores: codificadorReducer,
-    equipos: equipoSlice, 
+    equipos: equipoSlice,
     torneos: torneoSlice,
     zonas: zonaSlice,
     zonasEquipos: zonasEquiposSlice,
     partidos: partidoSlice,
     torneosImagenes: torneosImagenSlice,
+    equiposJugadores: equiposJugadoresSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

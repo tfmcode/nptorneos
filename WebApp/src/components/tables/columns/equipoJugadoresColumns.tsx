@@ -1,14 +1,14 @@
 import { EquipoJugador } from "../../../types/equiposJugadores";
-import { Jugador } from "../../../types/jugadores";
 
 export const equipoJugadoresColumns = [
   {
     header: "Nombre",
-    render: (jugador: Jugador) => `${jugador.nombres} ${jugador.apellido}`,
+    render: (jugador: EquipoJugador) =>
+      `${jugador.nombres} ${jugador.apellido}`,
   },
   {
     header: "DNI",
-    accessor: "docnro" as keyof Jugador,
+    accessor: "docnro" as keyof EquipoJugador,
   },
   {
     header: "N° Camiseta",

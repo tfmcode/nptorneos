@@ -1,4 +1,4 @@
-/* import { EquipoJugador } from "../../../types/equiposJugadores";
+import { EquipoJugador } from "../../../types/equiposJugadores";
 import { Jugador } from "../../../types/jugadores";
 
 export const equipoJugadoresColumns = [
@@ -38,4 +38,3 @@ export const equipoJugadoresColumns = [
     render: (jugador: EquipoJugador) => (jugador.subcapitan ? "✅" : "—"),
   },
 ];
- */

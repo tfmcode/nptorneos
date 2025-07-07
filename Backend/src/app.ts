@@ -13,6 +13,8 @@ import zonasEquiposRoutes from "./routes/zonasEquiposRoutes";
 import partidosRoutes from "./routes/partidosRoutes";
 import torneosImagenesRoutes from "./routes/torneosImagenesRoutes";
 import listaNegraRoutes from "./routes/listaNegraRoutes";
+import proveedoresRoutes from "./routes/proveedoresRoutes";
+import consentimientosRoutes from "./routes/consentimientosRoutes";
 
 dotenv.config();
 
@@ -38,6 +40,8 @@ app.use("/api/zonas-equipos", zonasEquiposRoutes);
 app.use("/api/partidos", partidosRoutes);
 app.use("/api/torneos-imagenes", torneosImagenesRoutes);
 app.use("/api/lista-negra", listaNegraRoutes);
+app.use("/api/proveedores", proveedoresRoutes);
+app.use("/api/consentimientos", consentimientosRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Ruta no encontrada." });

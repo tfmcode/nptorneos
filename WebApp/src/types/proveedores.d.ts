@@ -1,0 +1,67 @@
+export interface Proveedor {
+  id?: number;
+  codtipo: number;
+  nombre: string;
+  domicilio?: string;
+  localidad?: string;
+  pais?: string;
+  provincia?: string;
+  cpostal?: string;
+  telefono?: string;
+  celular?: string;
+  email?: string;
+  documento?: string;
+  fhnac?: string;
+  estcivil?: string;
+  hijos?: string;
+  estudios?: string;
+  facebook?: string;
+  valor_hora?: number;
+  valor_fijo?: number;
+  sumarhs?: number;
+  contrasenia?: string;
+  sedes?: string;
+  nombrefiscal?: string;
+  codcateg?: number;
+  cuit?: string;
+  fax?: string;
+  contacto?: string;
+  producto?: string;
+  codtipogasto?: number;
+  fhcarga?: string;
+  fhbaja?: string;
+  [key: string]: unknown;
+}
+
+export interface ProveedorInput {
+  codtipo: number;
+  nombre: string;
+  domicilio?: string;
+  localidad?: string;
+  pais?: string;
+  provincia?: string;
+  cpostal?: string;
+  telefono?: string;
+  celular?: string;
+  email?: string;
+  documento?: string;
+  fhnac?: string;
+  estcivil?: string;
+  hijos?: string;
+  estudios?: string;
+  facebook?: string;
+  valor_hora?: number;
+  valor_fijo?: number;
+  sumarhs?: number;
+  contrasenia?: string;
+  sedes?: string;
+  nombrefiscal?: string;
+  codcateg?: number;
+  cuit?: string;
+  fax?: string;
+  contacto?: string;
+  producto?: string;
+  codtipogasto?: number;
+  fhcarga?: string;
+  fhbaja?: string;
+}

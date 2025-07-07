@@ -1,39 +1,40 @@
 import { EquipoJugador } from "../../../types/equiposJugadores";
+import { Jugador } from "../../../types/jugadores";
 
 export const equipoJugadoresColumns = [
   {
-    header: "Código",
-    accessor: "id" as keyof EquipoJugador,
-  },
-  {
-    header: "Apellido",
-    accessor: "apellido" as keyof EquipoJugador,
-  },
-  {
     header: "Nombre",
-    accessor: "nombres" as keyof EquipoJugador,
+    render: (jugador: Jugador) => `${jugador.nombres} ${jugador.apellido}`,
   },
   {
-    header: "Documento",
-    accessor: "docnro" as keyof EquipoJugador,
+    header: "DNI",
+    accessor: "docnro" as keyof Jugador,
   },
   {
     header: "N° Camiseta",
     accessor: "camiseta" as keyof EquipoJugador,
+    render: (jugador: EquipoJugador) =>
+      jugador.camiseta !== null && jugador.camiseta !== undefined
+        ? jugador.camiseta
+        : "—",
+  },
+  {
+    header: "Tipo",
+    accessor: "codtipo" as keyof EquipoJugador,
+    render: (jugador: EquipoJugador) => {
+      if (jugador.codtipo === 1) return "OFICIAL";
+      if (jugador.codtipo === 2) return "INVITADO";
+      return "—";
+    },
   },
   {
     header: "Capitán",
     accessor: "capitan" as keyof EquipoJugador,
-    render: (jugador: EquipoJugador) => (jugador.capitan ? "✅" : "-"),
+    render: (jugador: EquipoJugador) => (jugador.capitan ? "✅" : "—"),
   },
   {
     header: "Subcapitán",
     accessor: "subcapitan" as keyof EquipoJugador,
-    render: (jugador: EquipoJugador) => (jugador.subcapitan ? "✅" : "-"),
-  },
-  {
-    header: "Tipo",
-    accessor: "tipo_desc" as keyof EquipoJugador,
-    render: (jugador: EquipoJugador) => jugador.tipo_desc ? "OFICIAL" : "INVITADO"
+    render: (jugador: EquipoJugador) => (jugador.subcapitan ? "✅" : "—"),
   },
 ];

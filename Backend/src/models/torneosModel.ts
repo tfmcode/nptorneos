@@ -31,6 +31,18 @@ export interface ITorneo {
   sas: number;
 }
 
+export const getTorneosByEquipo = async (
+  idequipo: number
+): Promise<ITorneo[]> => {
+  const { rows } = await pool.query(
+    `SELECT t.* FROM wtorneos_equipos_insc te
+    INNER JOIN wtorneos t ON t.id = te.idtorneo
+    WHERE te.idequipo = $1 AND t.fhbaja IS NULL;`,
+    [idequipo]
+  );
+  return rows;
+};
+
 export const getTorneoById = async (id: number): Promise<ITorneo | null> => {
   const { rows } = await pool.query(
     `SELECT id, nombre, abrev, anio, idcampeonato, idsede, codestado, codtipoestado, cposicion, cpromedio, codmodelo, codtipo, cantmin, torneodefault, fotojugador, idpadre, idgaleria, valor_insc, valor_fecha, individual, valor_arbitro, valor_cancha, valor_medico, excluir_res, fhcarga, idusuario, sas FROM wtorneos WHERE id = $1 AND fhbaja IS NULL;`,

@@ -5,6 +5,7 @@ import {
   createEquipo,
   updateEquipo,
   deleteEquipo,
+  getEquiposByJugador,
 } from "../models/equiposModel";
 
 export const getEquipos = async (req: Request, res: Response) => {
@@ -34,6 +35,29 @@ export const getEquipoByIdController = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("❌ Error al obtener equipo:", error);
     res.status(500).json({ message: "Error al obtener equipo.", error });
+  }
+};
+
+// Obtener todos los equipos de un jugador
+export const getEquiposByJugadorController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const idjugador = Number(req.params.idjugador);
+    const equipos = await getEquiposByJugador(idjugador);
+    if (!equipos || equipos.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No se encontraron equipos para este jugador." });
+    }
+
+    res.status(200).json(equipos);
+  } catch (error) {
+    console.error("❌ Error al obtener equipos del jugador:", error);
+    res
+      .status(500)
+      .json({ message: "Error al obtener equipos del jugador.", error });
   }
 };
 

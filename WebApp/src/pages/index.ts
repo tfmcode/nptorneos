@@ -10,4 +10,4 @@ export * from './Public/Tournaments/components';
 export * from './Public/Tournaments';
 export * from './Public';
 export { default as RecPassword } from './RecPassword';
-export * from './private';
+export * from './Private';

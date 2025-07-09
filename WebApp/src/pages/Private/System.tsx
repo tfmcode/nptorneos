@@ -10,6 +10,7 @@ import Torneos from "./Torneos";
 import ListaNegra from "./ListaNegra";
 import Proveedores from "./Proveedores";
 import ConsentimientosAdmin from "./ConsentimientosAdmin";
+import Sanciones from "./Sanciones";
 import { NavbarSystem } from "../../layouts/navbar/NavbarSystem";
 
 const System: React.FC = () => {
@@ -37,6 +38,8 @@ const System: React.FC = () => {
         return <Proveedores />;
       case "Consentimiento":
         return <ConsentimientosAdmin />;
+      case "Tribunal de Faltas F":
+        return <Sanciones />;
       default:
         return (
           <p className="text-center text-xl text-white">

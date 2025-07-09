@@ -5,6 +5,7 @@ import {
   createEquipoController,
   updateEquipoController,
   deleteEquipoController,
+  getEquiposByJugadorController,
 } from "../controllers/equiposController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
@@ -22,6 +23,19 @@ router.get(
   [param("id").isInt().withMessage("El ID debe ser un número entero.")],
   validateRequest,
   asyncHandler(getEquipoByIdController)
+);
+
+// Obtener todos los equipos de un jugador
+router.get(
+  "/jugador/:idjugador",
+  authMiddleware,
+  [
+    param("idjugador")
+      .isInt()
+      .withMessage("El ID de jugador debe ser un número entero."),
+  ],
+  validateRequest,
+  asyncHandler(getEquiposByJugadorController)
 );
 
 router.post(

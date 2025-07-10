@@ -1,7 +1,12 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import CountUp from "react-countup";
+import { useInView } from "react-intersection-observer";
+
 import centroEntrenamientos from "../../../../assets/escuela_futbol.jpg";
 import escuelaFutbol from "../../../../assets/torneo_apertura.jpg";
-import infantoJuvenil from "../../../../assets/infanto_juvenil.jpeg";
+import nuevoParadigma from "../../../../assets/Empresa3.jpg";
 import jugadoresIcon from "../../../../assets/jugadores.png";
 import sedesIcon from "../../../../assets/sedes.png";
 import equiposIcon from "../../../../assets/equipos.png";
@@ -11,17 +16,17 @@ const NewSections: React.FC = () => {
     {
       title: "CENTRO DE ENTRENAMIENTOS",
       image: centroEntrenamientos,
-      link: "#centro-entrenamientos",
+      link: "/centro-entrenamientos",
     },
     {
-      title: "ESCUELA DE FÚTBOL",
+      title: "FUTBOL NP",
       image: escuelaFutbol,
-      link: "#escuela-futbol",
+      link: "/futbol-np",
     },
     {
-      title: "LIGA INFANTO JUVENIL",
-      image: infantoJuvenil,
-      link: "#liga-infanto-juvenil",
+      title: "NUEVO PARADIGMA",
+      image: nuevoParadigma,
+      link: "/nuevo-paradigma",
     },
   ];
 
@@ -31,70 +36,87 @@ const NewSections: React.FC = () => {
     { label: "EQUIPOS", value: 1800, icon: equiposIcon },
   ];
 
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.15,
+  });
+
   return (
-    <div>
+    <div ref={ref} className="bg-white w-full">
       {/* News Section */}
-      <div className="py-16 text-center">
+      <motion.div
+        className="py-16 text-center"
+        initial={{ opacity: 0, y: 50 }}
+        animate={inView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+      >
         <h2 className="text-4xl font-bold text-gray-800 mb-6 relative">
           Novedades
           <span className="block w-16 h-1 bg-yellow-600 mx-auto mt-2"></span>
         </h2>
 
-        <div
-          className=""
-          style={{
-            display: "flex",
-            justifyContent: "space-evenly",
-            flexDirection: "row",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="flex justify-evenly flex-wrap gap-6 px-4">
           {news.map((item, index) => (
-            <div
+            <motion.div
               key={index}
-              className="relative w-full sm:w-[30%] bg-white rounded-lg shadow-lg overflow-hidden transition-transform transform hover:scale-105"
+              initial={{ opacity: 0, y: 40 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{
+                duration: 1.2,
+                delay: index * 0.3,
+                ease: "easeInOut",
+              }}
+              className="relative w-full sm:w-[45%] md:w-[30%] bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-500"
             >
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-72 object-cover border-b-4 border-yellow-600"
-              />
-              <h5 className="text-xl font-bold text-gray-800 mt-4">
-                <a
-                  href={item.link}
-                  className="hover:text-yellow-600 transition-colors"
-                >
+              <Link to={item.link}>
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-80 sm:h-96 object-cover border-b-4 border-yellow-600 cursor-pointer"
+                />
+                <h5 className="text-xl font-bold text-gray-800 mt-4 mb-4 hover:text-yellow-600 transition-colors">
                   {item.title}
-                </a>
-              </h5>
-            </div>
+                </h5>
+              </Link>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats Bar */}
-      <div
-        className=" text-white py-8 flex flex-wrap justify-around items-center gap-6"
+      <motion.div
+        className="text-white py-10 flex flex-wrap justify-around items-center gap-8 px-4"
         style={{ backgroundColor: "#d0a15f" }}
+        initial={{ opacity: 0, y: 50 }}
+        animate={inView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 1.5, ease: "easeInOut", delay: 0.4 }}
       >
         {stats.map((stat, index) => (
-          <div
+          <motion.div
             key={index}
-            className="flex items-center gap-4 text-lg font-semibold"
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: 1,
+              delay: index * 0.3 + 0.5,
+              ease: "easeInOut",
+            }}
+            className="flex flex-col items-center text-center"
           >
-            <img
-              src={stat.icon}
-              alt={stat.label}
-              className=""
-            />
-            <div className="text-left">
-              <strong className="block text-2xl">{stat.value}</strong>
-              <span>{stat.label}</span>
-            </div>
-          </div>
+            <img src={stat.icon} alt={stat.label} className="w-16 h-16 mb-2" />
+            <strong className="text-3xl font-bold">
+              {inView ? (
+                <CountUp end={stat.value} duration={4} separator="." />
+              ) : (
+                "0"
+              )}
+            </strong>
+            <span className="text-lg">{stat.label}</span>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 };
+
 export default NewSections;

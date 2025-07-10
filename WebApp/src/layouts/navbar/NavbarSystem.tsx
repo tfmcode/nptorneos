@@ -24,8 +24,9 @@ const navItems: NavItem[] = [
       { title: "Equipos" },
       { title: "Jugadores" },
       { title: "Lista Negra" },
-      { title: "Tribunal de Faltas F" },
-      { title: "Cambios de Equipos F" },
+      { title: "Tribunal de Faltas" },
+      { title: "Cambios de Equipos" },
+      { title: "Menú Torneos" },
     ],
   },
   {
@@ -67,7 +68,7 @@ export const NavbarSystem: React.FC<{
   };
 
   return (
-    <nav className="bg-gray-800 text-white text-sm"> 
+    <nav className="bg-gray-800 text-white text-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

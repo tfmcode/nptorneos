@@ -32,6 +32,18 @@ export const getEquipos = async (
   return { equipos: [], total: 0, page, limit };
 };
 
+export const getEquiposByJugador = async (
+  idjugador: number
+): Promise<Equipo[]> => {
+  try {
+    const response = await API.get(`/api/equipos/jugador/${idjugador}`);
+    return response.data;
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return [];
+};
+
 export const saveEquipo = async (
   data: EquipoInput & { id?: number }
 ): Promise<Equipo | undefined> => {

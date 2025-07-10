@@ -7,3 +7,4 @@ export { default as Sedes } from './Sedes';
 export { default as System } from './System';
 export { default as Torneos } from './Torneos';
 export { default as Usuarios } from './Usuarios';
+export { default as Sanciones } from './Sanciones';

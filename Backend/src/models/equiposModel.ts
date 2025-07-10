@@ -71,6 +71,20 @@ export const getAllEquipos = async (
   };
 };
 
+// Obtener todos los equipos de un jugador
+export const getEquiposByJugador = async (
+  idjugador: number
+): Promise<IEquipo[]> => {
+  const { rows } = await pool.query(
+    `SELECT e.* FROM wequipos_jugadores ej
+     INNER JOIN wequipos e ON ej.idequipo = e.id
+     WHERE ej.idjugador = $1 AND ej.fhbaja IS NULL AND e.fhbaja IS NULL
+     ORDER BY ej.id ASC;`,
+    [idjugador]
+  );
+  return rows;
+};
+
 export const createEquipo = async (data: IEquipo): Promise<IEquipo> => {
   const {
     nombre,
@@ -174,7 +188,7 @@ export const updateEquipo = async (
 
   if (!updates.length) throw new Error("No hay datos para actualizar.");
 
-  updates.push(`fhultmod = NOW()`); 
+  updates.push(`fhultmod = NOW()`);
   values.push(id);
 
   const q = `UPDATE wequipos SET ${updates.join(
@@ -190,5 +204,5 @@ export const deleteEquipo = async (id: number): Promise<boolean> => {
     `UPDATE wequipos SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;`,
     [id]
   );
-  return (res.rowCount ?? 0) > 0; 
+  return (res.rowCount ?? 0) > 0;
 };

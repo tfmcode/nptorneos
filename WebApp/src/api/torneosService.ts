@@ -44,6 +44,18 @@ export const getTorneosCampeonato = async (
   return [];
 };
 
+export const getTorneosByEquipoID = async (
+  idequipo: number
+): Promise<Torneo[]> => {
+  try {
+    const response = await API.get(`/api/torneos/equipo/${idequipo}`);
+    return response.data;
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return [];
+};
+
 export const saveTorneo = async (data: TorneoInput & { id?: number }) => {
   try {
     const response = data.id

@@ -6,6 +6,7 @@ import {
   updateTorneo,
   deleteTorneo,
   getTorneosByCampeonato,
+  getTorneosByEquipo,
 } from "../models/torneosModel";
 
 export const getTorneos = async (req: Request, res: Response) => {
@@ -42,6 +43,16 @@ export const getTorneo = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("❌ Error al obtener torneo:", error);
     res.status(500).json({ message: "Error al obtener el torneo.", error });
+  }
+};
+
+export const getTorneosByEquipoID = async (req: Request, res: Response) => {
+  try {
+    const torneos = await getTorneosByEquipo(Number(req.params.idequipo));
+    res.status(200).json(torneos);
+  } catch (error) {
+    console.error("❌ Error al obtener los torneos:", error);
+    res.status(500).json({ message: "Error al obtener los torneos.", error });
   }
 };
 

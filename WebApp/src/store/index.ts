@@ -16,6 +16,7 @@ import listaNegraSlice from "./slices/listaNegraSlice";
 import proveedoresSlice from "./slices/proveedoresSlice";
 import consentimientoSlice from "./slices/consentimientoSlice";
 import sancionSlice from "./slices/sancionSlice";
+import menuTorneosSlice from "./slices/menuTorneosSlice";
 
 export const store = configureStore({
   reducer: {
@@ -32,10 +33,11 @@ export const store = configureStore({
     partidos: partidoSlice,
     torneosImagenes: torneosImagenSlice,
     equiposJugadores: equiposJugadoresSlice,
-    listaNegra: listaNegraSlice, 
+    listaNegra: listaNegraSlice,
     proveedores: proveedoresSlice,
     consentimientos: consentimientoSlice,
     sanciones: sancionSlice,
+    menuTorneos: menuTorneosSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

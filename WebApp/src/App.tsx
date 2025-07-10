@@ -8,12 +8,12 @@ import {
   Contact,
   Concents,
   Tournaments,
-  System,
   PageNotFound,
   Login,
   RecPassword,
 } from "./pages";
 import "./App.css";
+import System from "./pages/private/System";
 
 function App() {
   return (

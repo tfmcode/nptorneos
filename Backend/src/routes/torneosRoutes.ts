@@ -5,6 +5,7 @@ import {
   getTorneo,
   updateTorneoController,
   deleteTorneoController,
+  getTorneosByEquipoID,
 } from "../controllers/torneosController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -21,6 +22,18 @@ router.get(
   [param("id").isInt().withMessage("El ID debe ser un número entero.")],
   validateRequest,
   asyncHandler(getTorneo)
+);
+
+router.get(
+  "/equipo/:idequipo",
+  authMiddleware,
+  [
+    param("idequipo")
+      .isInt()
+      .withMessage("El ID del equipo debe ser un número entero."),
+  ],
+  validateRequest,
+  asyncHandler(getTorneosByEquipoID)
 );
 
 router.post(
@@ -56,7 +69,7 @@ router.post(
           );
         }
         return true;
-      })
+      }),
   ],
   validateRequest,
   asyncHandler(createTorneoController)

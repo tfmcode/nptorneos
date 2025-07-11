@@ -7,13 +7,13 @@ import {
   About,
   Contact,
   Concents,
-  Tournaments,
   PageNotFound,
   Login,
   RecPassword,
+  TorneoPublic,
+  System,
 } from "./pages";
 import "./App.css";
-import System from "./pages/private/System";
 
 function App() {
   return (
@@ -25,7 +25,10 @@ function App() {
             <Route path={EPublicRoutes.ABOUT} element={<About />} />
             <Route path={EPublicRoutes.CONTACT} element={<Contact />} />
             <Route path={EPublicRoutes.CONCENTS} element={<Concents />} />
-            <Route path={EPublicRoutes.TOURNAMENTS} element={<Tournaments />} />
+            <Route
+              path={EPublicRoutes.TORNEO_PUBLIC}
+              element={<TorneoPublic />}
+            />
             <Route path="*" element={<PageNotFound />} />
           </Route>
           <Route path={EPublicRoutes.LOGIN} element={<Login />} />

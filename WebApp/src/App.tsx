@@ -12,13 +12,18 @@ import {
   RecPassword,
   TorneoPublic,
   System,
+  CentroEntrenamiento,
+  FutbolNP,
+  NuevoParadigma,
 } from "./pages";
 import "./App.css";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 function App() {
   return (
     <>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route element={<Layout />}>
             <Route path={EPublicRoutes.HOME} element={<Home />} />
@@ -29,7 +34,16 @@ function App() {
               path={EPublicRoutes.TORNEO_PUBLIC}
               element={<TorneoPublic />}
             />
+<Route path={EPublicRoutes.FUTBOL_NP} element={<FutbolNP />} />
+            <Route
+              path={EPublicRoutes.NUEVO_PARADIGMA}
+              element={<NuevoParadigma />}
+            />
             <Route path="*" element={<PageNotFound />} />
+            <Route
+              path={EPublicRoutes.CENTRO_ENTRENAMIENTO}
+              element={<CentroEntrenamiento />}
+            />
           </Route>
           <Route path={EPublicRoutes.LOGIN} element={<Login />} />
           <Route path={EPublicRoutes.REC_PASSWORD} element={<RecPassword />} />

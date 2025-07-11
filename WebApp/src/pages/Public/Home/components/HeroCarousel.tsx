@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import img1 from "../../../../assets/1.png";
 import img2 from "../../../../assets/2.png";
 import img3 from "../../../../assets/3.png";
@@ -8,80 +9,70 @@ import img5 from "../../../../assets/5.png";
 const HeroCarousel: React.FC = () => {
   const images = [img1, img2, img3, img4, img5];
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+
+  const handleNext = useCallback(() => {
+    setDirection(1);
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  }, [images.length]);
+
+  const handlePrev = useCallback(() => {
+    setDirection(-1);
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  }, [images.length]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 3500);
-
+      handleNext();
+    }, 6000);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [handleNext]);
 
-  const handleNext = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex((prevIndex) =>
-      prevIndex === 0 ? images.length - 1 : prevIndex - 1
-    );
+  const variants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 100 : -100,
+      opacity: 0,
+      scale: 1,
+    }),
+    center: { x: 0, opacity: 1, scale: 1 },
+    exit: (direction: number) => ({
+      x: direction > 0 ? -100 : 100,
+      opacity: 0,
+      scale: 1,
+    }),
   };
 
   return (
-    <div
-      id="heroCarousel"
-      className="relative w-full overflow-hidden"
-      style={{ height: "750px" }}
-    >
-      <div className="relative h-full">
-        <div
-          className="absolute inset-0 w-full h-full transition-opacity duration-1000"
-          style={{
-            backgroundImage: `url(${images[currentIndex]})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        ></div>
+    <div id="heroCarousel" className="relative w-full h-screen overflow-hidden">
+      <div className="relative w-full h-full">
+        <AnimatePresence initial={false} custom={direction} mode="wait">
+          <motion.img
+            key={currentIndex}
+            src={images[currentIndex]}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 1.2, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full object-cover"
+            alt={`Hero ${currentIndex + 1}`}
+          />
+        </AnimatePresence>
       </div>
 
-      {/* Prev Button */}
       <button
-        className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black focus:outline-none"
         onClick={handlePrev}
+        className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black focus:outline-none z-10"
       >
-        <span className="sr-only">Anterior</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-6 h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
+        ◀
       </button>
 
-      {/* Next Button */}
       <button
-        className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black focus:outline-none"
         onClick={handleNext}
+        className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black focus:outline-none z-10"
       >
-        <span className="sr-only">Siguiente</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-6 h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+        ▶
       </button>
     </div>
   );

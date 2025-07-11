@@ -3,9 +3,9 @@ export enum EPublicRoutes {
   ABOUT = "/about",
   CONTACT = "/contact",
   CONCENTS = "/concents",
-  TOURNAMENTS = "/tournaments",
   LOGIN = "/login",
   REC_PASSWORD = "/recoverpassword",
+  TORNEO_PUBLIC = "/torneos/:id",
 }
 
 export enum EPrivateRoutes {

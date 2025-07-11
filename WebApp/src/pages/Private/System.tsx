@@ -1,17 +1,19 @@
 import React, { useState } from "react";
 import BackgroundImage from "../../assets/login.jpg";
+import { NavbarSystem } from "../../layouts/navbar/NavbarSystem";
 import Usuarios from "./Usuarios";
 import Campeonatos from "./Campeonatos";
 import Jugadores from "./Jugadores";
 import Sedes from "./Sedes";
-import Codificadores from "./Codificadores";
+import Codificadores from "./Codificadores";     
 import Equipos from "./Equipos";
 import Torneos from "./Torneos";
 import ListaNegra from "./ListaNegra";
 import Proveedores from "./Proveedores";
 import ConsentimientosAdmin from "./ConsentimientosAdmin";
 import Sanciones from "./Sanciones";
-import { NavbarSystem } from "../../layouts/navbar/NavbarSystem";
+import MenuTorneos from "./MenuTorneos";
+
 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -38,8 +40,10 @@ const System: React.FC = () => {
         return <Proveedores />;
       case "Consentimiento":
         return <ConsentimientosAdmin />;
-      case "Tribunal de Faltas F":
+      case "Tribunal de Faltas":
         return <Sanciones />;
+      case "Menú Torneos":
+        return <MenuTorneos />;
       default:
         return (
           <p className="text-center text-xl text-white">

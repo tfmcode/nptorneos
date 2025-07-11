@@ -5,6 +5,7 @@ export * from './equipoJugadoresColumns';
 export * from './equiposColumns';
 export * from './jugadorColumns';
 export * from './listaNegraColumns';
+export * from './menuTorneosColumns';
 export * from './partidosColumns';
 export * from './proveedoresColumns';
 export * from './sancionColumns';

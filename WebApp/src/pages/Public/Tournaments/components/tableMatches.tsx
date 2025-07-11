@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 
 export interface Match {
+  id: number;
+  zona: string;
   local: string;
   visitante: string;
   golesLocal: number;
@@ -20,106 +22,121 @@ const TableMatches: React.FC<TableMatchesProps> = ({
   matches,
   itemsPerPage,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeZone, setActiveZone] = useState<string>(matches[0]?.zona || "");
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const totalPages = Math.ceil(matches.length / itemsPerPage);
+  const zones = Array.from(new Set(matches.map((m) => m.zona))).sort();
+
+  const filteredMatches = matches.filter((m) => m.zona === activeZone);
+  const totalPages = Math.ceil(filteredMatches.length / itemsPerPage);
 
   const handlePageChange = (page: number) => {
-    if (page > 0 && page <= totalPages) {
+    if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
 
-  const getPaginatedMatches = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return matches.slice(startIndex, endIndex);
-  };
+  const paginatedMatches = filteredMatches.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
-    <div className="overflow-x-auto">
-      {/* Tabla */}
-      <table className="w-full border border-gray-300 text-center mb-4">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="px-4 py-2 border">Local</th>
-            <th className="px-4 py-2 border">Goles</th>
-            <th className="px-4 py-2 border">Visitante</th>
-            <th className="px-4 py-2 border">Goles</th>
-            <th className="px-4 py-2 border">Citación</th>
-            <th className="px-4 py-2 border">Partido</th>
-            <th className="px-4 py-2 border">Fecha</th>
-            <th className="px-4 py-2 border">Sede</th>
-            <th className="px-4 py-2 border">Ficha</th>
-          </tr>
-        </thead>
-        <tbody>
-          {getPaginatedMatches().map((match, index) => (
-            <tr key={index} className="hover:bg-gray-100">
-              <td className="px-4 py-2 border">{match.local}</td>
-              <td
-                className={`px-4 py-2 border ${
-                  match.golesLocal > match.golesVisitante
-                    ? "text-blue-600 font-bold"
-                    : ""
-                }`}
-              >
-                {match.golesLocal}
-              </td>
-              <td className="px-4 py-2 border">{match.visitante}</td>
-              <td
-                className={`px-4 py-2 border ${
-                  match.golesVisitante > match.golesLocal
-                    ? "text-blue-600 font-bold"
-                    : ""
-                }`}
-              >
-                {match.golesVisitante}
-              </td>
-              <td className="px-4 py-2 border">{match.citacion}</td>
-              <td className="px-4 py-2 border">{match.partido}</td>
-              <td className="px-4 py-2 border">{match.fecha}</td>
-              <td className="px-4 py-2 border">{match.sede}</td>
-              <td className="px-4 py-2 border">
-                <button className="px-4 py-1 bg-blue-600 text-white rounded">
-                  Ficha
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Paginación */}
-      <div className="flex justify-center items-center space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-        >
-          {"<"}
-        </button>
-        {[...Array(totalPages)].map((_, index) => (
+    <div className="container mx-auto px-4 py-6">
+      {/* Tabs de Zonas */}
+      <div className="flex flex-wrap justify-center gap-2 mb-4">
+        {zones.map((zone) => (
           <button
-            key={index}
-            onClick={() => handlePageChange(index + 1)}
-            className={`px-3 py-1 rounded ${
-              currentPage === index + 1
-                ? "bg-yellow-600 text-white"
-                : "bg-gray-200"
+            key={zone}
+            onClick={() => {
+              setActiveZone(zone);
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded font-semibold ${
+              activeZone === zone ? "bg-yellow-600 text-white" : "bg-gray-200"
             }`}
           >
-            {index + 1}
+            {zone.toUpperCase()}
           </button>
         ))}
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-        >
-          {">"}
-        </button>
       </div>
+
+      {/* Tabla de Partidos */}
+      <div className="overflow-x-auto">
+        <table className="w-full border border-gray-300 text-center mb-4">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-2 py-1 border">Local</th>
+              <th className="px-2 py-1 border">Goles</th>
+              <th className="px-2 py-1 border">Visitante</th>
+              <th className="px-2 py-1 border">Goles</th>
+              <th className="px-2 py-1 border">Citación</th>
+              <th className="px-2 py-1 border">Partido</th>
+              <th className="px-2 py-1 border">Fecha</th>
+              <th className="px-2 py-1 border">Sede</th>
+              <th className="px-2 py-1 border">Ficha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedMatches.map((match) => (
+              <tr key={match.id} className="hover:bg-gray-50">
+                <td className="px-2 py-1 border font-semibold text-blue-700">
+                  {match.local}
+                </td>
+                <td
+                  className={`px-2 py-1 border ${
+                    match.golesLocal > match.golesVisitante
+                      ? "text-blue-600 font-bold"
+                      : ""
+                  }`}
+                >
+                  {match.golesLocal}
+                </td>
+                <td className="px-2 py-1 border font-semibold text-blue-700">
+                  {match.visitante}
+                </td>
+                <td
+                  className={`px-2 py-1 border ${
+                    match.golesVisitante > match.golesLocal
+                      ? "text-blue-600 font-bold"
+                      : ""
+                  }`}
+                >
+                  {match.golesVisitante}
+                </td>
+                <td className="px-2 py-1 border">{match.citacion}</td>
+                <td className="px-2 py-1 border">{match.partido}</td>
+                <td className="px-2 py-1 border">{match.fecha}</td>
+                <td className="px-2 py-1 border">{match.sede}</td>
+                <td className="px-2 py-1 border">
+                  <button className="px-3 py-1 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs">
+                    Ficha
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-1 mt-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={`px-3 py-1 rounded ${
+                currentPage === page
+                  ? "bg-yellow-600 text-white"
+                  : "bg-gray-200"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

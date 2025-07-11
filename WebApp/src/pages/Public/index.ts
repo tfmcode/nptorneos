@@ -1,8 +1,11 @@
 export * from './About';
+export { default as CentroEntrenamiento } from './CentroEntrenamiento';
 export * from './Concents';
 export * from './Contact/components';
 export * from './Contact';
+export { default as FutbolNP } from './FutbolNP';
 export * from './Home/components';
 export * from './Home';
+export { default as NuevoParadigma } from './NuevoParadigma';
 export * from './Tournaments/components';
 export * from './Tournaments';

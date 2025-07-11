@@ -7,16 +7,16 @@ import {
   About,
   Contact,
   Concents,
-  Tournaments,
   PageNotFound,
   Login,
   RecPassword,
+  TorneoPublic,
+  System,
   CentroEntrenamiento,
   FutbolNP,
   NuevoParadigma,
 } from "./pages";
 import "./App.css";
-import System from "./pages/private/System";
 import ScrollToTop from "./components/common/ScrollToTop";
 
 function App() {
@@ -30,13 +30,15 @@ function App() {
             <Route path={EPublicRoutes.ABOUT} element={<About />} />
             <Route path={EPublicRoutes.CONTACT} element={<Contact />} />
             <Route path={EPublicRoutes.CONCENTS} element={<Concents />} />
-            <Route path={EPublicRoutes.TOURNAMENTS} element={<Tournaments />} />
-            <Route path={EPublicRoutes.FUTBOL_NP} element={<FutbolNP />} />
+            <Route
+              path={EPublicRoutes.TORNEO_PUBLIC}
+              element={<TorneoPublic />}
+            />
+<Route path={EPublicRoutes.FUTBOL_NP} element={<FutbolNP />} />
             <Route
               path={EPublicRoutes.NUEVO_PARADIGMA}
               element={<NuevoParadigma />}
             />
-
             <Route path="*" element={<PageNotFound />} />
             <Route
               path={EPublicRoutes.CENTRO_ENTRENAMIENTO}

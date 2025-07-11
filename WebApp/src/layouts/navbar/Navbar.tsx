@@ -71,12 +71,11 @@ export const Navbar: React.FC = () => {
           {/* TOP BAR */}
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
-              {/* Logo */}
               <RouteLink to="/">
                 <img src={Logo} alt="LIGA NP" className="h-12 w-auto" />
               </RouteLink>
 
-              {/* DESKTOP MENU */}
+              {/* DESKTOP */}
               <div className="hidden sm:flex space-x-4 items-center">
                 {navItems.map((item) =>
                   item.dynamic && item.idopciones ? (
@@ -101,30 +100,51 @@ export const Navbar: React.FC = () => {
                                 (c) => c.idopcion === idopcion
                               );
                               if (!cat) return null;
+                              const torneosCat = torneos[idopcion] || [];
+
                               return (
-                                <div key={idopcion} className="group relative">
-                                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex justify-between items-center">
+                                <Menu as="div" className="relative" key={`cat-${idopcion}`}>
+                                  <Menu.Button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex justify-between items-center">
                                     {cat.nombre}
-                                    {torneos[idopcion]?.length > 0 && (
+                                    {torneosCat.length > 0 && (
                                       <ChevronDownIcon className="h-4 w-4 ml-2 text-gray-500" />
                                     )}
-                                  </button>
-                                  {torneos[idopcion]?.length > 0 && (
-                                    <div className="absolute left-full top-0 ml-1 w-64 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 hidden group-hover:block z-50">
-                                      <div className="py-1">
-                                        {torneos[idopcion].map((torneo) => (
-                                          <RouteLink
-                                            to={`/torneos/${torneo.idtorneo}`}
-                                            key={`${torneo.idopcion}-${torneo.orden}`}
-                                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                          >
-                                            {torneo.descripcion ?? "Torneo"}
-                                          </RouteLink>
-                                        ))}
-                                      </div>
-                                    </div>
+                                  </Menu.Button>
+                                  {torneosCat.length > 0 && (
+                                    <Transition
+                                      as={Fragment}
+                                      enter="transition ease-out duration-100"
+                                      enterFrom="transform opacity-0 scale-95"
+                                      enterTo="transform opacity-100 scale-100"
+                                      leave="transition ease-in duration-75"
+                                      leaveFrom="transform opacity-100 scale-100"
+                                      leaveTo="transform opacity-0 scale-95"
+                                    >
+                                      <Menu.Items className="absolute left-full top-0 ml-1 w-64 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                                        <div className="py-1">
+                                          {torneosCat.map((torneo) => (
+                                            <Menu.Item
+                                              key={`torneo-${torneo.idopcion}-${torneo.orden}`}
+                                            >
+                                              {({ active }) => (
+                                                <RouteLink
+                                                  to={`/torneos/${torneo.idtorneo}`}
+                                                  className={`block px-4 py-2 text-sm ${
+                                                    active
+                                                      ? "bg-gray-100 text-gray-900"
+                                                      : "text-gray-700"
+                                                  }`}
+                                                >
+                                                  {torneo.descripcion ?? "Torneo"}
+                                                </RouteLink>
+                                              )}
+                                            </Menu.Item>
+                                          ))}
+                                        </div>
+                                      </Menu.Items>
+                                    </Transition>
                                   )}
-                                </div>
+                                </Menu>
                               );
                             })}
                           </div>
@@ -165,14 +185,15 @@ export const Navbar: React.FC = () => {
                   {item.idopciones.map((idopcion) => {
                     const cat = categorias.find((c) => c.idopcion === idopcion);
                     if (!cat) return null;
+                    const torneosCat = torneos[idopcion] || [];
                     return (
-                      <div key={idopcion} className="ml-4">
+                      <div key={`mobile-${idopcion}`} className="ml-4">
                         {cat.nombre}
-                        {torneos[idopcion]?.length > 0 && (
+                        {torneosCat.length > 0 && (
                           <div className="ml-4 space-y-1">
-                            {torneos[idopcion].map((torneo) => (
+                            {torneosCat.map((torneo) => (
                               <RouteLink
-                                key={`${torneo.idopcion}-${torneo.orden}`}
+                                key={`mobile-${torneo.idopcion}-${torneo.orden}`}
                                 to={`/torneos/${torneo.idtorneo}`}
                                 className="block text-sm text-gray-200 hover:underline"
                               >

@@ -8,7 +8,6 @@ import {
   Contact,
   Concents,
   Tournaments,
-  System,
   PageNotFound,
   Login,
   RecPassword,
@@ -17,8 +16,8 @@ import {
   NuevoParadigma,
 } from "./pages";
 import "./App.css";
+import System from "./pages/private/System";
 import ScrollToTop from "./components/common/ScrollToTop";
-
 
 function App() {
   return (

@@ -56,7 +56,12 @@ const MenuTorneos: React.FC = () => {
   const handleSave = async (item: MenuTorneo) => {
     try {
       if (!item.idopcion || !item.orden) return;
-      await dispatch(saveMenuTorneoThunk(item)).unwrap();
+      await dispatch(
+        saveMenuTorneoThunk({
+          ...item,
+          idopcion: item.idopcion ?? 0,
+        })
+      ).unwrap();
       dispatch(fetchMenuTorneosByOpcion(idopcion));
     } catch (error) {
       console.error("Error al guardar:", error);

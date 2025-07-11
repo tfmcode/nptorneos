@@ -12,8 +12,9 @@ export interface MenuTorneo {
 export interface MenuTorneoInput {
   idopcion: number;
   idtorneo?: number;
+  torneo?: Torneo; 
   descripcion?: string | null;
   orden?: number | null;
-  ordenAnterior?: number; // Para actualizar
+  ordenAnterior?: number; 
   [key: string]: unknown;
 }

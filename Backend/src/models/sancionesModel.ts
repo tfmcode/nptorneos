@@ -19,7 +19,6 @@ export interface ISancion {
 }
 
 export const getSancionById = async (id: number): Promise<ISancion | null> => {
-  console.log("getSancionById", id);
   const { rows } = await pool.query(
     `SELECT s.id, s.fecha, s.idjugador, s.idequipo, s.idtorneo, s.titulo, s.descripcion, 
      s.codestado, s.fhcarga, s.idusuario, s.fechafin,

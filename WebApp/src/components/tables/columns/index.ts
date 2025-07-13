@@ -3,6 +3,8 @@ export * from './codificadorColumns';
 export * from './consentimientoColumns';
 export * from './equipoJugadoresColumns';
 export * from './equiposColumns';
+export * from './inscripcionColumns';
+export * from './inscripcionJugadoresColumns';
 export * from './jugadorColumns';
 export * from './listaNegraColumns';
 export * from './menuTorneosColumns';

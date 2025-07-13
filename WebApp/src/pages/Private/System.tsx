@@ -5,7 +5,7 @@ import Usuarios from "./Usuarios";
 import Campeonatos from "./Campeonatos";
 import Jugadores from "./Jugadores";
 import Sedes from "./Sedes";
-import Codificadores from "./Codificadores";     
+import Codificadores from "./Codificadores";
 import Equipos from "./Equipos";
 import Torneos from "./Torneos";
 import ListaNegra from "./ListaNegra";
@@ -13,7 +13,7 @@ import Proveedores from "./Proveedores";
 import ConsentimientosAdmin from "./ConsentimientosAdmin";
 import Sanciones from "./Sanciones";
 import MenuTorneos from "./MenuTorneos";
-
+import Inscripciones from "./Inscripciones";
 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -44,6 +44,8 @@ const System: React.FC = () => {
         return <Sanciones />;
       case "Menú Torneos":
         return <MenuTorneos />;
+      case "Inscripciones":
+        return <Inscripciones />;
       default:
         return (
           <p className="text-center text-xl text-white">

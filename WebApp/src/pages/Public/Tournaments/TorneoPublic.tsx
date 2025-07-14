@@ -21,10 +21,12 @@ import {
   TableScorers,
   TableCards,
   ModalFichaPartido,
+  Sanctions,
 } from "./components";
 import { Match } from "./components/TableMatches";
 import { Card } from "./components/TableCards";
 import { StatusMessage } from "../../../components";
+
 
 const TorneoPublic: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -188,24 +190,28 @@ const TorneoPublic: React.FC = () => {
         </>
       )}
 
-      {zonaTabs.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-lg font-bold text-center mb-4">Posiciones</h2>
-          <TablePosition positions={positions} />
+      {zonaTabs.length > 0 && goleadorTabs.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+          <div>
+            <h2 className="text-lg font-bold mb-4">POSICIONES</h2>
+            <TablePosition positions={positions} />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold mb-4">GOLEADORES</h2>
+            <TableScorers scorersByZona={scorers} />
+          </div>
         </div>
       )}
 
-      {goleadorTabs.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-xl font-bold text-center mb-4">Goleadores</h2>
-          <TableScorers scorersByZona={scorers} />
-        </div>
-      )}
-
-      {tarjetasTabs.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-xl font-bold text-center mb-4">Tarjetas</h2>
-          <TableCards cards={cards} tabs={tarjetasTabs} />
+      {tarjetasTabs.length > 0 &&  (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+          <div>
+            <h2 className="text-lg font-bold mb-4">TARJETAS</h2>
+            <TableCards cards={cards} tabs={tarjetasTabs} />
+          </div>
+          <div>
+            <Sanctions sanciones={[]} />
+          </div>
         </div>
       )}
 

@@ -1,33 +1,29 @@
 import React, { useState } from "react";
-
-export interface Scorer {
-  pos: number;
-  jugador: string;
-  equipo: string;
-  goles: number;
-}
+import { Goleador } from "../../../../types/";
 
 interface TableScorersProps {
-  scorers: Scorer[];
-  tabs: string[];
+  scorersByZona: Record<string, Goleador[]>;
 }
 
-const TableScorers: React.FC<TableScorersProps> = ({ scorers, tabs }) => {
-  const [activeTab, setActiveTab] = useState(tabs[0]);
+const TableScorers: React.FC<TableScorersProps> = ({ scorersByZona }) => {
+  const zonas = Object.keys(scorersByZona);
+  const [activeTab, setActiveTab] = useState(zonas[0]);
+
+  const scorers = scorersByZona[activeTab] || [];
 
   return (
     <div className="overflow-x-auto">
       {/* Tabs */}
       <div className="flex justify-center space-x-4 mb-6">
-        {tabs.map((tab) => (
+        {zonas.map((zona) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={zona}
+            onClick={() => setActiveTab(zona)}
             className={`px-4 py-2 rounded-lg font-semibold ${
-              activeTab === tab ? "bg-yellow-600 text-white" : "bg-gray-200"
+              activeTab === zona ? "bg-yellow-600 text-white" : "bg-gray-200"
             }`}
           >
-            {tab.toUpperCase()}
+            {zona.toUpperCase()}
           </button>
         ))}
       </div>
@@ -44,8 +40,8 @@ const TableScorers: React.FC<TableScorersProps> = ({ scorers, tabs }) => {
         </thead>
         <tbody>
           {scorers.map((scorer, index) => (
-            <tr key={index} className="hover:bg-gray-100">
-              <td className="px-4 py-2 border">{scorer.pos}</td>
+            <tr key={scorer.idjugador} className="hover:bg-gray-100">
+              <td className="px-4 py-2 border">{index + 1}</td>
               <td className="px-4 py-2 border">{scorer.jugador}</td>
               <td className="px-4 py-2 border">{scorer.equipo}</td>
               <td className="px-4 py-2 border font-bold">{scorer.goles}</td>

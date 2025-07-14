@@ -4,13 +4,13 @@ export interface Card {
   pos: number;
   jugador: string;
   equipo: string;
-  amarillas?: number;
-  rojas?: number;
-  azules?: number;
+  amarillas: number;
+  rojas: number;
+  azules: number;
 }
 
 interface TableCardsProps {
-  cards: Record<string, Card[]>; // Estructura para pestañas
+  cards: Record<string, Card[]>;
   tabs: string[];
 }
 
@@ -61,9 +61,9 @@ const TableCards: React.FC<TableCardsProps> = ({ cards, tabs }) => {
                 <td className="px-4 py-2 border">{card.pos}</td>
                 <td className="px-4 py-2 border">{card.jugador}</td>
                 <td className="px-4 py-2 border">{card.equipo}</td>
-                <td className="px-4 py-2 border">{card.rojas || 0}</td>
-                <td className="px-4 py-2 border">{card.amarillas || 0}</td>
-                <td className="px-4 py-2 border">{card.azules || 0}</td>
+                <td className="px-4 py-2 border">{card.rojas}</td>
+                <td className="px-4 py-2 border">{card.amarillas}</td>
+                <td className="px-4 py-2 border">{card.azules}</td>
               </tr>
             ))}
           </tbody>

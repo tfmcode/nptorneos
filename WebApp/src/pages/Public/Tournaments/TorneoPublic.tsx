@@ -1,43 +1,113 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getPublicTorneoById } from "../../../api/torneosPublicService";
-import { Torneo } from "../../../types/torneos";
-import { Zona } from "../../../types/zonas";
-import { Partido } from "../../../types/partidos";
-import { Sancion } from "../../../types/sanciones";
+import {
+  getPublicTorneoById,
+  getPosicionesByTorneoId,
+  getGoleadoresByZonaId,
+  getSancionesPorZona,
+  getFichaPartido,
+} from "../../../api/torneosPublicService";
+import {
+  Torneo,
+  Zona,
+  Partido,
+  Posicion,
+  Goleador,
+  FichaPartido,
+} from "../../../types";
+import {
+  TableMatches,
+  TablePosition,
+  TableScorers,
+  TableCards,
+  ModalFichaPartido,
+} from "./components";
+import { Match } from "./components/TableMatches";
+import { Card } from "./components/TableCards";
 import { StatusMessage } from "../../../components";
-import TableMatches, { Match } from "./components/TableMatches";
-import Sanctions from "./components/Sanctions";
 
 const TorneoPublic: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [torneo, setTorneo] = useState<Torneo | null>(null);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [partidos, setPartidos] = useState<Partido[]>([]);
-  const [sanciones, setSanciones] = useState<Sancion[]>([]);
+  const [fichaPartido, setFichaPartido] = useState<FichaPartido | null>(null);
+  const [positions, setPositions] = useState<Record<string, Posicion[]>>({});
+  const [scorers, setScorers] = useState<Record<string, Goleador[]>>({});
+  const [cards, setCards] = useState<Record<string, Card[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchTorneo = async () => {
+    const fetchData = async () => {
       if (!id) return;
       try {
         setLoading(true);
-        const data = await getPublicTorneoById(Number(id));
-        setTorneo(data.torneo);
-        setZonas(data.zonas);
-        setPartidos(data.partidos);
-        setSanciones(data.sanciones);
-      } catch (error) {
-        console.error(error);
+        const [data, posicionesData] = await Promise.all([
+          getPublicTorneoById(Number(id)),
+          getPosicionesByTorneoId(Number(id)),
+        ]);
+
+        setTorneo(data.torneo ?? null);
+        setZonas(data.zonas ?? []);
+        setPartidos(data.partidos ?? []);
+
+        const posicionesByZona: Record<string, Posicion[]> = {};
+        posicionesData.forEach((pos) => {
+          const zona = pos.zona_nombre ?? "SIN ZONA";
+          if (!posicionesByZona[zona]) posicionesByZona[zona] = [];
+          posicionesByZona[zona].push(pos);
+        });
+        setPositions(posicionesByZona);
+
+        const goleadoresByZona: Record<string, Goleador[]> = {};
+        for (const zona of data.zonas) {
+          if (typeof zona.id === "number") {
+            const goleadores = await getGoleadoresByZonaId(zona.id);
+            goleadoresByZona[zona.abrev ?? zona.nombre] = goleadores.map(
+              (g, idx) => ({ ...g, pos: idx + 1 })
+            );
+          }
+        }
+        setScorers(goleadoresByZona);
+
+        const tarjetasByZona: Record<string, Card[]> = {};
+        for (const zona of data.zonas) {
+          if (typeof zona.id === "number") {
+            const sanciones = await getSancionesPorZona(zona.id);
+            tarjetasByZona[zona.abrev ?? zona.nombre] = sanciones.map(
+              (s, idx) => ({
+                pos: idx + 1,
+                jugador: s.jugador,
+                equipo: s.equipo,
+                amarillas: s.namarillas,
+                azules: s.nazules,
+                rojas: s.nrojas,
+              })
+            );
+          }
+        }
+        setCards(tarjetasByZona);
+      } catch (err) {
+        console.error(err);
         setError("Error al cargar el torneo.");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchTorneo();
+    fetchData();
   }, [id]);
+
+  const fetchFicha = async (idpartido: number) => {
+    try {
+      const ficha = await getFichaPartido(idpartido);
+      setFichaPartido(ficha);
+      setModalOpen(true);
+    } catch (err) {
+      console.error("Error al obtener la ficha del partido:", err);
+    }
+  };
 
   const matchesFormateados: Match[] = partidos.map((p) => {
     const fechaObj = p.fecha ? new Date(p.fecha) : null;
@@ -83,9 +153,12 @@ const TorneoPublic: React.FC = () => {
     };
   });
 
+  const zonaTabs = Object.keys(positions).sort();
+  const goleadorTabs = Object.keys(scorers).sort();
+  const tarjetasTabs = Object.keys(cards).sort();
+
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Título */}
       <h1 className="text-2xl font-bold text-center mb-6">
         {typeof torneo?.nombre === "string"
           ? torneo.nombre.toUpperCase()
@@ -94,61 +167,48 @@ const TorneoPublic: React.FC = () => {
 
       <StatusMessage loading={loading} error={error} />
 
-
-      {/* Fixture de Partidos */}
       {matchesFormateados.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-lg font-bold text-center mb-4">
-            Fixture de Partidos
-          </h2>
-          <TableMatches matches={matchesFormateados} itemsPerPage={3} />
-        </div>
-      )}
-
-      <div className="flex flex-wrap lg:flex-nowrap space-y-6 lg:space-y-0 lg:space-x-6 mb-10">
-        <div className="w-full lg:w-1/2 p-4 bg-white shadow-md rounded-lg">
-          <h2 className="text-xl font-bold text-center mb-4">Posiciones</h2>
-          <div className="text-center text-gray-500">Próximamente...</div>
-        </div>
-        <div className="w-full lg:w-1/2 p-4 bg-white shadow-md rounded-lg">
-          <h2 className="text-xl font-bold text-center mb-4">Goleadores</h2>
-          <div className="text-center text-gray-500">Próximamente...</div>
-        </div>
-      </div>
-
-      {/* Sanciones */}
-      {sanciones.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-lg font-bold text-center mb-4">Sanciones</h2>
-          {sanciones.map((s) => (
-            <Sanctions
-              key={s.id}
-              jugador={
-                typeof s.nombrejugador === "string"
-                  ? s.nombrejugador
-                  : String(s.idjugador ?? "-")
-              }
-              equipo={
-                typeof s.nombreequipo === "string"
-                  ? s.nombreequipo
-                  : String(s.idequipo ?? "-")
-              }
-              fecha={
-                s.fecha
-                  ? new Date(s.fecha).toLocaleDateString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })
-                  : "Sin fecha"
-              }
-              detalles={s.descripcion ?? "Sin descripción"}
+        <>
+          <div className="mb-10">
+            <h2 className="text-lg font-bold text-center mb-4">
+              Fixture de Partidos
+            </h2>
+            <TableMatches
+              matches={matchesFormateados}
+              itemsPerPage={3}
+              onSelectMatch={(idpartido: number) => fetchFicha(idpartido)}
             />
-          ))}
+          </div>
+
+          <ModalFichaPartido
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            ficha={fichaPartido}
+          />
+        </>
+      )}
+
+      {zonaTabs.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold text-center mb-4">Posiciones</h2>
+          <TablePosition positions={positions} />
         </div>
       )}
 
-      {/* Mapa */}
+      {goleadorTabs.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-bold text-center mb-4">Goleadores</h2>
+          <TableScorers scorersByZona={scorers} />
+        </div>
+      )}
+
+      {tarjetasTabs.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-bold text-center mb-4">Tarjetas</h2>
+          <TableCards cards={cards} tabs={tarjetasTabs} />
+        </div>
+      )}
+
       {torneo?.latitud && torneo?.longitud && (
         <div className="border border-gray-300 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold mb-4">
@@ -156,9 +216,7 @@ const TorneoPublic: React.FC = () => {
             {typeof torneo?.sede_nombre === "string" ? torneo.sede_nombre : ""}
           </h2>
           <p>
-            {typeof torneo?.domicilio === "string" ? torneo.domicilio : ""},{" "}
-            {typeof torneo?.localidad === "string" ? torneo.localidad : ""},{" "}
-            {typeof torneo?.provincia === "string" ? torneo.provincia : ""}
+            {torneo?.domicilio}, {torneo?.localidad}, {torneo?.provincia}
           </p>
           <iframe
             src={`https://www.google.com/maps?q=${torneo.latitud},${torneo.longitud}&z=15&output=embed`}

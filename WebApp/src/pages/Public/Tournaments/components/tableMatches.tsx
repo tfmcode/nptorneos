@@ -1,3 +1,4 @@
+// components/TableMatches.tsx
 import React, { useState } from "react";
 
 export interface Match {
@@ -16,24 +17,23 @@ export interface Match {
 interface TableMatchesProps {
   matches: Match[];
   itemsPerPage: number;
+  onSelectMatch?: (idpartido: number) => void; // ✅ nueva prop
 }
 
 const TableMatches: React.FC<TableMatchesProps> = ({
   matches,
   itemsPerPage,
+  onSelectMatch,
 }) => {
   const [activeZone, setActiveZone] = useState<string>(matches[0]?.zona || "");
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const zones = Array.from(new Set(matches.map((m) => m.zona))).sort();
-
   const filteredMatches = matches.filter((m) => m.zona === activeZone);
   const totalPages = Math.ceil(filteredMatches.length / itemsPerPage);
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const paginatedMatches = filteredMatches.slice(
@@ -43,7 +43,6 @@ const TableMatches: React.FC<TableMatchesProps> = ({
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Tabs de Zonas */}
       <div className="flex flex-wrap justify-center gap-2 mb-4">
         {zones.map((zone) => (
           <button
@@ -61,7 +60,6 @@ const TableMatches: React.FC<TableMatchesProps> = ({
         ))}
       </div>
 
-      {/* Tabla de Partidos */}
       <div className="overflow-x-auto">
         <table className="w-full border border-gray-300 text-center mb-4">
           <thead className="bg-gray-100">
@@ -109,7 +107,10 @@ const TableMatches: React.FC<TableMatchesProps> = ({
                 <td className="px-2 py-1 border">{match.fecha}</td>
                 <td className="px-2 py-1 border">{match.sede}</td>
                 <td className="px-2 py-1 border">
-                  <button className="px-3 py-1 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs">
+                  <button
+                    className="px-3 py-1 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs"
+                    onClick={() => onSelectMatch?.(match.id)}
+                  >
                     Ficha
                   </button>
                 </td>
@@ -119,7 +120,6 @@ const TableMatches: React.FC<TableMatchesProps> = ({
         </table>
       </div>
 
-      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-1 mt-2">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (

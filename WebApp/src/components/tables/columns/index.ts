@@ -10,6 +10,7 @@ export * from './listaNegraColumns';
 export * from './menuTorneosColumns';
 export * from './partidosColumns';
 export * from './proveedoresColumns';
+export * from './resultadoColumns';
 export * from './sancionColumns';
 export * from './sedeColumns';
 export * from './torneoColumns';

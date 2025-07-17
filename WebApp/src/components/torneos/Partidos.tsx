@@ -38,14 +38,13 @@ function Partidos({ idtorneo }: PartidosProps) {
   );
 
   useEffect(() => {
+    dispatch(fetchPartidosByZona(0));
     dispatch(fetchZonasByTorneo(idtorneo));
     dispatch(fetchZonasEquiposByTorneo(idtorneo ?? 0));
     dispatch(fetchSedes());
   }, [dispatch, idtorneo]);
 
-  const [equiposPartido, setEquiposPartido] = useState<ZonaEquipo[]>([]);
-
-  const { formData, setFormData, handleInputChange } = useCrudForm<Partido>({
+  const initialFormData: Partido = {
     id: undefined,
     idzona: 0,
     nrofecha: 0,
@@ -75,9 +74,16 @@ function Partidos({ idtorneo }: PartidosProps) {
     dt2: "",
     suplentes1: "",
     suplentes2: "",
-    ausente1: "",
-    ausente2: "",
+    ausente1: 0,
+    ausente2: 0,
     idfecha: 0,
+  };
+
+  const [equiposPartido, setEquiposPartido] = useState<ZonaEquipo[]>([]);
+  const [horario, setHorario] = useState<string>("00:00");
+
+  const { formData, setFormData, handleInputChange } = useCrudForm<Partido>({
+    ...initialFormData,
   });
 
   useEffect(() => {
@@ -86,10 +92,20 @@ function Partidos({ idtorneo }: PartidosProps) {
     );
   }, [formData.idzona, zonasEquipos]);
 
+  useEffect(() => {
+    dispatch(fetchPartidosByZona(formData.idzona ?? 0));
+  }, [formData.idzona, dispatch]);
+
+  useEffect(() => {
+    if (formData.fecha) {
+      setHorario(formData.fecha.split(" ")[1] ?? "00:00");
+    }
+  }, [formData.fecha]);
+
   const handleSubmitPartido = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (formData.id == null || formData.id == 0) {
+      if (formData.idzona == null || formData.idzona == 0) {
         dispatch(
           setZonasError(
             "No se puede guardar un partido sin una zona seleccionada"
@@ -97,9 +113,13 @@ function Partidos({ idtorneo }: PartidosProps) {
         );
         return;
       }
+      if (formData.fecha) {
+        formData.fecha = `${formData.fecha.split(" ")[0]} ${horario}`;
+      }
       const { id, ...partidoData } = formData;
       await dispatch(savePartidoThunk(id ? formData : partidoData)).unwrap();
       dispatch(fetchPartidosByZona(formData.idzona ?? 0));
+      setFormData({ ...initialFormData, idzona: formData.idzona ?? 0 });
     } catch (err) {
       console.error("Error al guardar partido:", err);
     }
@@ -142,8 +162,9 @@ function Partidos({ idtorneo }: PartidosProps) {
           },
           {
             name: "horario",
-            type: "date",
-            value: formData.fecha?.split(" ")[0] ?? "",
+            type: "time",
+            value: horario,
+            onChange: (e) => setHorario(e.target.value),
             label: "Horario",
           },
           {

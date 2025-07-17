@@ -13,6 +13,7 @@ import Proveedores from "./Proveedores";
 import ConsentimientosAdmin from "./ConsentimientosAdmin";
 import Sanciones from "./Sanciones";
 import MenuTorneos from "./MenuTorneos";
+import Facturas from "./Facturas";
 
 
 const System: React.FC = () => {
@@ -44,6 +45,8 @@ const System: React.FC = () => {
         return <Sanciones />;
       case "Menú Torneos":
         return <MenuTorneos />;
+      case "Facturación":
+        return <Facturas />;
       default:
         return (
           <p className="text-center text-xl text-white">

@@ -19,7 +19,8 @@ interface FieldConfig {
     | "number"
     | "textarea"
     | "money"
-    | "file";
+    | "file"
+    | "time";
   placeholder?: string;
   value: string | number | boolean;
   options?: FieldOption[];

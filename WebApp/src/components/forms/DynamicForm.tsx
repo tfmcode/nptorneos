@@ -19,12 +19,14 @@ interface FieldConfig {
     | "number"
     | "textarea"
     | "money"
-    | "file";
+    | "file"
+    | "time";
   placeholder?: string;
   value: string | number | boolean;
   options?: FieldOption[];
   label?: string;
   colSpan?: number;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 interface DynamicFormProps {
@@ -118,8 +120,16 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               <input
                 name={field.name}
                 type="file"
-                onChange={onChange}
+                onChange={field.onChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
+              />
+            ) : field.type === "time" ? (
+              <input
+                name={field.name}
+                type="time"
+                value={String(field.value)}
+                onChange={field.onChange}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm"
               />
             ) : (
               <InputField

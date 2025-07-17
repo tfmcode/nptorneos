@@ -31,8 +31,8 @@ export interface Partido {
   fhbaja?: string;
   idusuario?: number;
   idprofesor?: number;
-  ausente1?: string;
-  ausente2?: string;
+  ausente1?: number;
+  ausente2?: number;
   idfecha?: number;
   [key: string]: unknown;
 }

@@ -17,9 +17,12 @@ import listaNegraRoutes from "./routes/listaNegraRoutes";
 import proveedoresRoutes from "./routes/proveedoresRoutes";
 import consentimientosRoutes from "./routes/consentimientosRoutes";
 import sancionesRoutes from "./routes/sancionesRoutes";
+import inscripcionesRoutes from "./routes/inscripcionesRoutes";
+import inscripcionesJugadoresRoutes from "./routes/inscripcionesJugadoresRoutes";
+import torneosEquiposInscRoutes from "./routes/torneosEquiposInscRoutes";
 import menuTorneosRoutes from "./routes/menuTorneosRoutes";
 import publicMenuTorneosRoutes from "./routes/publicMenuTorneosRoutes";
-import torneosPublicRoutes from "./routes/torneosPublicRoutes";
+import publicTorneosRoutes from "./routes/publicTorneosRoutes";
 import facturasRoutes from "./routes/facturasRoutes";
 
 dotenv.config();
@@ -50,9 +53,12 @@ app.use("/api/lista-negra", listaNegraRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/consentimientos", consentimientosRoutes);
 app.use("/api/sanciones", sancionesRoutes);
+app.use("/api/inscripciones", inscripcionesRoutes);
+app.use("/api/inscripciones-jugadores", inscripcionesJugadoresRoutes);
+app.use("/api/torneos-equipos-insc", torneosEquiposInscRoutes);
 app.use("/api/menutorneos", menuTorneosRoutes);
 app.use("/api/public/menutorneos", publicMenuTorneosRoutes);
-app.use("/api/public/torneos", torneosPublicRoutes);
+app.use("/api/public/torneos", publicTorneosRoutes);
 app.use("/api/facturas", facturasRoutes);
 
 app.use((req: Request, res: Response) => {

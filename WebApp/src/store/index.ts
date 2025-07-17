@@ -16,6 +16,9 @@ import listaNegraSlice from "./slices/listaNegraSlice";
 import proveedoresSlice from "./slices/proveedoresSlice";
 import consentimientoSlice from "./slices/consentimientoSlice";
 import sancionSlice from "./slices/sancionSlice";
+import inscripcionSlice from "./slices/inscripcionSlice";
+import inscripcionesJugadoresSlice from "./slices/inscripcionesJugadoresSlice";
+import torneosEquiposInscSlice from "./slices/torneosEquiposInscSlice";
 import menuTorneosSlice from "./slices/menuTorneosSlice";
 import facturaSlice from "./slices/facturasSlice";
 
@@ -38,6 +41,9 @@ export const store = configureStore({
     proveedores: proveedoresSlice,
     consentimientos: consentimientoSlice,
     sanciones: sancionSlice,
+    inscripciones: inscripcionSlice,
+    inscripcionesJugadores: inscripcionesJugadoresSlice,
+    torneosEquiposInsc: torneosEquiposInscSlice,
     menuTorneos: menuTorneosSlice,
     facturas: facturaSlice
   },

@@ -8,7 +8,7 @@ import {
 } from "../../store/slices/inscripcionesJugadoresSlice";
 import JugadoresDataTable from "./JugadoresDataTable";
 import { inscripcionJugadorColumns } from "../tables/columns";
-import EquipoAutocomplete from "../forms/EquipoAutocomplete";
+import EquipoInscAutocomplete from "../forms/EquipoInscAutocomplete";
 import { Inscripcion } from "../../types/inscripciones";
 import { TorneosEquiposInsc } from "../../types/torneosEquiposInsc";
 import { InscripcionJugador } from "../../types/inscripcionesJugadores";
@@ -105,7 +105,7 @@ function ProcesarEquipo({
         <div className="w-[25%]">
           <span>Asociar Equipo</span>
         </div>
-        <EquipoAutocomplete
+        <EquipoInscAutocomplete
           value={inscripcion.idequipoasoc ?? 0}
           onChange={(e) => handleEquipoChange(e)}
           disabled={loading}

@@ -98,9 +98,7 @@ const sancionSlice = createSlice({
         const updatedSancion = action.payload;
         if (!updatedSancion || !updatedSancion.id) return;
 
-        const index = state.sanciones.findIndex(
-          (s) => s.id === updatedSancion.id
-        );
+        const index = state.sanciones.findIndex((s) => s.id === updatedSancion.id);
         if (index !== -1) {
           state.sanciones[index] = updatedSancion;
         } else {

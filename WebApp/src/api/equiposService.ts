@@ -32,6 +32,16 @@ export const getEquipos = async (
   return { equipos: [], total: 0, page, limit };
 };
 
+export const getEquipoById = async (id: number): Promise<Equipo | null> => {
+  try {
+    const response = await API.get(`/api/equipos/${id}`);
+    return response.data;
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return null;
+};
+
 export const getEquiposByJugador = async (
   idjugador: number
 ): Promise<Equipo[]> => {

@@ -16,11 +16,13 @@ export const zonasEquiposColumns = [
   {
     header: "Valor Inscripción",
     accessor: "valor_insc" as keyof ZonaEquipo,
-    render: (zonaEquipo: ZonaEquipo) => zonaEquipo.valor_insc ?? "",
+    render: (zonaEquipo: ZonaEquipo) =>
+      `$${zonaEquipo.valor_insc?.toLocaleString() ?? ""}`,
   },
   {
     header: "Valor Fecha",
     accessor: "valor_fecha" as keyof ZonaEquipo,
-    render: (zonaEquipo: ZonaEquipo) => zonaEquipo.valor_fecha ?? "",
+    render: (zonaEquipo: ZonaEquipo) =>
+      `$${zonaEquipo.valor_fecha?.toLocaleString() ?? ""}`,
   },
 ];

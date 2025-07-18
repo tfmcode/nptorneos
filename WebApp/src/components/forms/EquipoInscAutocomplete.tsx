@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { Equipo } from "../../types/equipos";
-import { getEquipoById, getEquipos } from "../../api/equiposService";
+import { TorneosEquiposInsc } from "../../types/torneosEquiposInsc";
+import {
+  getTorneosEquiposInsc,
+  getTorneosEquiposInscByEquipo,
+} from "../../api/torneosEquiposInscService";
 
 interface Props {
   value: number;
-  onChange: (equipo: Equipo) => void;
+  onChange: (inscripcion: TorneosEquiposInsc) => void;
   disabled?: boolean;
 }
 
-const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
+const EquipoInscAutocomplete: React.FC<Props> = ({
+  value,
+  onChange,
+  disabled,
+}) => {
   const [inputValue, setInputValue] = useState("");
-  const [sugerencias, setSugerencias] = useState<Equipo[]>([]);
+  const [sugerencias, setSugerencias] = useState<TorneosEquiposInsc[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (value !== 0) {
-      getEquipoById(value).then((res) => {
-        if (res) {
-          setInputValue(`${res.nombre}`);
+      getTorneosEquiposInscByEquipo(value).then((res) => {
+        if (res.length > 0) {
+          setInputValue(`${res[0].equipo_nombre} - ${res[0].torneo_nombre}`);
         }
       });
     }
@@ -26,8 +33,8 @@ const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (inputValue.length >= 2) {
-        getEquipos(1, 10, inputValue).then((res) => {
-          setSugerencias(res.equipos);
+        getTorneosEquiposInsc(1, 10, inputValue).then((res) => {
+          setSugerencias(res.inscripciones);
           setShowDropdown(true);
         });
       } else {
@@ -39,9 +46,11 @@ const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
     return () => clearTimeout(delayDebounce);
   }, [inputValue]);
 
-  const handleSelect = (equipo: Equipo) => {
-    setInputValue(`${equipo.nombre}`);
-    onChange(equipo); // Devuelve el objeto completo
+  const handleSelect = (inscripcion: TorneosEquiposInsc) => {
+    setInputValue(
+      `${inscripcion.equipo_nombre} - ${inscripcion.torneo_nombre}`
+    );
+    onChange(inscripcion); // Devuelve el objeto completo
     setShowDropdown(false);
   };
 
@@ -49,11 +58,11 @@ const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
     setInputValue("");
     onChange({
       id: 0,
-      nombre: "",
-      abrev: "",
-      idusuario: 0,
-      codestado: 1,
-    } as Equipo);
+      idtorneo: 0,
+      idequipo: 0,
+      equipo_nombre: "",
+      torneo_nombre: "",
+    } as TorneosEquiposInsc);
   };
 
   return (
@@ -64,7 +73,7 @@ const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
           value={inputValue}
           placeholder="Buscar equipo por nombre de equipo o torneo"
           onChange={(e) => setInputValue(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
+          className="border rounded px-3 py-2 w-full"
           onFocus={() => inputValue.length >= 2 && setShowDropdown(true)}
           disabled={disabled}
         />
@@ -89,14 +98,16 @@ const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
               "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           }}
         >
-          {sugerencias.map((equipo) => (
+          {sugerencias.map((inscripcion) => (
             <li
-              key={equipo.id}
+              key={inscripcion.id}
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-              onClick={() => !disabled && handleSelect(equipo)}
+              onClick={() => !disabled && handleSelect(inscripcion)}
             >
-              <div className="font-medium">{equipo.nombre}</div>
-              <div className="text-sm text-gray-600">{equipo.abrev}</div>
+              <div className="font-medium">{inscripcion.equipo_nombre}</div>
+              <div className="text-sm text-gray-600">
+                {inscripcion.torneo_nombre}
+              </div>
             </li>
           ))}
         </ul>
@@ -105,4 +116,4 @@ const EquipoAutocomplete: React.FC<Props> = ({ value, onChange, disabled }) => {
   );
 };
 
-export default EquipoAutocomplete;
+export default EquipoInscAutocomplete;

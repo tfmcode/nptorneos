@@ -1,5 +1,4 @@
 import { pool } from "../config/db";
-import { createEquipo, IEquipo } from "./equiposModel";
 
 export interface IZonaEquipo {
   id?: number;
@@ -46,34 +45,6 @@ export const getZonasEquiposByTorneo = async (
 export const createZonaEquipo = async (
   zonaEquipo: IZonaEquipo
 ): Promise<IZonaEquipo> => {
-  const equipo: IEquipo = {
-    nombre: zonaEquipo.nombre,
-    coddeporte: 4,
-    codcateg: 1,
-    codestado: 1,
-    fhcarga: new Date(),
-    idusuario: zonaEquipo.idusuario,
-    fhbaja: null,
-    foto: "",
-    archivoubic: "",
-    archivosize: 0,
-    archivonom: "",
-    idsede: 0,
-    contacto: "",
-    emailcto: "",
-    telefonocto: "",
-    celularcto: "",
-    contrasenia: "",
-    buenafe: 0,
-    iniciales: "",
-    observ: "",
-    saldodeposito: 0,
-    fhultmod: new Date(),
-    abrev: zonaEquipo.abrev,
-  };
-
-  const equipoCreado = await createEquipo(equipo);
-
   const { rows } = await pool.query(
     `INSERT INTO zonas_equipos (
       idtorneo, idzona, idequipo, codestado, fhcarga, idusuario, valor_insc, valor_fecha
@@ -83,7 +54,7 @@ export const createZonaEquipo = async (
     [
       zonaEquipo.idtorneo,
       zonaEquipo.idzona,
-      equipoCreado.id,
+      zonaEquipo.idequipo,
       zonaEquipo.codestado,
       zonaEquipo.idusuario,
       zonaEquipo.valor_insc ?? 0,

@@ -39,6 +39,7 @@ const Sanciones: React.FC = () => {
 
   const {
     formData,
+    setFormData,
     handleInputChange,
     handleOpenModal,
     handleCloseModal,
@@ -315,7 +316,7 @@ const Sanciones: React.FC = () => {
             <>
               <div className="mb-4">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Jugador {formData.id}
+                  Jugador
                 </label>
                 <input
                   type="text"
@@ -399,9 +400,15 @@ const Sanciones: React.FC = () => {
               },
               {
                 name: "descripcion",
-                type: "textarea",
+                type: "richtext",
                 placeholder: "Descripción",
                 value: formData.descripcion ?? "",
+                onChange: (e) =>
+                  setFormData({
+                    ...formData,
+                    descripcion: e.target.value as string,
+                  }),
+                colSpan: 2,
               },
             ]}
             onChange={handleInputChange}

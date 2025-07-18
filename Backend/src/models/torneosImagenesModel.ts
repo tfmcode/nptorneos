@@ -36,6 +36,26 @@ export const getTorneoImagenesByTorneo = async (
   return rows;
 };
 
+export const getNextFileNumber = async (): Promise<number> => {
+  const { rows } = await pool.query(
+    `SELECT nombre FROM wtorneos_imagenes WHERE nombre LIKE 'arch%.%';`
+  );
+
+  let maxNumber = 0;
+
+  for (const row of rows) {
+    const match = row.nombre.match(/arch(\d+)\./);
+    if (match) {
+      const number = parseInt(match[1], 10);
+      if (number > maxNumber) {
+        maxNumber = number;
+      }
+    }
+  }
+
+  return maxNumber + 1;
+};
+
 export const createTorneoImagen = async (
   imagen: ITorneoImagen
 ): Promise<ITorneoImagen> => {
@@ -58,6 +78,13 @@ export const createTorneoImagen = async (
       imagen.fhultmod,
     ]
   );
+
+  // update imagen.idimagen with the id of the new imagen
+  await pool.query(
+    `UPDATE wtorneos_imagenes SET idimagen = $1 WHERE id = $2;`,
+    [rows[0].id, rows[0].id]
+  );
+
   return rows[0];
 };
 

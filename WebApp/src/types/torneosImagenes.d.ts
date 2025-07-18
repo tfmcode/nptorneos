@@ -14,11 +14,3 @@ export interface TorneosImagen {
   fhbaja?: string;
   [key: string]: unknown;
 }
-
-export interface TorneosImagenInput {
-  idtorneo?: number;
-  idzona?: number;
-  idimagen?: number;
-  descripcion?: string;
-  nombre?: string;
-}

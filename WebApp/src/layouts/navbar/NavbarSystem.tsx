@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
     submenus: [
       { title: "Sedes" },
       { title: "Inscripciones" },
-      { title: "Resultados F" },
+      { title: "Resultados" },
       { title: "Campeonatos" },
       { title: "Torneos" },
       { title: "Equipos" },

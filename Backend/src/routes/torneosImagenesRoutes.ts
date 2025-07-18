@@ -5,6 +5,7 @@ import {
   getTorneoImagenController,
   updateTorneoImagenController,
   deleteTorneoImagenController,
+  uploadImageController,
 } from "../controllers/torneosImagenesController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -34,6 +35,14 @@ router.get(
   [param("id").isInt().withMessage("El ID debe ser un número entero.")],
   validateRequest,
   asyncHandler(getTorneoImagenController)
+);
+
+// Upload image file
+router.post(
+  "/upload",
+  authMiddleware,
+  adminMiddleware,
+  asyncHandler(uploadImageController)
 );
 
 // Create image

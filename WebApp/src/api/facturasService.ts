@@ -2,6 +2,7 @@ import { AxiosError } from "axios";
 import API from "./httpClient"; // Reutilizamos la configuración de Axios
 import { Factura, FacturaInput } from "../types/factura";
 import { dateToInputValue } from "../helpers/dateHelpers";
+import { Console } from "console";
 
 /**
  * Manejo de errores de Axios para obtener mensajes claros
@@ -39,18 +40,16 @@ export const getFacturas = async (
     if (searchTerm) queryParams.append("searchTerm", searchTerm);
     if (fechaDesde) queryParams.append("fechaDesde", dateToInputValue(fechaDesde));
     if (fechaHasta) queryParams.append("fechaHasta", dateToInputValue(fechaHasta));
+    
+    console.log("queryparams:", queryParams.toString());
+    console.log("fecha desde: ", dateToInputValue(fechaDesde), " fecha hasta: ", dateToInputValue(fechaHasta));
+  
+    console.log("todo la url:", `/api/facturas?${queryParams.toString()}`);
 
-    console.log("Filtros enviados:", {
-      page,
-      limit,
-      searchTerm,
-      fechaDesde,
-      fechaHasta,
-    });
+    const response = await API.get(`/api/facturas?${queryParams.toString()}`);
+    
+    console.log("response: ", response);
 
-    console.log("query Params: ", queryParams.toString() )
-    const response = await API.get("/api/facturas?${queryParams.toString()}`");
-    console.log("facturas: ", response.data );
     return response.data ?? [];
   } catch (error) {
     handleAxiosError(error);
@@ -63,14 +62,16 @@ export const getFacturas = async (
  */
 export const saveFactura = async (data: FacturaInput & { id?: number }) => {
   try {
-    if (!data.nroComprobante) {
+    if (!data.nrocomprobante) {
       throw new Error("El campo N° comprobante es obligatorio.");
     }
-
+    
 
     const facturaPayload = {
       ...data
     };
+
+    console.log("facturapayload: ", facturaPayload);
 
     const response = data.id
       ? await API.put(`/api/facturas/${data.id}`, facturaPayload)

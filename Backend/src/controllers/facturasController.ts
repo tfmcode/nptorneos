@@ -74,7 +74,7 @@ export const createFacturaController = async (req: Request, res: Response) => {
         .json({ message: "El proveedor es obligatorio." });
     }
 
-    if (!factura.formaPago) {
+    if (!factura.formapago) {
       return res
         .status(400)
         .json({ message: "La forma de pago es obligatorio." });

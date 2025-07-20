@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { Factura } from "../../types/factura";
 import DataTable from "../../components/tables/DataTable";
-import DynamicForm from "../../components/forms/DynamicForm";
+import FacturaForm from "../../components/forms/FacturaForm";
 import DateRangePicker from "../../components/common/DateRangePicker";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
@@ -20,6 +20,7 @@ import {
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { facturaColumns } from "../../components/tables/columns/facturaColumns";
 import { dateToInputValue } from '../../helpers/dateHelpers';
+import { calcularImporteIVA, calcularImporteIngrBru, calcularImporteTotal } from "../../helpers/facturaHelpers";
 
 const Facturas: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -28,6 +29,7 @@ const Facturas: React.FC = () => {
 
   const {
     formData,
+    setFormData,
     isModalOpen,
     handleInputChange,
     handleOpenModal,
@@ -45,7 +47,7 @@ const Facturas: React.FC = () => {
     importeingrbru: 0,
     importeiva: 0,
     alicuotaingrbru: 0,
-    alicuotaiva: 1,
+    alicuotaiva: 0,
     importetotal: 0,
     id: undefined,
   });
@@ -66,6 +68,28 @@ const Facturas: React.FC = () => {
         fechaHasta: fechaHasta || new Date("2099-12-31"),
       }));
   }, [dispatch, page, limit, searchTerm, fechaDesde, fechaHasta]);
+
+  useEffect(() => {
+  const subtotal = formData.importesubtotal ?? 0;
+  const alicuotaIVA = formData.alicuotaiva ?? 0;
+  const alicuotaIngrBru = formData.alicuotaingrbru ?? 0;
+
+  const iva = calcularImporteIVA(subtotal, alicuotaIVA);
+  const ingrBru = calcularImporteIngrBru(subtotal, alicuotaIngrBru);
+  const total = calcularImporteTotal(subtotal, iva, ingrBru);
+
+  setFormData((prev) => ({
+    ...prev,
+    importeiva: iva,
+    importeingrbru: ingrBru,
+    importetotal: total,
+  }));
+}, [formData.importesubtotal, formData.alicuotaiva, formData.alicuotaingrbru]);
+
+  const handleInputChangeAdapted = (name: string, value: any) => {
+    handleInputChange({ target: { name, value } } as React.ChangeEvent<HTMLInputElement>);
+  };
+
 
   const handleSearch = () => {
       dispatch(
@@ -115,7 +139,7 @@ const Facturas: React.FC = () => {
   const filteredFacturas = Array.isArray(facturas)
     ? (searchTerm
         ? facturas.filter((factura) =>
-            factura.nroComprobante?.toString().includes(searchTerm)
+            factura.nrocomprobante?.toString().includes(searchTerm)
           )
         : facturas)
     : [];
@@ -202,76 +226,9 @@ const Facturas: React.FC = () => {
           onClose={handleCloseModal}
           title={formData.id ? "Editar Factura" : "Crear Factura"}
         >
-          <DynamicForm
-            fields={[
-              {
-                name: "nrocomprobante",
-                type: "number",
-                placeholder: "N° Comprobante",
-                value: formData.nrocomprobante ?? "",
-              },
-              {
-                name: "fechaorigen",
-                type: "date",
-                placeholder: "Fecha",
-                value: dateToInputValue(formData.fechaorigen),
-              },
-              {
-                name: "comprobante",
-                type: "text",
-                placeholder: "Comprobante",
-                value: formData.comprobante ?? "",
-              },
-              {
-                name: "tipo",
-                type: "text",
-                placeholder: "Tipo",
-                value: formData.tipo ?? "",
-              },
-              {
-                name: "proveedor",
-                type: "text",
-                placeholder: "Proveedor",
-                value: formData.proveedor ?? "",
-              },
-              {
-                name: "fechavencimiento",
-                type: "date",
-                placeholder: "Fecha Vto.",
-                value: dateToInputValue(formData.fechavencimiento),
-              },
-              {
-                name: "formapago",
-                type: "text",
-                placeholder: "Pago",
-                value: formData.formapago ?? "",
-              },
-              {
-                name: "pagoautomatico",
-                type: "checkbox",
-                placeholder: "Pago automatico",
-                value: formData.pagoautomatico ?? false,
-              },
-              {
-                name: "importeingrbru",
-                type: "money",
-                placeholder: "Importe Ingr. Br.",
-                value: formData.importeingrbru ?? 0,
-              },
-              {
-                name: "importeiva",
-                type: "money",
-                placeholder: "Importe IVA",
-                value: formData.importeiva ?? 0,
-              },
-              {
-                name: "importetotal",
-                type: "money",
-                placeholder: "Importe Neto",
-                value: formData.importetotal ?? 0,
-              }
-            ]}
-            onChange={handleInputChange}
+          <FacturaForm
+            formData={formData}
+            onChange={handleInputChangeAdapted}
             onSubmit={handleSubmit}
             submitLabel="Guardar"
           />

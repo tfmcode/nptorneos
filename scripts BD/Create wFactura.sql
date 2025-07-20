@@ -1,22 +1,22 @@
 CREATE TABLE wFactura (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 10000000 INCREMENT BY 1),
-    fechaOrigen TIMESTAMP NULL,
+    fechaorigen TIMESTAMP NULL,
     proveedor VARCHAR(255) NOT NULL,
     comprobante VARCHAR(255) NOT NULL,
     tipo VARCHAR(100) NOT NULL,
-    nroComprobante BIGINT NULL,
-    fechaVencimiento TIMESTAMP NULL,
-    formaPago VARCHAR(100),
-    pagoAutomatico BOOLEAN NULL DEFAULT FALSE,
-    importeSubtotal MONEY NULL,
-    importeIngrBru MONEY NULL,
-    importeIva MONEY NULL,
-    alicuotaIngrBru NUMERIC(5,2) NULL,
-    alicuotaIVA NUMERIC(5,2) NULL,
-    importeTotal MONEY NULL,
-    importePendAfectar MONEY NULL,
+    nrocomprobante BIGINT NULL,
+    fechavencimiento TIMESTAMP NULL,
+    formapago VARCHAR(100),
+    pagoautomatico BOOLEAN NULL DEFAULT FALSE,
+    importesubtotal NUMERIC(18, 2) NULL,
+    importeingrbru NUMERIC(18, 2) NULL,
+    importeiva NUMERIC(18, 2) NULL,
+    alicuotaingrbru NUMERIC(5,2) NULL,
+    alicuotaiva NUMERIC(5,2) NULL,
+    importetotal NUMERIC(18, 2) NULL,
+    importependafectar NUMERIC(18, 2) NULL,
     afecta INT NULL,
-    estado VARCHAR(4)
+    estado VARCHAR(4) NULL
 );
 
 CREATE TABLE Comprobante (

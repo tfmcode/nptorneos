@@ -4,7 +4,7 @@ import {
   saveTorneoImagen,
   deleteTorneoImagen,
 } from "../../api/torneosImagenesService";
-import { TorneosImagen, TorneosImagenInput } from "../../types/torneosImagenes";
+import { TorneosImagen } from "../../types/torneosImagenes";
 
 interface TorneosImagenState {
   imagenes: TorneosImagen[];
@@ -34,7 +34,7 @@ export const fetchTorneoImagenesByTorneo = createAsyncThunk(
 export const saveTorneoImagenThunk = createAsyncThunk(
   "torneosImagen/saveTorneoImagen",
   async (
-    imagenData: Partial<TorneosImagenInput> & { id?: number },
+    imagenData: Partial<TorneosImagen> & { id?: number },
     { rejectWithValue }
   ) => {
     try {

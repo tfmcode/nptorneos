@@ -37,6 +37,18 @@ export const getTorneoImagen = async (
   return null;
 };
 
+// Upload image file
+export const uploadImage = async (dataUrl: string): Promise<string> => {
+  try {
+    const response = await API.post("/api/torneos-imagenes/upload", {
+      image: dataUrl,
+    });
+    return response.data.fileName;
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
 // Create or update image
 export const saveTorneoImagen = async (
   data: Partial<TorneosImagen> & { id?: number }

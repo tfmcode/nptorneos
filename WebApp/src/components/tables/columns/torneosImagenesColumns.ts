@@ -13,9 +13,7 @@ export const torneosImagenesColumns = [
     header: "Imagen",
     accessor: "idimagen" as keyof TorneosImagen,
     render: (imagen: TorneosImagen) =>
-      imagen.ubicacion && imagen.nombre
-        ? imagen.ubicacion + "/" + imagen.nombre
-        : "",
+      imagen.ubicacion && imagen.nombre ? imagen.ubicacion + imagen.nombre : "",
   },
   {
     header: "Home",

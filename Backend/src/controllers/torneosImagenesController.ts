@@ -5,6 +5,7 @@ import {
   createTorneoImagen,
   updateTorneoImagen,
   deleteTorneoImagen,
+  getNextFileNumber,
 } from "../models/torneosImagenesModel";
 
 export const getTorneoImagenesByTorneoController = async (
@@ -120,5 +121,72 @@ export const deleteTorneoImagenController = async (
     return res
       .status(500)
       .json({ message: "Error al eliminar la imagen de torneo.", error });
+  }
+};
+
+export const uploadImageController = async (req: Request, res: Response) => {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+
+    // Get the base64 data from request body
+    const { image } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: "Image data is required" });
+    }
+
+    // Create directory if it doesn't exist
+    const uploadDir = path.join(__dirname, "../../assets/wtorneos/files/");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Remove data:image/...;base64, prefix if present
+    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, "");
+
+    const nextFileNumberFromFiles = await getNextFileNumberFromFiles();
+    const nextFileNumberFromDB = await getNextFileNumber();
+
+    const nextFileNumber = Math.max(
+      nextFileNumberFromFiles,
+      nextFileNumberFromDB
+    );
+
+    // Always use .webp extension for converted images
+    const fileName = `arch${nextFileNumber}.webp`;
+
+    // Save file as WebP
+    const filePath = path.join(uploadDir, fileName);
+    fs.writeFileSync(filePath, base64Data, "base64");
+
+    res.json({
+      message: "File uploaded successfully",
+      fileName,
+      ubicacion: `/assets/wtorneos/files/${fileName}`,
+    });
+  } catch (error) {
+    console.error("❌ Error al subir archivo:", error);
+    res.status(500).json({ error: "Error al subir el archivo." });
+  }
+};
+
+const getNextFileNumberFromFiles = async () => {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const dir = path.join(__dirname, "../../assets/wtorneos/files/");
+
+    const files = fs.readdirSync(dir);
+    const archFiles = files.filter((f: string) => f.startsWith("arch"));
+    const numbers = archFiles.map((f: string) =>
+      parseInt(f.match(/arch(\d+)/)?.[1] || "0")
+    );
+    const maxNum = Math.max(0, ...numbers);
+
+    return maxNum + 1;
+  } catch (error) {
+    console.error("Error reading directory:", error);
+    return 1;
   }
 };

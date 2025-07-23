@@ -1,6 +1,7 @@
 import React from "react";
 import InputField from "../common/InputField";
 import MoneyInputField from "../common/MoneyInputField";
+import RichTextEditor from "../common/RichTextEditor";
 
 interface FieldOption {
   label: string;
@@ -20,13 +21,18 @@ interface FieldConfig {
     | "textarea"
     | "money"
     | "file"
-    | "time";
+    | "time"
+    | "richtext";
   placeholder?: string;
   value: string | number | boolean;
   options?: FieldOption[];
   label?: string;
   colSpan?: number;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => void;
 }
 
 interface DynamicFormProps {
@@ -130,6 +136,19 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 value={String(field.value)}
                 onChange={field.onChange}
                 className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm"
+              />
+            ) : field.type === "richtext" ? (
+              <RichTextEditor
+                content={String(field.value)}
+                onChange={(content) =>
+                  field.onChange?.({
+                    target: {
+                      name: field.name,
+                      value: content,
+                    },
+                  } as React.ChangeEvent<HTMLTextAreaElement>) ?? onChange
+                }
+                className="w-full min-h-[120px] border border-gray-300 rounded-md text-sm text-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition duration-200 bg-white"
               />
             ) : (
               <InputField

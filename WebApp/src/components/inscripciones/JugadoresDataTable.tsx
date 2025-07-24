@@ -6,19 +6,19 @@ interface Column<T> {
   render?: (row: T) => string;
 }
 
-interface DataTableProps<T> {
+interface JugadoresDataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   setData: (data: T[]) => void;
   disabled?: boolean;
 }
 
-const DataTable = <T extends Record<string, unknown>>({
+const JugadoresDataTable = <T extends Record<string, unknown>>({
   columns,
   data,
   setData,
   disabled,
-}: DataTableProps<T>) => {
+}: JugadoresDataTableProps<T>) => {
   const handleCheckChange = (row: T, field: keyof T) => {
     const newData = data.map((r) => {
       if (r.id === row.id) {
@@ -158,4 +158,4 @@ const DataTable = <T extends Record<string, unknown>>({
   );
 };
 
-export default DataTable;
+export default JugadoresDataTable;

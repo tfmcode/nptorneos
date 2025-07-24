@@ -16,6 +16,7 @@ import {
   MenuTorneos,
   Inscripciones,
   Resultados,
+  Facturas,
 } from "./";
 
 const System: React.FC = () => {
@@ -47,6 +48,8 @@ const System: React.FC = () => {
         return <Sanciones />;
       case "Menú Torneos":
         return <MenuTorneos />;
+      case "Facturación":
+        return <Facturas />;
       case "Inscripciones":
         return <Inscripciones />;
       case "Resultados":

@@ -21,6 +21,7 @@ const TablePosition: React.FC<TablePositionProps> = ({ positions }) => {
       pos.gf,
       pos.gc,
       pos.dg,
+      pos.pb,
     ]);
     return {
       zona,
@@ -35,6 +36,7 @@ const TablePosition: React.FC<TablePositionProps> = ({ positions }) => {
         "GF",
         "GC",
         "DIF",
+        "PB",
       ],
       rows,
     };

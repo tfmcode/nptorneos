@@ -1,5 +1,6 @@
 import express, { Request, Response, ErrorRequestHandler } from "express";
 import dotenv from "dotenv";
+import path from "path";
 import { applyMiddlewares } from "./middlewares/global";
 import usuariosRoutes from "./routes/usuariosRoutes";
 import sedesRoutes from "./routes/sedesRoutes";
@@ -31,6 +32,28 @@ dotenv.config();
 const app = express();
 
 applyMiddlewares(app);
+
+app.use(
+  "/assets",
+  (req, res, next) => {
+    if (!process.env.FRONTEND_URL) {
+      console.error("⚠️ FRONTEND_URL environment variable is not set");
+      return res.status(500).send("Server configuration error");
+    }
+
+    res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
+    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Cross-Origin-Resource-Policy", "cross-origin");
+
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  },
+  express.static(path.join(__dirname, "../assets"))
+);
 
 app.get("/", (req: Request, res: Response) => {
   res

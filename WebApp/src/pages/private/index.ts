@@ -1,8 +1,8 @@
-
 export { default as Campeonatos } from "./Campeonatos";
 export { default as Codificadores } from "./Codificadores";
 export { default as ConsentimientosAdmin } from "./ConsentimientosAdmin";
 export { default as Equipos } from "./Equipos";
+export { default as Facturas } from "./Facturas";
 export { default as Inscripciones } from "./Inscripciones";
 export { default as Jugadores } from "./Jugadores";
 export { default as ListaNegra } from "./ListaNegra";
@@ -14,4 +14,3 @@ export { default as Sedes } from "./Sedes";
 export { default as System } from "./System";
 export { default as Torneos } from "./Torneos";
 export { default as Usuarios } from "./Usuarios";
-export { default as Factura } from './Facturas';

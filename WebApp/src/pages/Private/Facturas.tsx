@@ -86,7 +86,7 @@ const Facturas: React.FC = () => {
   }));
 }, [formData.importesubtotal, formData.alicuotaiva, formData.alicuotaingrbru]);
 
-  const handleInputChangeAdapted = (name: string, value: any) => {
+  const handleInputChangeAdapted = (name: string, value: unknown) => {
     handleInputChange({ target: { name, value } } as React.ChangeEvent<HTMLInputElement>);
   };
 

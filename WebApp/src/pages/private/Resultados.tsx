@@ -62,8 +62,8 @@ const Resultados: React.FC = () => {
     dt2: "",
     suplentes1: "",
     suplentes2: "",
-    ausente1: "",
-    ausente2: "",
+    ausente1: 0,
+    ausente2: 0,
     idfecha: 0,
   });
 

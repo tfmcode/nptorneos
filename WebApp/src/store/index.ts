@@ -21,6 +21,7 @@ import inscripcionesJugadoresSlice from "./slices/inscripcionesJugadoresSlice";
 import torneosEquiposInscSlice from "./slices/torneosEquiposInscSlice";
 import menuTorneosSlice from "./slices/menuTorneosSlice";
 import facturaSlice from "./slices/facturasSlice";
+import fechasSlice from "./slices/fechasSlice";
 
 export const store = configureStore({
   reducer: {
@@ -45,7 +46,8 @@ export const store = configureStore({
     inscripcionesJugadores: inscripcionesJugadoresSlice,
     torneosEquiposInsc: torneosEquiposInscSlice,
     menuTorneos: menuTorneosSlice,
-    facturas: facturaSlice
+    facturas: facturaSlice,
+    fechas: fechasSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

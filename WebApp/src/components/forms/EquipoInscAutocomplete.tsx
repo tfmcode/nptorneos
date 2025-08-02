@@ -73,7 +73,7 @@ const EquipoInscAutocomplete: React.FC<Props> = ({
           value={inputValue}
           placeholder="Buscar equipo por nombre de equipo o torneo"
           onChange={(e) => setInputValue(e.target.value)}
-          className="border rounded px-3 py-2 w-full"
+          className="border rounded px-3 py-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
           onFocus={() => inputValue.length >= 2 && setShowDropdown(true)}
           disabled={disabled}
         />
@@ -81,7 +81,7 @@ const EquipoInscAutocomplete: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="text-sm text-red-500 hover:underline"
+            className="text-sm text-red-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={disabled}
           >
             Quitar

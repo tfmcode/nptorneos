@@ -1,6 +1,7 @@
 import { AxiosError } from "axios";
 import API from "./httpClient";
 import { InscripcionInput, Inscripcion } from "../types/inscripciones";
+import { InscripcionJugador } from "../types/inscripcionesJugadores";
 
 const handleAxiosError = (error: unknown): never => {
   if (error instanceof AxiosError && error.response?.data?.message) {
@@ -42,6 +43,28 @@ export const getInscripcion = async (
     handleAxiosError(error);
   }
   return null;
+};
+
+export const procesarEquipo = async (
+  inscripcion: Inscripcion,
+  jugadores: InscripcionJugador[]
+): Promise<{
+  inscripcion: Inscripcion | null;
+  jugadores: InscripcionJugador[] | null;
+}> => {
+  try {
+    const response = await API.post("/api/inscripciones/procesarEquipo", {
+      inscripcion: inscripcion,
+      jugadores: jugadores,
+    });
+    return {
+      inscripcion: response.data.inscripcion,
+      jugadores: response.data.jugadores,
+    };
+  } catch (error) {
+    handleAxiosError(error);
+    return { inscripcion: null, jugadores: null };
+  }
 };
 
 export const updateEquipoAsoc = async (id: number, idequipoasoc: number) => {

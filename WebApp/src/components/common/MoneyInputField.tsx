@@ -6,6 +6,7 @@ interface InputFieldProps {
   placeholder: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
 const MoneyInputField: React.FC<InputFieldProps> = ({
@@ -14,6 +15,7 @@ const MoneyInputField: React.FC<InputFieldProps> = ({
   placeholder,
   value,
   onChange,
+  disabled = false,
 }) => {
   return (
     <div className="w-full flex">
@@ -27,7 +29,8 @@ const MoneyInputField: React.FC<InputFieldProps> = ({
         value={value}
         onChange={onChange}
         data-type="money"
-        className="flex-1 px-3 py-2 border border-l-0 border-gray-300 rounded-e-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 h-10"
+        className="flex-1 px-3 py-2 border border-l-0 border-gray-300 rounded-e-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={disabled}
       />
     </div>
   );

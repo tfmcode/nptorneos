@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store";
-import {
-  fetchInscripcionesJugadoresByInscripcion,
-  removeInscripcionJugador,
-  saveInscripcionJugadorThunk,
-} from "../../store/slices/inscripcionesJugadoresSlice";
+import { fetchInscripcionesJugadoresByInscripcion } from "../../store/slices/inscripcionesJugadoresSlice";
 import JugadoresDataTable from "./JugadoresDataTable";
 import { inscripcionJugadorColumns } from "../tables/columns";
 import EquipoInscAutocomplete from "../forms/EquipoInscAutocomplete";
 import { Inscripcion } from "../../types/inscripciones";
 import { TorneosEquiposInsc } from "../../types/torneosEquiposInsc";
 import { InscripcionJugador } from "../../types/inscripcionesJugadores";
-import { updateEquipoAsocThunk } from "../../store/slices/inscripcionSlice";
+import { procesarEquipo } from "../../api/inscripcionesService";
+import { fetchInscripciones } from "../../store/slices/inscripcionSlice";
 
 function ProcesarEquipo({
   inscripcion,
@@ -23,8 +20,8 @@ function ProcesarEquipo({
 }) {
   const dispatch = useDispatch<AppDispatch>();
 
-  const { inscripcionesJugadores } = useSelector(
-    (state: RootState) => state.inscripcionesJugadores
+  const { page, limit } = useSelector(
+    (state: RootState) => state.inscripciones
   );
 
   const [data, setData] = useState<InscripcionJugador[]>([]);
@@ -54,34 +51,21 @@ function ProcesarEquipo({
     e.preventDefault();
     try {
       setLoading(true);
+
+      const { inscripcion: inscripcionResult, jugadores: jugadoresResult } =
+        await procesarEquipo(inscripcion, data);
+
+      if (inscripcionResult) {
+        setFormData(inscripcionResult);
+      }
+
+      if (jugadoresResult) {
+        setData(jugadoresResult);
+      }
+
       await dispatch(
-        updateEquipoAsocThunk({
-          id: inscripcion.id!,
-          idequipo: inscripcion.idequipoasoc!,
-        })
-      );
-
-      // Save or update existing jugadores
-      await Promise.all(
-        data.map(async (jugador) => {
-          dispatch(saveInscripcionJugadorThunk(jugador));
-        })
-      );
-
-      // Find jugadores that exist in inscripcionesJugadores but not in data (to delete)
-      const jugadoresToDelete = inscripcionesJugadores.filter(
-        (originalJugador) =>
-          !data.some(
-            (currentJugador) => currentJugador.id === originalJugador.id
-          )
-      );
-
-      // Delete the jugadores that are no longer in data
-      await Promise.all(
-        jugadoresToDelete.map(async (jugador) => {
-          await dispatch(removeInscripcionJugador(jugador.id!)).unwrap();
-        })
-      );
+        fetchInscripciones({ page, limit, searchTerm: "" })
+      ).unwrap();
 
       // Refresh the data
       const updated = await dispatch(
@@ -108,20 +92,20 @@ function ProcesarEquipo({
         <EquipoInscAutocomplete
           value={inscripcion.idequipoasoc ?? 0}
           onChange={(e) => handleEquipoChange(e)}
-          disabled={loading}
+          disabled={loading || inscripcion.codestado === 1}
         />
       </div>
       <JugadoresDataTable
         columns={inscripcionJugadorColumns}
         data={data}
         setData={setData}
-        disabled={loading}
+        disabled={loading || inscripcion.codestado === 1}
       />
       <div className="flex justify-end">
         <button
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm mt-4"
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={(e) => handleSubmit(e)}
-          disabled={loading}
+          disabled={loading || inscripcion.codestado === 1}
         >
           {loading ? "Procesando..." : "Procesar"}
         </button>

@@ -6,6 +6,7 @@ import {
   updateInscripcion,
   deleteInscripcion,
   updateEquipoAsoc,
+  procesarEquipo,
 } from "../models/inscripcionesModel";
 
 export const getInscripciones = async (req: Request, res: Response) => {
@@ -42,6 +43,22 @@ export const getInscripcion = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ message: "Error al obtener la inscripción.", error });
+  }
+};
+
+export const procesarEquipoController = async (req: Request, res: Response) => {
+  try {
+    const { inscripcion, jugadores } = req.body;
+    const { inscripcion: inscripcionResult, jugadores: jugadoresResult } =
+      await procesarEquipo(inscripcion, jugadores);
+    res.status(200).json({
+      message: "Equipo procesado exitosamente.",
+      inscripcion: inscripcionResult,
+      jugadores: jugadoresResult,
+    });
+  } catch (error) {
+    console.error("❌ Error al procesar equipo:", error);
+    res.status(500).json({ message: "Error al procesar equipo.", error });
   }
 };
 

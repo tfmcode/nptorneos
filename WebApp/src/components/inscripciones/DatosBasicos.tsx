@@ -93,6 +93,7 @@ function DatosBasicos({
         onChange={onChange}
         onSubmit={handleSubmit}
         submitLabel="Guardar"
+        disabled={formData.codestado === 1}
       />
     </div>
   );

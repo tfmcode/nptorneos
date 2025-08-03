@@ -44,6 +44,7 @@ interface DynamicFormProps {
   ) => void;
   onSubmit: (e: React.FormEvent) => void;
   submitLabel: string;
+  disabled?: boolean;
 }
 
 const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -51,6 +52,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   onChange,
   onSubmit,
   submitLabel,
+  disabled = false,
 }) => {
   return (
     <form onSubmit={onSubmit}>
@@ -81,7 +83,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 id={field.name}
                 value={String(field.value)}
                 onChange={onChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={disabled}
               >
                 <option value="0" disabled>
                   Seleccionar...
@@ -100,7 +103,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                   type="checkbox"
                   checked={Boolean(field.value)}
                   onChange={onChange}
-                  className="mr-2"
+                  className="mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={disabled}
                 />
                 {field.label || field.placeholder || field.name}
               </label>
@@ -111,8 +115,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 placeholder={field.placeholder || ""}
                 value={String(field.value)}
                 onChange={onChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                 rows={4}
+                disabled={disabled}
               />
             ) : field.type === "money" ? (
               <MoneyInputField
@@ -121,13 +126,14 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 placeholder={field.placeholder || "0.00"}
                 value={String(field.value)}
                 onChange={onChange}
+                disabled={disabled}
               />
             ) : field.type === "file" ? (
               <input
                 name={field.name}
                 type="file"
                 onChange={field.onChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             ) : field.type === "time" ? (
               <input
@@ -135,7 +141,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 type="time"
                 value={String(field.value)}
                 onChange={field.onChange}
-                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm"
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={disabled}
               />
             ) : field.type === "richtext" ? (
               <RichTextEditor
@@ -148,7 +155,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                     },
                   } as React.ChangeEvent<HTMLTextAreaElement>) ?? onChange
                 }
-                className="w-full min-h-[120px] border border-gray-300 rounded-md text-sm text-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition duration-200 bg-white"
+                className="w-full min-h-[120px] border border-gray-300 rounded-md text-sm text-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             ) : (
               <InputField
@@ -157,6 +164,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 placeholder={field.placeholder || ""}
                 value={String(field.value)}
                 onChange={onChange}
+                disabled={disabled}
               />
             )}
           </div>
@@ -166,7 +174,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       <div className="flex justify-end mt-4">
         <button
           type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm"
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={disabled}
         >
           {submitLabel}
         </button>

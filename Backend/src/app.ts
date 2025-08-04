@@ -26,6 +26,7 @@ import publicMenuTorneosRoutes from "./routes/publicMenuTorneosRoutes";
 import publicTorneosRoutes from "./routes/publicTorneosRoutes";
 import facturasRoutes from "./routes/facturasRoutes";
 import comprobantesRoutes from "./routes/comprobantesRoutes";
+import publicInscripcionesRoute from "./routes/publicInscripcionesRoute";
 
 dotenv.config();
 
@@ -85,6 +86,7 @@ app.use("/api/public/menutorneos", publicMenuTorneosRoutes);
 app.use("/api/public/torneos", publicTorneosRoutes);
 app.use("/api/facturas", facturasRoutes);
 app.use("/api/comprobantes", comprobantesRoutes);
+app.use("/api/public/inscripciones", publicInscripcionesRoute);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Ruta no encontrada." });

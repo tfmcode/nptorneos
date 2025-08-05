@@ -1,12 +1,11 @@
-// src/pages/public/Concents.tsx
-
 import React, { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import { Sede } from "../../../types/sede";
 import { Equipo } from "../../../types/equipos";
 import { getSedes } from "../../../api/sedesService";
 import { getEquipos } from "../../../api/equiposService";
-import API from "../../../api/httpClient"; 
+import API from "../../../api/httpClient";
+import { PopupNotificacion } from "../../../components/common";
 
 const Concents: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -19,7 +18,6 @@ const Concents: React.FC = () => {
     obrasocial: "",
     facebook: "",
     idequipo: "",
-    codtipo: "",
     idsede: "",
     nombrecto: "",
     relacioncto: "",
@@ -28,8 +26,21 @@ const Concents: React.FC = () => {
 
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -42,6 +53,7 @@ const Concents: React.FC = () => {
         setEquipos(equiposData.equipos ?? []);
       } catch (error) {
         console.error("❌ Error cargando sedes o equipos:", error);
+        showPopup("error", "Error al cargar sedes o equipos.");
       }
     };
     loadData();
@@ -59,20 +71,22 @@ const Concents: React.FC = () => {
       "fechanac",
       "domicilio",
       "telefono",
-      "obrasocial",
-      "idequipo",
-      "codtipo",
-      "idsede",
-      "nombrecto",
-      "relacioncto",
-      "telefonocto",
+  
     ];
+
+    const errores: string[] = [];
+
     for (const field of requiredFields) {
       if (!formData[field as keyof typeof formData]) {
-        setMessage(`El campo ${field} es obligatorio.`);
-        return false;
+        errores.push(`• El campo ${field} es obligatorio.`);
       }
     }
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return false;
+    }
+
     return true;
   };
 
@@ -100,7 +114,6 @@ const Concents: React.FC = () => {
 
     addSectionTitle("DATOS DEL EQUIPO", 110);
     doc.text(`Equipo: ${formData.idequipo}`, 20, 120);
-    doc.text(`Tipo Torneo: ${formData.codtipo}`, 20, 128);
     doc.text(`Sede: ${formData.idsede}`, 20, 136);
 
     addSectionTitle("CONTACTO DE EMERGENCIA", 150);
@@ -116,7 +129,6 @@ const Concents: React.FC = () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    setMessage(null);
 
     try {
       await API.post("/api/consentimientos", {
@@ -129,15 +141,15 @@ const Concents: React.FC = () => {
         obrasocial: formData.obrasocial,
         facebook: formData.facebook,
         idequipo: parseInt(formData.idequipo),
-        codtipo: parseInt(formData.codtipo),
         idsede: parseInt(formData.idsede),
         nombrecto: formData.nombrecto,
         relacioncto: formData.relacioncto,
         telefonocto: formData.telefonocto,
       });
 
-      setMessage("✅ Consentimiento enviado correctamente.");
+      showPopup("success", "✅ Consentimiento enviado correctamente.");
       generatePDF();
+
       setFormData({
         apellido: "",
         nombres: "",
@@ -148,7 +160,6 @@ const Concents: React.FC = () => {
         obrasocial: "",
         facebook: "",
         idequipo: "",
-        codtipo: "",
         idsede: "",
         nombrecto: "",
         relacioncto: "",
@@ -156,7 +167,7 @@ const Concents: React.FC = () => {
       });
     } catch (error) {
       console.error("❌ Error al enviar consentimiento:", error);
-      setMessage("❌ Error al enviar consentimiento.");
+      showPopup("error", "❌ Error al enviar consentimiento.");
     } finally {
       setLoading(false);
     }
@@ -168,17 +179,12 @@ const Concents: React.FC = () => {
         Consentimiento Informado
       </h1>
 
-      {message && (
-        <div
-          className={`text-center mb-4 text-sm px-4 py-2 rounded ${
-            message.startsWith("✅")
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+      <PopupNotificacion
+        open={popup.open}
+        type={popup.type}
+        message={popup.message}
+        onClose={() => setPopup({ ...popup, open: false })}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-10">
         {/* DATOS PERSONALES */}
@@ -191,7 +197,11 @@ const Concents: React.FC = () => {
               { label: "Apellido*", field: "apellido" },
               { label: "Nombre*", field: "nombres" },
               { label: "DNI*", field: "docnro", type: "number" },
-              { label: "Fecha de Nacimiento*", field: "fechanac", type: "date" },
+              {
+                label: "Fecha de Nacimiento*",
+                field: "fechanac",
+                type: "date",
+              },
               { label: "Domicilio*", field: "domicilio" },
               { label: "Teléfono*", field: "telefono" },
               { label: "Obra Social*", field: "obrasocial" },
@@ -233,17 +243,7 @@ const Concents: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm mb-1">Tipo Torneo*</label>
-              <input
-                type="number"
-                value={formData.codtipo}
-                onChange={(e) => handleChange("codtipo", e.target.value)}
-                className="w-full border rounded px-3 py-2"
-                placeholder="Código tipo torneo"
-                required
-              />
-            </div>
+
             <div>
               <label className="block text-sm mb-1">Sede*</label>
               <select
@@ -296,7 +296,9 @@ const Concents: React.FC = () => {
               loading ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
-            {loading ? "Enviando..." : "Confirmar Consentimiento y Descargar PDF"}
+            {loading
+              ? "Enviando..."
+              : "Confirmar Consentimiento y Descargar PDF"}
           </button>
         </div>
       </form>

@@ -15,6 +15,7 @@ import {
   PageHeader,
   StatusMessage,
   SearchField,
+  PopupNotificacion,
 } from "../../components/common";
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { codificadorColumns } from "../../components/tables/columns/codificadorColumns";
@@ -45,13 +46,27 @@ const Codificadores: React.FC = () => {
     id: undefined,
     idcodificador: 8,
     descripcion: "",
-    habilitado: "1",
+    codestado: "1",
   });
 
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIdCodificador, setSelectedIdCodificador] = useState<number>(8);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [popup, setPopup] = useState<{
+    open: boolean;
+    type: "success" | "error" | "warning";
+    message: string;
+  }>({ open: false, type: "success", message: "" });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => {
+      setPopup({ ...popup, open: false });
+    }, 4000);
+  };
 
   useEffect(() => {
     dispatch(fetchCodificadores());
@@ -69,30 +84,25 @@ const Codificadores: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
+
+    if (!formData.descripcion || formData.descripcion.trim() === "") {
+      showPopup("warning", "Ingresar la descripción");
+      return;
+    }
 
     try {
-      if (!formData.descripcion) {
-        setFormError("La descripción es requerida");
-        return;
-      }
-      if (!formData.idcodificador) {
-        setFormError("Debe seleccionar un ID Codificador");
-        return;
-      }
-
       const isEditing = !!formData.id;
       const payload = { ...formData };
 
-      if (!isEditing) {
-        delete payload.id;
-      }
+      if (!isEditing) delete payload.id;
 
       await dispatch(saveCodificadorThunk(payload)).unwrap();
+      dispatch(fetchCodificadores());
+      showPopup("success", "¡Codificador guardado correctamente!");
       handleCloseModal();
     } catch (err) {
       console.error("Error al guardar codificador:", err);
-      setFormError("Error al guardar el codificador");
+      showPopup("error", "Error al guardar el codificador");
     }
   };
 
@@ -104,6 +114,7 @@ const Codificadores: React.FC = () => {
           idcodificador: codificador.idcodificador,
         })
       ).unwrap();
+      dispatch(fetchCodificadores());
     } catch (err) {
       console.error("Error al eliminar codificador:", err);
     }
@@ -181,9 +192,6 @@ const Codificadores: React.FC = () => {
               : "Crear Codificador"
           }
         >
-          {formError && (
-            <div className="mb-4 text-red-500 text-sm">{formError}</div>
-          )}
           <DynamicForm
             fields={[
               {
@@ -205,12 +213,18 @@ const Codificadores: React.FC = () => {
                   { label: "Sí", value: "1" },
                   { label: "No", value: "0" },
                 ],
-                value: formData.habilitado ?? "1",
+                value: formData.codestado ?? "1",
               },
             ]}
             onChange={handleInputChange}
             onSubmit={handleSubmit}
             submitLabel="Grabar"
+          />
+          <PopupNotificacion
+            open={popup.open}
+            type={popup.type}
+            message={popup.message}
+            onClose={() => setPopup({ ...popup, open: false })}
           />
         </Modal>
       </div>

@@ -33,8 +33,8 @@ function DatosBasicos({
     try {
       const partido = {
         ...formData,
-        ausente1: formData.ausente1 === "SI" ? "SI" : "",
-        ausente2: formData.ausente2 === "SI" ? "SI" : "",
+        ausente1: Number(formData.ausente1),
+        ausente2: Number(formData.ausente2),
       };
       await dispatch(savePartidoThunk(partido)).unwrap();
       dispatch(fetchPartidosByZona(formData.idzona));
@@ -62,7 +62,7 @@ function DatosBasicos({
           <label className="block font-medium mb-1">Sede</label>
           <select
             name="idsede"
-            value={Number(formData.idsede) || 0}
+            value={formData.idsede ?? 0}
             onChange={onChange}
             className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
@@ -79,7 +79,7 @@ function DatosBasicos({
           <label className="block font-medium mb-1">Estado</label>
           <select
             name="codestado"
-            value={Number(formData.codestado) || 1}
+            value={formData.codestado ?? 1}
             onChange={onChange}
             className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
@@ -102,7 +102,7 @@ function DatosBasicos({
             <input
               type="number"
               name="goles1"
-              value={Number(formData.goles1) || 0}
+              value={formData.goles1 ?? 0}
               onChange={onChange}
               className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
@@ -112,7 +112,7 @@ function DatosBasicos({
             <label className="block font-medium mb-1">Punto Bonus</label>
             <select
               name="puntobonus1"
-              value={Number(formData.puntobonus1) || 0}
+              value={formData.puntobonus1 ?? 0}
               onChange={onChange}
               className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
@@ -125,13 +125,14 @@ function DatosBasicos({
             <input
               type="checkbox"
               name="ausente1"
-              checked={formData.ausente1 === "SI"}
+              checked={formData.ausente1 === 1}
               onChange={(e) =>
                 onChange({
                   ...e,
                   target: {
                     ...e.target,
-                    value: e.target.checked ? "SI" : "",
+                    name: "ausente1",
+                    value: e.target.checked ? "1" : "0",
                   },
                 })
               }
@@ -153,7 +154,7 @@ function DatosBasicos({
             <input
               type="number"
               name="goles2"
-              value={Number(formData.goles2) || 0}
+              value={formData.goles2 ?? 0}
               onChange={onChange}
               className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
@@ -163,7 +164,7 @@ function DatosBasicos({
             <label className="block font-medium mb-1">Punto Bonus</label>
             <select
               name="puntobonus2"
-              value={Number(formData.puntobonus2) || 0}
+              value={formData.puntobonus2 ?? 0}
               onChange={onChange}
               className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
@@ -176,13 +177,14 @@ function DatosBasicos({
             <input
               type="checkbox"
               name="ausente2"
-              checked={formData.ausente2 === "SI"}
+              checked={formData.ausente2 === 1}
               onChange={(e) =>
                 onChange({
                   ...e,
                   target: {
                     ...e.target,
-                    value: e.target.checked ? "SI" : "",
+                    name: "ausente2",
+                    value: e.target.checked ? "1" : "0",
                   },
                 })
               }

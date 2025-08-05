@@ -17,6 +17,7 @@ import {
   Inscripciones,
   Resultados,
   Facturas,
+  Fechas,
 } from "./";
 
 const System: React.FC = () => {
@@ -54,6 +55,8 @@ const System: React.FC = () => {
         return <Inscripciones />;
       case "Resultados":
         return <Resultados />;
+        case "Fecha Torneos":
+          return <Fechas />;
       default:
         return (
           <p className="text-center text-xl text-white">

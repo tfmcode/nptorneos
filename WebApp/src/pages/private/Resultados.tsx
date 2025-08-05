@@ -18,6 +18,7 @@ import { resultadoColumns } from "../../components/tables";
 import DatosBasicos from "../../components/resultados/DatosBasicos";
 import { Partido } from "../../types";
 import SelectorTorneoZonaFecha from "../../components/resultados/SelectorResultado";
+import JugadoresEquipo from "../../components/resultados/JugadoresEquipo";
 
 const Resultados: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -116,6 +117,24 @@ const Resultados: React.FC = () => {
             <AccordionItem title="Datos Básicos" defaultOpen>
               <DatosBasicos formData={formData} onChange={handleInputChange} />
             </AccordionItem>
+
+            {formData.id && (
+              <>
+                <AccordionItem title={`Equipo Local ${formData.idequipo1}`}>
+                  <JugadoresEquipo
+                    idpartido={formData.id}
+                    idequipo={formData.idequipo1}
+                  />
+                </AccordionItem>
+
+                <AccordionItem title={`Equipo Visitante ${formData.idequipo2}`}>
+                  <JugadoresEquipo
+                    idpartido={formData.id}
+                    idequipo={formData.idequipo2}
+                  />
+                </AccordionItem>
+              </>
+            )}
           </Accordion>
         </Modal>
       </div>

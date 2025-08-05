@@ -27,6 +27,8 @@ import publicTorneosRoutes from "./routes/publicTorneosRoutes";
 import facturasRoutes from "./routes/facturasRoutes";
 import comprobantesRoutes from "./routes/comprobantesRoutes";
 import publicInscripcionesRoute from "./routes/publicInscripcionesRoute";
+import partidosJugadoresRoute from "./routes/partidosJugadoresRoute";
+
 
 dotenv.config();
 
@@ -72,6 +74,7 @@ app.use("/api/torneos", torneosRoutes);
 app.use("/api/zonas", zonasRoutes);
 app.use("/api/zonas-equipos", zonasEquiposRoutes);
 app.use("/api/partidos", partidosRoutes);
+app.use("/api/partidos", partidosJugadoresRoute);
 app.use("/api/torneos-imagenes", torneosImagenesRoutes);
 app.use("/api/equipos-jugadores", equiposJugadoresRoutes);
 app.use("/api/lista-negra", listaNegraRoutes);

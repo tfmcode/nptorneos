@@ -17,6 +17,7 @@ import {
   PageHeader,
   StatusMessage,
   SearchField,
+  PopupNotificacion,
 } from "../../components/common";
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { listaNegraColumns } from "../../components/tables/columns/listaNegraColumns";
@@ -47,6 +48,20 @@ const ListaNegraPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [jugadorSeleccionado, setJugadorSeleccionado] =
     useState<Jugador | null>(null);
+
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
 
   useEffect(() => {
     dispatch(fetchListaNegra({ page, limit, searchTerm }));
@@ -88,6 +103,34 @@ const ListaNegraPage: React.FC = () => {
     }
   }, [formData.idjugador, isModalOpen]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const errores: string[] = [];
+    if (!formData.idjugador) errores.push("• Ingresar el nombre del jugador");
+    if (!formData.fecha) errores.push("• Ingresar una fecha");
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
+    try {
+      const payload = {
+        ...formData,
+        codestado: Number(formData.codestado),
+      };
+      const { id, ...rest } = payload;
+      await dispatch(saveRegistroListaNegra(id ? payload : rest)).unwrap();
+      handleCloseModal();
+      dispatch(fetchListaNegra({ page, limit, searchTerm }));
+      showPopup("success", "Registro guardado correctamente");
+    } catch (err) {
+      console.error("Error al guardar registro:", err);
+      showPopup("error", "Error al guardar el registro");
+    }
+  };
+
   return (
     <div className="flex justify-center items-center">
       <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-5xl">
@@ -117,7 +160,6 @@ const ListaNegraPage: React.FC = () => {
           onEdit={(row) => handleOpenModal(row as ListaNegra)}
           onDelete={handleDelete}
         />
-
         <div className="flex justify-between items-center mt-4">
           <button
             disabled={page === 1}
@@ -141,14 +183,13 @@ const ListaNegraPage: React.FC = () => {
             Siguiente
           </button>
         </div>
+
         <Modal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           title={formData.id ? "Editar Sanción" : "Registrar Sanción"}
         >
-          {/* ---- JUGADOR ---- */}
           {formData.id ? (
-            /* Modo EDICIÓN – nombre readonly */
             <>
               <div className="mb-4">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -179,7 +220,6 @@ const ListaNegraPage: React.FC = () => {
               </div>
             </>
           ) : (
-            /* Modo ALTA – autocomplete */
             <div className="mb-4">
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Jugador
@@ -194,7 +234,6 @@ const ListaNegraPage: React.FC = () => {
             </div>
           )}
 
-          {/* ---- FORM dinámico (fecha, motivo, estado) ---- */}
           <DynamicForm
             fields={[
               {
@@ -216,28 +255,18 @@ const ListaNegraPage: React.FC = () => {
                   { label: "Inhabilitado", value: "0" },
                   { label: "Habilitado", value: "1" },
                 ],
-                value: (formData.codestado ?? 0).toString(), // << string
+                value: (formData.codestado ?? 0).toString(),
               },
             ]}
             onChange={handleInputChange}
-            onSubmit={(e) => {
-              e.preventDefault();
-              const payload = {
-                ...formData,
-                codestado: Number(formData.codestado), // backend espera número
-              };
-              const { id, ...rest } = payload;
-              dispatch(saveRegistroListaNegra(id ? payload : rest))
-                .unwrap()
-                .then(() => {
-                  handleCloseModal();
-                  dispatch(fetchListaNegra({ page, limit, searchTerm }));
-                })
-                .catch((err) =>
-                  console.error("Error al guardar registro:", err)
-                );
-            }}
+            onSubmit={handleSubmit}
             submitLabel="Guardar"
+          />
+          <PopupNotificacion
+            open={popup.open}
+            type={popup.type}
+            message={popup.message}
+            onClose={() => setPopup({ ...popup, open: false })}
           />
         </Modal>
       </div>

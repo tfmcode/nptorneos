@@ -14,6 +14,7 @@ import {
   StatusMessage,
   SearchField,
   Modal,
+  PopupNotificacion,
 } from "../../components/common";
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { sancionColumns } from "../../components/tables";
@@ -36,6 +37,12 @@ const Sanciones: React.FC = () => {
 
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [torneos, setTorneos] = useState<Torneo[]>([]);
+
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
 
   const {
     formData,
@@ -65,6 +72,14 @@ const Sanciones: React.FC = () => {
   const [endDate, setEndDate] = useState("2025-12-31");
   const [jugadorSeleccionado, setJugadorSeleccionado] =
     useState<Jugador | null>(null);
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
 
   useEffect(() => {
     dispatch(
@@ -203,21 +218,29 @@ const Sanciones: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errores: string[] = [];
+
+    if (!formData.fecha)
+      errores.push("• Ingresar una fecha de inicio de sanción");
+    if (!formData.fechafin)
+      errores.push("• Ingresar una fecha de fin de sanción");
+    if (!formData.titulo?.trim()) errores.push("• Ingresar un título");
+    if (!formData.idjugador) errores.push("• Ingresar el nombre del jugador");
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
     try {
       const { id, ...sancionData } = formData;
       await dispatch(saveSancionThunk(id ? formData : sancionData)).unwrap();
       handleManualCloseModal();
-      dispatch(
-        fetchSanciones({
-          page,
-          limit,
-          searchTerm,
-          startDate: startDate || "1900-01-01",
-          endDate: endDate || "2099-12-31",
-        })
-      );
+      dispatch(fetchSanciones({ page, limit, searchTerm, startDate, endDate }));
+      showPopup("success", "Sanción guardada correctamente");
     } catch (err) {
       console.error("Error al guardar sanción:", err);
+      showPopup("error", "Error al guardar la sanción");
     }
   };
 
@@ -414,6 +437,12 @@ const Sanciones: React.FC = () => {
             onChange={handleInputChange}
             onSubmit={handleSubmit}
             submitLabel="Guardar"
+          />
+          <PopupNotificacion
+            open={popup.open}
+            type={popup.type}
+            message={popup.message}
+            onClose={() => setPopup({ ...popup, open: false })}
           />
         </Modal>
       </div>

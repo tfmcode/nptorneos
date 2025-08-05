@@ -8,7 +8,11 @@ import {
   removeMenuTorneo,
 } from "../../store/slices/menuTorneosSlice";
 import { fetchTorneos } from "../../store/slices/torneoSlice";
-import { PageHeader, StatusMessage } from "../../components/common";
+import {
+  PageHeader,
+  StatusMessage,
+  PopupNotificacion,
+} from "../../components/common";
 
 const MenuTorneos: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -19,6 +23,20 @@ const MenuTorneos: React.FC = () => {
 
   const [idopcion, setIdopcion] = useState<number>(5);
   const [localData, setLocalData] = useState<MenuTorneo[]>([]);
+
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
 
   useEffect(() => {
     dispatch(fetchMenuTorneosByOpcion(idopcion));
@@ -54,29 +72,39 @@ const MenuTorneos: React.FC = () => {
   };
 
   const handleSave = async (item: MenuTorneo) => {
+    const errores: string[] = [];
+
+    if (!item.idtorneo) errores.push("• Se debe seleccionar un torneo");
+    if (!item.descripcion?.trim())
+      errores.push("• Se debe cargar una descripción");
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
     try {
-      if (!item.idopcion || !item.orden) return;
       await dispatch(
-        saveMenuTorneoThunk({
-          ...item,
-          idopcion: item.idopcion ?? 0,
-        })
+        saveMenuTorneoThunk({ ...item, idopcion: item.idopcion! })
       ).unwrap();
       dispatch(fetchMenuTorneosByOpcion(idopcion));
+      showPopup("success", "Torneo guardado correctamente");
     } catch (error) {
       console.error("Error al guardar:", error);
+      showPopup("error", "Ocurrió un error al guardar");
     }
   };
 
   const handleDelete = async (item: MenuTorneo) => {
     try {
-      if (!item.idopcion || !item.orden) return;
       await dispatch(
-        removeMenuTorneo({ idopcion: item.idopcion, orden: item.orden })
+        removeMenuTorneo({ idopcion: item.idopcion!, orden: item.orden! })
       ).unwrap();
       dispatch(fetchMenuTorneosByOpcion(idopcion));
+      showPopup("success", "Torneo eliminado correctamente");
     } catch (error) {
       console.error("Error al borrar:", error);
+      showPopup("error", "Ocurrió un error al eliminar");
     }
   };
 
@@ -152,6 +180,13 @@ const MenuTorneos: React.FC = () => {
             </div>
           ))}
         </div>
+
+        <PopupNotificacion
+          open={popup.open}
+          type={popup.type}
+          message={popup.message}
+          onClose={() => setPopup({ ...popup, open: false })}
+        />
       </div>
     </div>
   );

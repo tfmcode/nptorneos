@@ -4,7 +4,7 @@ export interface ICodificador {
   id: number;
   idcodificador: number;
   descripcion?: string;
-  habilitado?: string;
+  codestado?: string;
   fhcarga?: Date;
   fhbaja?: Date | null;
 }
@@ -38,13 +38,13 @@ export const createCodificador = async (
   const nextId = maxIdRows[0].next_id;
 
   const { rows } = await pool.query(
-    `INSERT INTO codificadores (id, idcodificador, descripcion, habilitado, fhcarga, fhbaja) 
+    `INSERT INTO codificadores (id, idcodificador, descripcion, codestado, fhcarga, fhbaja) 
      VALUES ($1, $2, $3, $4, NOW(), NULL) RETURNING *;`,
     [
       nextId,
       codificador.idcodificador,
       codificador.descripcion,
-      codificador.habilitado,
+      codificador.codestado,
     ]
   );
 

@@ -16,17 +16,17 @@ const navItems: NavItem[] = [
   {
     name: "Web",
     submenus: [
-      { title: "Sedes" },
-      { title: "Inscripciones" },
-      { title: "Resultados" },
       { title: "Campeonatos" },
-      { title: "Torneos" },
       { title: "Equipos" },
+      { title: "Inscripciones" },
       { title: "Jugadores" },
       { title: "Lista Negra" },
+      { title: "Menú Torneos" },
+      { title: "Sedes" },
+      { title: "Resultados" },
+      { title: "Torneos" },
       { title: "Tribunal de Faltas" },
       { title: "Cambios de Equipos" },
-      { title: "Menú Torneos" },
     ],
   },
   {

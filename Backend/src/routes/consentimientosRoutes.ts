@@ -26,8 +26,6 @@ router.get(
 
 router.post(
   "/",
-  authMiddleware,
-  adminMiddleware,
   [
     body("docnro")
       .isInt({ allow_leading_zeroes: false })

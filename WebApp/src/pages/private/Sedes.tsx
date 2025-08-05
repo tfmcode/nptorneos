@@ -15,6 +15,7 @@ import {
   PageHeader,
   StatusMessage,
   SearchField,
+  PopupNotificacion,
 } from "../../components/common";
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { sedeColumns } from "../../components/tables/columns/sedeColumns";
@@ -39,7 +40,7 @@ const Sedes: React.FC = () => {
     email: "",
     contacto: "",
     emailcto: "",
-    telefonoc: "",
+    telefonocto: "",
     celularcto: "",
     latitud: "",
     longitud: "",
@@ -54,6 +55,20 @@ const Sedes: React.FC = () => {
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
+
   useEffect(() => {
     dispatch(fetchSedes());
   }, [dispatch]);
@@ -64,13 +79,28 @@ const Sedes: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errores: string[] = [];
+
+    if (!formData.nombre) errores.push("• Ingresar el nombre");
+    if (!formData.domicilio) errores.push("• Ingresar el domicilio");
+    if (!formData.cpostal) errores.push("• Ingresar el cod. postal");
+    if (!formData.telefono) errores.push("• Ingresar el teléfono");
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
     try {
       const { id, ...sedeData } = formData;
       await dispatch(saveSedeThunk(id ? formData : sedeData)).unwrap();
       dispatch(fetchSedes());
       handleCloseModal();
+      showPopup("success", "Sede guardada correctamente");
     } catch (err) {
       console.error("Error al guardar sede:", err);
+      showPopup("error", "Error al guardar la sede");
     }
   };
 
@@ -141,6 +171,12 @@ const Sedes: React.FC = () => {
                 value: formData.cpostal ?? "",
               },
               {
+                name: "telefono",
+                type: "text",
+                placeholder: "Teléfono",
+                value: formData.telefono ?? "",
+              },
+              {
                 name: "localidad",
                 type: "text",
                 placeholder: "Localidad",
@@ -151,12 +187,6 @@ const Sedes: React.FC = () => {
                 type: "text",
                 placeholder: "Provincia",
                 value: formData.provincia ?? "",
-              },
-              {
-                name: "telefono",
-                type: "text",
-                placeholder: "Teléfono",
-                value: formData.telefono ?? "",
               },
               {
                 name: "email",
@@ -225,6 +255,12 @@ const Sedes: React.FC = () => {
             onChange={handleInputChange}
             onSubmit={handleSubmit}
             submitLabel="Guardar"
+          />
+          <PopupNotificacion
+            open={popup.open}
+            type={popup.type}
+            message={popup.message}
+            onClose={() => setPopup({ ...popup, open: false })}
           />
         </Modal>
       </div>

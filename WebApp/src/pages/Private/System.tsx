@@ -14,10 +14,10 @@ import {
   ConsentimientosAdmin,
   Sanciones,
   MenuTorneos,
+  Facturas,
   Inscripciones,
   Resultados,
-  Facturas,
-} from "./";
+} from ".";
 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);

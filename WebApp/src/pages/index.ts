@@ -1,5 +1,6 @@
 export { default as Login } from './Login';
 export { default as PageNotFound } from './PageNotFound';
+export * from './Private';
 export * from './Public/About';
 export * from './Public/Concents';
 export * from './Public/Contact/components';
@@ -10,4 +11,3 @@ export * from './Public/Tournaments/components';
 export * from './Public/Tournaments';
 export * from './Public';
 export { default as RecPassword } from './RecPassword';
-export * from './private';

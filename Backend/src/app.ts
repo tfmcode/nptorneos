@@ -29,34 +29,14 @@ import comprobantesRoutes from "./routes/comprobantesRoutes";
 import publicInscripcionesRoute from "./routes/publicInscripcionesRoute";
 import partidosJugadoresRoute from "./routes/partidosJugadoresRoute";
 
-
 dotenv.config();
 
 const app = express();
 
 applyMiddlewares(app);
 
-app.use(
-  "/assets",
-  (req, res, next) => {
-    if (!process.env.FRONTEND_URL) {
-      console.error("⚠️ FRONTEND_URL environment variable is not set");
-      return res.status(500).send("Server configuration error");
-    }
-
-    res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
-    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.header("Cross-Origin-Resource-Policy", "cross-origin");
-
-    if (req.method === "OPTIONS") {
-      res.sendStatus(200);
-      return;
-    }
-    next();
-  },
-  express.static(path.join(__dirname, "../assets"))
-);
+// Middleware para servir archivos estáticos (como logos, imágenes, etc.)
+app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
 app.get("/", (req: Request, res: Response) => {
   res

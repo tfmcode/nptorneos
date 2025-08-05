@@ -2,7 +2,6 @@ import { AxiosError } from "axios";
 import API from "./httpClient"; // Reutilizamos la configuración de Axios
 import { Factura, FacturaInput } from "../types/factura";
 import { dateToInputValue } from "../helpers/dateHelpers";
-import { Console } from "console";
 
 /**
  * Manejo de errores de Axios para obtener mensajes claros

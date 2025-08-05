@@ -1,5 +1,5 @@
 import React from "react";
-import { Posicion } from "../../../../types/";
+import { Posicion } from "../../../../types";
 import { TournamentsTable } from "../../../../components/tables";
 
 interface TablePositionProps {

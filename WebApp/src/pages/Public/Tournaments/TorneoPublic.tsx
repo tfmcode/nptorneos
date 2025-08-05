@@ -22,7 +22,7 @@ import {
   Sanctions,
   TableMatches,
   TableCards,
-} from "./components";
+} from "./";
 
 import type { Match } from "./components/TableMatches";
 import type { Card } from "./components/TableCards";

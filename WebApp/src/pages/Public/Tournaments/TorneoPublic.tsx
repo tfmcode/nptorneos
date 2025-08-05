@@ -15,14 +15,12 @@ import {
   Goleador,
   FichaPartido,
 } from "../../../types";
-import {
-  TablePosition,
-  TableScorers,
-  ModalFichaPartido,
-  Sanctions,
-  TableMatches,
-  TableCards,
-} from "./";
+import TableMatches from "./components/TableMatches";
+import TablePosition from "./components/TablePosition";
+import TableScorers from "./components/TableScorers";
+import TableCards from "./components/TableCards";
+import ModalFichaPartido from "./components/ModalFichaPartido";
+import Sanctions from "./components/Sanctions";
 
 import type { Match } from "./components/TableMatches";
 import type { Card } from "./components/TableCards";

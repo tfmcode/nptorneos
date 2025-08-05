@@ -9,7 +9,6 @@ import equipoSlice from "./slices/equiposSlice";
 import torneoSlice from "./slices/torneoSlice";
 import zonaSlice from "./slices/zonaSlice";
 import zonasEquiposSlice from "./slices/zonasEquiposSlice";
-import partidoSlice from "./slices/partidoSlice";
 import torneosImagenSlice from "./slices/torneosImagenSlice";
 import equiposJugadoresSlice from "./slices/equiposJugadoresSlice";
 import listaNegraSlice from "./slices/listaNegraSlice";
@@ -21,6 +20,8 @@ import inscripcionesJugadoresSlice from "./slices/inscripcionesJugadoresSlice";
 import torneosEquiposInscSlice from "./slices/torneosEquiposInscSlice";
 import menuTorneosSlice from "./slices/menuTorneosSlice";
 import facturaSlice from "./slices/facturasSlice";
+import partidoSlice from "./slices/partidoSlice";
+import partidosJugadoresSlice from "./slices/partidosJugadoresSlice";
 
 export const store = configureStore({
   reducer: {
@@ -34,7 +35,6 @@ export const store = configureStore({
     torneos: torneoSlice,
     zonas: zonaSlice,
     zonasEquipos: zonasEquiposSlice,
-    partidos: partidoSlice,
     torneosImagenes: torneosImagenSlice,
     equiposJugadores: equiposJugadoresSlice,
     listaNegra: listaNegraSlice,
@@ -45,7 +45,9 @@ export const store = configureStore({
     inscripcionesJugadores: inscripcionesJugadoresSlice,
     torneosEquiposInsc: torneosEquiposInscSlice,
     menuTorneos: menuTorneosSlice,
-    facturas: facturaSlice
+    facturas: facturaSlice,
+    partidos: partidoSlice,
+    partidosJugadores: partidosJugadoresSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

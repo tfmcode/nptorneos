@@ -44,6 +44,10 @@ export const getJugadoresByEquipo = async (
 export const createEquipoJugador = async (
   data: IEquipoJugador
 ): Promise<IEquipoJugador> => {
+  // Conversión segura de booleanos a enteros
+  const capitanDb = data.capitan ? 1 : 0;
+  const subcapitanDb = data.subcapitan ? 1 : 0;
+
   const { rows } = await pool.query(
     `INSERT INTO wequipos_jugadores (
       idjugador, idequipo, camiseta, capitan, subcapitan, codtipo, codestado, fhcarga, idusuario
@@ -54,8 +58,8 @@ export const createEquipoJugador = async (
       data.idjugador,
       data.idequipo,
       data.camiseta ?? null,
-      data.capitan ?? false,
-      data.subcapitan ?? false,
+      capitanDb,
+      subcapitanDb,
       data.codtipo ?? null,
       data.codestado ?? 1,
       data.idusuario,
@@ -71,26 +75,37 @@ export const updateEquipoJugador = async (
 ): Promise<IEquipoJugador | null> => {
   if (data.capitan === true && data.idequipo) {
     await pool.query(
-      `UPDATE wequipos_jugadores SET capitan = false WHERE idequipo = $1 AND id <> $2 AND fhbaja IS NULL;`,
+      `UPDATE wequipos_jugadores SET capitan = 0 WHERE idequipo = $1 AND id <> $2 AND fhbaja IS NULL;`,
       [data.idequipo, id]
     );
   }
 
   if (data.subcapitan === true && data.idequipo) {
     await pool.query(
-      `UPDATE wequipos_jugadores SET subcapitan = false WHERE idequipo = $1 AND id <> $2 AND fhbaja IS NULL;`,
+      `UPDATE wequipos_jugadores SET subcapitan = 0 WHERE idequipo = $1 AND id <> $2 AND fhbaja IS NULL;`,
       [data.idequipo, id]
     );
   }
 
+  // Preparar valores convertidos para booleanos si están presentes
   const updates: string[] = [];
   const values: any[] = [];
   let index = 1;
 
-  for (const key in data) {
-    if (data[key as keyof IEquipoJugador] !== undefined) {
+  const dataCopy: Partial<IEquipoJugador> = { ...data };
+
+  if (typeof data.capitan === "boolean") {
+    dataCopy.capitan = data.capitan ? 1 : (0 as any);
+  }
+
+  if (typeof data.subcapitan === "boolean") {
+    dataCopy.subcapitan = data.subcapitan ? 1 : (0 as any);
+  }
+
+  for (const key in dataCopy) {
+    if (dataCopy[key as keyof IEquipoJugador] !== undefined) {
       updates.push(`${key} = $${index}`);
-      values.push(data[key as keyof IEquipoJugador]);
+      values.push(dataCopy[key as keyof IEquipoJugador]);
       index++;
     }
   }

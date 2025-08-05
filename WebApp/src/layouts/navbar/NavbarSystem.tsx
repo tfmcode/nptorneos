@@ -45,13 +45,13 @@ const navItems: NavItem[] = [
       { title: "C.Corriente" },
     ],
   },
-  {
+  /* {
     name: "Movs. Caja",
     submenus: [
       { title: "Ingresos y Egresos" },
       { title: "Depósito por Equipo" },
     ],
-  },
+  }, */
   { name: "Fecha Torneos", submenus: [{ title: "Fecha Torneos" }] },
   { name: "Reportes", submenus: [{ title: "Reportes" }] },
   { name: "Usuarios" },

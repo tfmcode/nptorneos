@@ -1,4 +1,5 @@
 import { Partido } from "../../../types";
+import { getEstadoTexto } from "../../../helpers/estadoHelper"; // <- importar helper
 
 export const resultadoColumns = [
   {
@@ -34,7 +35,7 @@ export const resultadoColumns = [
   {
     header: "Estado",
     accessor: "codestado" as keyof Partido,
-    render: (partido: Partido) => partido.codestado ?? "",
+    render: (partido: Partido) => getEstadoTexto(partido.codestado),
   },
   {
     header: "Fecha",
@@ -46,10 +47,5 @@ export const resultadoColumns = [
     header: "Sede",
     accessor: "sede" as keyof Partido,
     render: (partido: Partido) => partido.sede ?? "",
-  },
-  {
-    header: "Tipo",
-    accessor: "codtipo" as keyof Partido,
-    render: (partido: Partido) => partido.codtipo ?? "",
   },
 ];

@@ -16,17 +16,18 @@ import {
   FichaPartido,
 } from "../../../types";
 import {
-  TableMatches,
   TablePosition,
   TableScorers,
-  TableCards,
   ModalFichaPartido,
   Sanctions,
+  TableMatches,
+  TableCards,
 } from "./components";
-import { Match } from "./components/TableMatches";
-import { Card } from "./components/TableCards";
-import { StatusMessage } from "../../../components";
 
+import type { Match } from "./components/TableMatches";
+import type { Card } from "./components/TableCards";
+
+import { StatusMessage } from "../../../components";
 
 const TorneoPublic: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -203,7 +204,7 @@ const TorneoPublic: React.FC = () => {
         </div>
       )}
 
-      {tarjetasTabs.length > 0 &&  (
+      {tarjetasTabs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div>
             <h2 className="text-lg font-bold mb-4">TARJETAS</h2>
@@ -215,15 +216,18 @@ const TorneoPublic: React.FC = () => {
         </div>
       )}
 
-      {torneo?.latitud && torneo?.longitud && (
+      {torneo?.latitud && torneo?.longitud ? (
         <div className="border border-gray-300 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold mb-4">
             SEDE:{" "}
             {typeof torneo?.sede_nombre === "string" ? torneo.sede_nombre : ""}
           </h2>
           <p>
-            {torneo?.domicilio}, {torneo?.localidad}, {torneo?.provincia}
+            {typeof torneo?.domicilio === "string" ? torneo.domicilio : ""},{" "}
+            {typeof torneo?.localidad === "string" ? torneo.localidad : ""},{" "}
+            {typeof torneo?.provincia === "string" ? torneo.provincia : ""}
           </p>
+
           <iframe
             src={`https://www.google.com/maps?q=${torneo.latitud},${torneo.longitud}&z=15&output=embed`}
             width="100%"
@@ -232,7 +236,7 @@ const TorneoPublic: React.FC = () => {
             allowFullScreen
           ></iframe>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

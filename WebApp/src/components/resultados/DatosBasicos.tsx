@@ -35,6 +35,7 @@ function DatosBasicos({
         ...formData,
         ausente1: Number(formData.ausente1),
         ausente2: Number(formData.ausente2),
+        codestado: Number(formData.codestado), // ✅ casteo correcto
       };
       await dispatch(savePartidoThunk(partido)).unwrap();
       dispatch(fetchPartidosByZona(formData.idzona));
@@ -79,14 +80,22 @@ function DatosBasicos({
           <label className="block font-medium mb-1">Estado</label>
           <select
             name="codestado"
-            value={formData.codestado ?? 1}
+            value={formData.codestado ?? 10}
             onChange={onChange}
             className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
-            <option value={1}>Pendiente</option>
-            <option value={40}>Jugado</option>
+            <option value={10}>No Comenzado</option>
+            <option value={20}>Iniciado</option>
+            <option value={21}>Primer Tiempo</option>
+            <option value={22}>Segundo Tiempo</option>
+            <option value={23}>Primer Suplementario</option>
+            <option value={24}>Segundo Suplementario</option>
+            <option value={25}>Penales</option>
+            <option value={30}>Entretiempo</option>
+            <option value={40}>Finalizado</option>
             <option value={50}>Suspendido</option>
-            <option value={60}>Finalizado</option>
+            <option value={60}>Demorado</option>
+            <option value={70}>No Computa</option>
           </select>
         </div>
       </section>

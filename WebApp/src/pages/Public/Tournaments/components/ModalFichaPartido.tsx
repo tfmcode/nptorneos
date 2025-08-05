@@ -16,11 +16,29 @@ const getResultadoColor = (goles1: number, goles2: number) => {
 
 const renderTarjetas = (j: JugadorFicha) => (
   <>
-    {" "}
     {j.amarillas > 0 && "🟡"}
     {j.azules > 0 && "🔵"}
     {j.rojas > 0 && "🔴"}
   </>
+);
+
+const JugadorRow: React.FC<{ jugador: JugadorFicha }> = ({ jugador }) => (
+  <div className="flex items-center gap-2 text-sm border-b py-1">
+    {jugador.foto && (
+      <img
+        src={jugador.foto}
+        alt={jugador.nombre}
+        className="w-8 h-8 rounded-full object-cover"
+      />
+    )}
+    <span className="w-5 text-center font-mono text-gray-600">
+    </span>
+    <span className="flex-1">{jugador.nombre}</span>
+    <span className="text-xs font-bold">
+      {jugador.goles > 0 ? `⚽ ${jugador.goles}` : ""}
+    </span>
+    <span>{renderTarjetas(jugador)}</span>
+  </div>
 );
 
 const ModalFichaPartido: React.FC<ModalProps> = ({ open, onClose, ficha }) => {
@@ -64,24 +82,8 @@ const ModalFichaPartido: React.FC<ModalProps> = ({ open, onClose, ficha }) => {
               {ficha.equipo1.nombre} - {ficha.equipo1.goles} Goles
             </h3>
             <div className="space-y-2">
-              {ficha.equipo1.jugadores.map((j, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 text-sm border-b py-1"
-                >
-                  {j.foto && (
-                    <img
-                      src={j.foto}
-                      alt={j.nombre}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  )}
-                  <span className="flex-1">{j.nombre}</span>
-                  <span className="text-xs font-bold">
-                    {j.goles > 0 ? `⚽ ${j.goles}` : ""}
-                  </span>
-                  <span>{renderTarjetas(j)}</span>
-                </div>
+              {ficha.equipo1.jugadores.map((j) => (
+                <JugadorRow key={j.idjugador} jugador={j} />
               ))}
             </div>
           </div>
@@ -94,24 +96,8 @@ const ModalFichaPartido: React.FC<ModalProps> = ({ open, onClose, ficha }) => {
               {ficha.equipo2.nombre} - {ficha.equipo2.goles} Goles
             </h3>
             <div className="space-y-2">
-              {ficha.equipo2.jugadores.map((j, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 text-sm border-b py-1"
-                >
-                  {j.foto && (
-                    <img
-                      src={j.foto}
-                      alt={j.nombre}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  )}
-                  <span className="flex-1">{j.nombre}</span>
-                  <span className="text-xs font-bold">
-                    {j.goles > 0 ? `⚽ ${j.goles}` : ""}
-                  </span>
-                  <span>{renderTarjetas(j)}</span>
-                </div>
+              {ficha.equipo2.jugadores.map((j) => (
+                <JugadorRow key={j.idjugador} jugador={j} />
               ))}
             </div>
           </div>

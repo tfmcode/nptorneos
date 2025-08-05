@@ -6,6 +6,7 @@ import {
   updateInscripcionController,
   deleteInscripcionController,
   updateEquipoAsocController,
+  procesarEquipoController,
 } from "../controllers/inscripcionesController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -15,6 +16,13 @@ const router = express.Router();
 
 router.get("/", authMiddleware, asyncHandler(getInscripciones));
 router.get("/:id", authMiddleware, asyncHandler(getInscripcion));
+
+router.post(
+  "/procesarEquipo",
+  authMiddleware,
+  adminMiddleware,
+  asyncHandler(procesarEquipoController)
+);
 
 router.post(
   "/",

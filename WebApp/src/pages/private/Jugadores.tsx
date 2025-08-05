@@ -15,6 +15,7 @@ import {
   PageHeader,
   StatusMessage,
   SearchField,
+  PopupNotificacion,
 } from "../../components/common";
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { jugadorColumns } from "../../components/tables/columns/jugadorColumns";
@@ -50,19 +51,48 @@ const Jugadores: React.FC = () => {
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
+
   useEffect(() => {
     dispatch(fetchJugadores({ page, limit, searchTerm }));
   }, [dispatch, page, limit, searchTerm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errores: string[] = [];
+
+    if (!formData.apellido) errores.push("• Ingresar el apellido");
+    if (!formData.nombres) errores.push("• Ingresar el nombre");
+    if (!formData.docnro) errores.push("• Ingresar el documento");
+    if (!formData.fhnacimiento) errores.push("• Ingresar la fecha de nacimiento");
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
     try {
       const { id, ...jugadorData } = formData;
       await dispatch(saveJugadorThunk(id ? formData : jugadorData)).unwrap();
-      handleCloseModal();
       dispatch(fetchJugadores({ page, limit, searchTerm }));
+      handleCloseModal();
+      showPopup("success", "Jugador guardado correctamente");
     } catch (err) {
       console.error("Error al guardar jugador:", err);
+      showPopup("error", "Error al guardar el jugador");
     }
   };
 
@@ -216,6 +246,12 @@ const Jugadores: React.FC = () => {
             onChange={handleInputChange}
             onSubmit={handleSubmit}
             submitLabel="Guardar"
+          />
+          <PopupNotificacion
+            open={popup.open}
+            type={popup.type}
+            message={popup.message}
+            onClose={() => setPopup({ ...popup, open: false })}
           />
         </Modal>
       </div>

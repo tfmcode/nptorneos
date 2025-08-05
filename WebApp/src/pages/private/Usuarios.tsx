@@ -15,6 +15,7 @@ import {
   PageHeader,
   StatusMessage,
   SearchField,
+  PopupNotificacion,
 } from "../../components/common";
 import { useCrudForm } from "../../hooks/useCrudForm";
 import { usuarioColumns } from "../../components/tables";
@@ -44,6 +45,20 @@ const Usuarios: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
 
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
+
   useEffect(() => {
     if (!usuarios.length) {
       dispatch(fetchUsuarios());
@@ -56,6 +71,22 @@ const Usuarios: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errores: string[] = [];
+
+    if (!formData.nombre?.trim()) errores.push("• Ingresar el nombre");
+    if (!formData.apellido?.trim()) errores.push("• Ingresar el apellido");
+    if (!formData.email?.trim()) errores.push("• Ingresar el email");
+
+    if (!formData.idusuario && !formData.contrasenia?.trim()) {
+      errores.push("• Ingresar una contraseña");
+    }
+
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
     try {
       const { idusuario, contrasenia = "", ...usuarioData } = formData;
 
@@ -79,8 +110,10 @@ const Usuarios: React.FC = () => {
 
       dispatch(fetchUsuarios());
       handleCloseModal();
+      showPopup("success", "Usuario guardado correctamente");
     } catch (err) {
       console.error("❌ Error al guardar usuario:", err);
+      showPopup("error", "Error al guardar el usuario");
     }
   };
 
@@ -90,6 +123,7 @@ const Usuarios: React.FC = () => {
       dispatch(fetchUsuarios());
     } catch (error) {
       console.error("❌ Error al eliminar usuario:", error);
+      showPopup("error", "Error al eliminar usuario");
     }
   };
 
@@ -129,7 +163,7 @@ const Usuarios: React.FC = () => {
         <DataTable<Usuario>
           columns={usuarioColumns}
           data={filteredUsuarios}
-          onEdit={(row) => row && handleOpenModal(row as Usuario)} 
+          onEdit={(row) => row && handleOpenModal(row as Usuario)}
           onDelete={(row) => row && handleDelete(row as Usuario)}
         />
 
@@ -184,6 +218,13 @@ const Usuarios: React.FC = () => {
             onChange={handleInputChange}
             onSubmit={handleSubmit}
             submitLabel="Guardar"
+          />
+
+          <PopupNotificacion
+            open={popup.open}
+            type={popup.type}
+            message={popup.message}
+            onClose={() => setPopup({ ...popup, open: false })}
           />
         </Modal>
       </div>

@@ -34,7 +34,7 @@ function App() {
               path={EPublicRoutes.TORNEO_PUBLIC}
               element={<TorneoPublic />}
             />
-<Route path={EPublicRoutes.FUTBOL_NP} element={<FutbolNP />} />
+            <Route path={EPublicRoutes.FUTBOL_NP} element={<FutbolNP />} />
             <Route
               path={EPublicRoutes.NUEVO_PARADIGMA}
               element={<NuevoParadigma />}

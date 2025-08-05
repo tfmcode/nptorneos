@@ -1,5 +1,5 @@
 import { TournamentsTable } from "../../../../components/tables";
-import { Goleador } from "../../../../types/";
+import { Goleador } from "../../../../types";
 
 interface TableScorersProps {
   scorersByZona: Record<string, Goleador[]>;

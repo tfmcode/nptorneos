@@ -22,5 +22,7 @@ export * from './Public/Contact/components';
 export * from './Public/Contact';
 export * from './Public/Home/components';
 export * from './Public/Home';
+export { default as TorneoPublic } from './Public/Tournaments/TorneoPublic';
+export * from './Public/Tournaments/componentes';
 export * from './Public';
 export { default as RecPassword } from './RecPassword';

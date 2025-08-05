@@ -8,3 +8,4 @@ export * from './Home/components';
 export * from './Home';
 export { default as NuevoParadigma } from './NuevoParadigma';
 export { default as TorneoPublic } from './Tournaments/TorneoPublic';
+export * from './Tournaments/componentes';

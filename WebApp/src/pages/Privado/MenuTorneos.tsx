@@ -125,6 +125,7 @@ const MenuTorneos: React.FC = () => {
             <option value={5}>Fútbol 5</option>
             <option value={8}>Fútbol 8</option>
             <option value={11}>Fútbol 11</option>
+            <option value={6}>Infanto Juvenil</option>
           </select>
         </div>
 

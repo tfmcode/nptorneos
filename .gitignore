@@ -1,29 +1,74 @@
-# Logs
-logs
-*.log
+# ======================
+# Archivos de entorno
+# ======================
+Backend/.env
+WebApp/.env
+WebApp/env
+.env
+env
+
+# ======================
+# Dependencias Node.js
+# ======================
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-node_modules
-dist
-dist-ssr
-*.local
+# ======================
+# Builds y distribución
+# ======================
+dist/
+build/
+Backend/dist/
+Backend/build/
+WebApp/dist/
+WebApp/build/
 
-env
-.env
-.env.*
-.env.local
+# ======================
+# Archivos de logs
+# ======================
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# ======================
+# Archivos del sistema
+# ======================
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# ======================
+# Archivos temporales
+# ======================
+tmp/
+temp/
+.cache/
+.vscode/
+.idea/
+*.swp
+
+# ======================
+# Backups
+# ======================
+*.bak
+*.tmp
+*.old
+
+# ======================
+# Archivos de test/coverage
+# ======================
+coverage/
+*.lcov
+
+# ======================
+# Archivos específicos de herramientas
+# ======================
+.eslintcache
+stylelintcache

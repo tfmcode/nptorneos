@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: './', 
   server: {
-    port: Number(process.env.PORT) || 3000,
+    port: Number(process.env.PORT) || 5173,
     host: '0.0.0.0' // 👈 Esto es CLAVE para que Railway acceda
   }
 })

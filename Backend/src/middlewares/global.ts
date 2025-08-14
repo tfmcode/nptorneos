@@ -4,35 +4,49 @@ import compression from "compression";
 import express from "express";
 
 export const applyMiddlewares = (app: express.Application) => {
-  // Seguridad básica
-  app.use(helmet());
+  // Seguridad básica (permitimos recursos cross-origin si servís imágenes desde el backend)
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false, // evita bloquear imágenes/archivos servidos a otro origen (p.ej. Vite)
+    })
+  );
 
-  // Compresión gzip para mejorar performance
+  // Compresión gzip
   app.use(compression());
 
-  // Orígenes permitidos en producción
-  const allowedOrigins = [
-    "https://nptorneos.com.ar",
-    "https://www.nptorneos.com.ar",
+  // Orígenes permitidos (lee .env FRONTEND_URL y cae a localhost en dev)
+  const envOrigins = (process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const defaultDevOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
   ];
 
-  /* const allowedOrigins = process.env.FRONTEND_URL?.split(",") || [
-    "http://localhost:5173",
-  ]; */
+  const allowedOrigins = envOrigins.length ? envOrigins : defaultDevOrigins;
 
+  // CORS con callback para aceptar solo orígenes permitidos y también requests sin Origin (curl/postman)
   app.use(
     cors({
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true); // permite herramientas locales (curl, Postman)
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error(`CORS bloqueado para origen: ${origin}`));
+      },
       credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     })
   );
 
-  // Habilita respuestas para preflight OPTIONS (evita error 405)
+  // Preflight explícito con misma config
   app.options("*", cors());
 
-  // Parsers estándar
+  // Parsers
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 };

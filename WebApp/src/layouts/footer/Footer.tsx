@@ -108,8 +108,8 @@ export const Footer: React.FC = () => {
           </p>
           <p>
             TFM Code{" "}
-            <a href="/nptorneosphp/index.php" className="hover:underline">
-              Adway Solutions
+            <a href="https://tfmcode.com.ar/" className="hover:underline">
+              Soluciones Integrales
             </a>
           </p>
         </div>

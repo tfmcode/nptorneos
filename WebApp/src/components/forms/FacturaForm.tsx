@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getComprobantesPorModulo } from "../../api/comprobantesService";
 import MoneyInputField from "../common/MoneyInputField";
 
 interface FacturaFormProps {
@@ -12,6 +13,20 @@ const FacturaForm: React.FC<FacturaFormProps> = ({ formData, onChange, onSubmit,
   const nroValue = Number(formData.nrocomprobante) || 0;
   const ptoventa = Math.floor(nroValue / 100000000).toString().padStart(4, "0");
   const nroparte = (nroValue % 100000000).toString().padStart(8, "0");
+  const [comprobantes, setComprobantes] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    const modulo = 1; // Facturación
+    getComprobantesPorModulo(modulo)
+      .then((data) => {
+        const opciones = data.map((item: any) => ({
+          value: item.codigo,
+          label: `${item.codigo} - ${item.descripcion}`,
+        }));
+        setComprobantes(opciones);
+      })
+      .catch((err) => console.error("Error al cargar comprobantes:", err));
+  }, []);
 
   const handlePtoVentaChange = (value: string) => {
     const pto = parseInt(value) || 0;
@@ -34,7 +49,19 @@ const FacturaForm: React.FC<FacturaFormProps> = ({ formData, onChange, onSubmit,
         <div className="space-y-4 md:col-span-2 w-full md:w-[86%]">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Comprobante</label>
-            <input type="text" name="comprobante" value={formData.comprobante ?? ""} onChange={(e) => onChange(e.target.name, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700" />
+            <select
+              name="comprobante"
+              value={formData.comprobante ?? ""}
+              onChange={(e) => onChange(e.target.name, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700"
+            >
+              <option value="">Seleccione un comprobante</option>
+              {comprobantes.map((comp) => (
+                <option key={comp.value} value={comp.value}>
+                  {comp.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Proveedor</label>

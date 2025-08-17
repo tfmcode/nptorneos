@@ -7,6 +7,7 @@ export interface IFactura {
   fechaorigen: Date;
   proveedor: string;
   comprobante: string;
+  desccomprobante?: string;
   tipo: string;
   nrocomprobante: number;
   fechavencimiento: Date;
@@ -23,8 +24,8 @@ export interface IFactura {
   afecta: number;
 }
 
-const crFactura = `id, fechaorigen, proveedor, comprobante, tipo, nrocomprobante, fechavencimiento, formapago, pagoautomatico, 
-                  importesubtotal, importeingrbru, importeiva, alicuotaingrbru, alicuotaiva, importetotal, estado, importependafectar, afecta`;
+export const crFactura = `id, fechaorigen, proveedor, comprobante, tipo, nrocomprobante, fechavencimiento, formapago, pagoautomatico, 
+                          importesubtotal, importeingrbru, importeiva, alicuotaingrbru, alicuotaiva, importetotal, estado, importependafectar, afecta`;
 
 
 export const getAllFacturas = async (): Promise<IFactura[]> => {
@@ -61,7 +62,7 @@ export const getFacturas = async ({
   let query: string;
   const filtros = 
     [
-      { campo: "nrocomprobante", operador: "=", valor: searchTerm },
+      { campo: "nrocomprobante", operador: "=", valor: searchTerm != "" ? parseInt(searchTerm) : searchTerm  },
       { campo: "fechaorigen", operador: "BETWEEN", valor: dateToSqlValue(fechaDesde), valorExtra: dateToSqlValue(fechaHasta) },
     ];
   const { where, values } = FiltroCondicion(filtros);
@@ -69,7 +70,9 @@ export const getFacturas = async ({
 
   totalQuery = `SELECT COUNT(0) FROM wfactura ${where}`
   query = `
-    SELECT ${crFactura} FROM wFactura
+    SELECT ${crFactura}, C.Descripcion AS desccomprobante
+    FROM wFactura AS F
+    LEFT OUTER JOIN comprobante AS C ON C.codigo = F.comprobante
     ${where}
     ORDER BY fechaorigen
     LIMIT $${values.length + 1}

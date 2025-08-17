@@ -16,6 +16,7 @@ import MenuTorneos from "./MenuTorneos";
 import Facturas from "./Facturas";
 import Inscripciones from "./Inscripciones";
 import Resultados from "./Resultados";
+import CajaMovimientos from './CajaMovimientos';
 
 
 const System: React.FC = () => {
@@ -53,6 +54,8 @@ const System: React.FC = () => {
         return <Inscripciones />;
       case "Resultados":
         return <Resultados />;
+      case "Pagos":
+        return <CajaMovimientos />;
       default:
         return (
           <p className="text-center text-xl text-white">

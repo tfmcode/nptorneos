@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getPublicTorneoById,
   getPosicionesByTorneoId,
@@ -17,7 +17,6 @@ import {
 } from "../../../types";
 import {
   ModalFichaPartido,
-  Sanctions,
   TableCards,
   TableMatches,
   TablePosition,
@@ -25,8 +24,10 @@ import {
 } from "./componentes";
 import { Match } from "./componentes/TableMatches";
 import { Card } from "./componentes/TableCards";
-
 import { StatusMessage } from "../../../components";
+
+const preferZone = (zones: string[]) =>
+  zones.find((k) => /(^|\s)(zona|grupo)\s*a($|\s)/i.test(k)) || zones[0] || "";
 
 const TorneoPublic: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,56 +42,94 @@ const TorneoPublic: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Zona global (default + controlada por tabs arriba)
+  const [activeZone, setActiveZone] = useState<string>("");
+
+  const isAmistoso = (txt?: string | null) =>
+    (txt ?? "").toLowerCase().includes("amistoso");
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
       try {
         setLoading(true);
+
         const [data, posicionesData] = await Promise.all([
           getPublicTorneoById(Number(id)),
           getPosicionesByTorneoId(Number(id)),
         ]);
 
         setTorneo(data.torneo ?? null);
-        setZonas(data.zonas ?? []);
-        setPartidos(data.partidos ?? []);
 
+        const allZonas: Zona[] = data.zonas ?? [];
+        const zonasPublic = allZonas.filter(
+          (z) => !isAmistoso(z.abrev ?? z.nombre)
+        );
+        setZonas(zonasPublic);
+
+        const zonasPublicIds = new Set(
+          zonasPublic
+            .filter((z) => typeof z.id === "number")
+            .map((z) => z.id as number)
+        );
+
+        const partidosPublic = (data.partidos ?? []).filter((p) =>
+          zonasPublicIds.has(Number(p.idzona))
+        );
+        setPartidos(partidosPublic);
+
+        // POSICIONES por zona (excluye amistosos)
         const posicionesByZona: Record<string, Posicion[]> = {};
         posicionesData.forEach((pos) => {
-          const zona = pos.zona_nombre ?? "SIN ZONA";
-          if (!posicionesByZona[zona]) posicionesByZona[zona] = [];
-          posicionesByZona[zona].push(pos);
+          const zonaNombre = pos.zona_nombre ?? "SIN ZONA";
+          if (isAmistoso(zonaNombre)) return;
+          if (!posicionesByZona[zonaNombre]) posicionesByZona[zonaNombre] = [];
+          posicionesByZona[zonaNombre].push(pos);
         });
-        setPositions(posicionesByZona);
 
+        // GOLEADORES (solo zonas públicas)
         const goleadoresByZona: Record<string, Goleador[]> = {};
-        for (const zona of data.zonas) {
+        for (const zona of zonasPublic) {
           if (typeof zona.id === "number") {
             const goleadores = await getGoleadoresByZonaId(zona.id);
-            goleadoresByZona[zona.abrev ?? zona.nombre] = goleadores.map(
-              (g, idx) => ({ ...g, pos: idx + 1 })
-            );
+            const key = zona.abrev ?? zona.nombre;
+            goleadoresByZona[key] = goleadores.map((g, idx) => ({
+              ...g,
+              pos: idx + 1,
+            }));
           }
         }
-        setScorers(goleadoresByZona);
 
+        // TARJETAS (solo zonas públicas)
         const tarjetasByZona: Record<string, Card[]> = {};
-        for (const zona of data.zonas) {
+        for (const zona of zonasPublic) {
           if (typeof zona.id === "number") {
             const sanciones = await getSancionesPorZona(zona.id);
-            tarjetasByZona[zona.abrev ?? zona.nombre] = sanciones.map(
-              (s, idx) => ({
-                pos: idx + 1,
-                jugador: s.jugador,
-                equipo: s.equipo,
-                amarillas: s.namarillas,
-                azules: s.nazules,
-                rojas: s.nrojas,
-              })
-            );
+            const key = zona.abrev ?? zona.nombre;
+            tarjetasByZona[key] = sanciones.map((s, idx) => ({
+              pos: idx + 1,
+              jugador: s.jugador,
+              equipo: s.equipo,
+              amarillas: s.namarillas,
+              azules: s.nazules,
+              rojas: s.nrojas,
+            }));
           }
         }
+
+        setPositions(posicionesByZona);
+        setScorers(goleadoresByZona);
         setCards(tarjetasByZona);
+
+        // ---- Zona por defecto GLOBAL (preferimos ZONA/GRUPO A; si no, la primera) ----
+        const posKeys = Object.keys(posicionesByZona).sort();
+        const scKeys = Object.keys(goleadoresByZona).sort();
+        const crKeys = Object.keys(tarjetasByZona).sort();
+        const all = Array.from(
+          new Set([...posKeys, ...scKeys, ...crKeys])
+        ).sort();
+        const chosen = preferZone(all);
+        setActiveZone(chosen);
       } catch (err) {
         console.error(err);
         setError("Error al cargar el torneo.");
@@ -155,9 +194,13 @@ const TorneoPublic: React.FC = () => {
     };
   });
 
-  const zonaTabs = Object.keys(positions).sort();
-  const goleadorTabs = Object.keys(scorers).sort();
-  const tarjetasTabs = Object.keys(cards).sort();
+  // Tabs globales: usamos la unión de todas las zonas disponibles
+  const allZonesTabs = useMemo(() => {
+    const pos = Object.keys(positions);
+    const sc = Object.keys(scorers);
+    const cr = Object.keys(cards);
+    return Array.from(new Set([...pos, ...sc, ...cr])).sort();
+  }, [positions, scorers, cards]);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -169,52 +212,74 @@ const TorneoPublic: React.FC = () => {
 
       <StatusMessage loading={loading} error={error} />
 
-      {matchesFormateados.length > 0 && (
-        <>
-          <div className="mb-10">
-            <h2 className="text-lg font-bold text-center mb-4">
-              Fixture de Partidos
-            </h2>
-            <TableMatches
-              matches={matchesFormateados}
-              itemsPerPage={3}
-              onSelectMatch={(idpartido: number) => fetchFicha(idpartido)}
-            />
-          </div>
+      {/* Selector global de ZONA */}
+      {allZonesTabs.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          {allZonesTabs.map((z) => (
+            <button
+              key={z}
+              onClick={() => setActiveZone(z)}
+              className={`px-4 py-2 rounded font-semibold transition-colors ${
+                activeZone === z
+                  ? "bg-yellow-600 text-white"
+                  : "bg-gray-200 hover:bg-gray-300"
+              }`}
+            >
+              {z.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
 
+      {/* 1) POSICIONES */}
+      {allZonesTabs.length > 0 && Object.keys(positions).length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold mb-4 text-center">POSICIONES</h2>
+          <TablePosition positions={positions} initialZone={activeZone} />
+        </div>
+      )}
+
+      {/* 2) FIXTURE */}
+      {matchesFormateados.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold text-center mb-4">
+            FIXTURE DE PARTIDOS
+          </h2>
+          <TableMatches
+            matches={matchesFormateados}
+            onSelectMatch={(idpartido: number) => fetchFicha(idpartido)}
+          />
           <ModalFichaPartido
             open={modalOpen}
             onClose={() => setModalOpen(false)}
             ficha={fichaPartido}
           />
-        </>
-      )}
-
-      {zonaTabs.length > 0 && goleadorTabs.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-          <div>
-            <h2 className="text-lg font-bold mb-4">POSICIONES</h2>
-            <TablePosition positions={positions} />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold mb-4">GOLEADORES</h2>
-            <TableScorers scorersByZona={scorers} />
-          </div>
         </div>
       )}
 
-      {tarjetasTabs.length > 0 && (
+      {/* 3) TARJETAS y GOLEADORES */}
+      {(Object.keys(cards).length > 0 || Object.keys(scorers).length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-          <div>
-            <h2 className="text-lg font-bold mb-4">TARJETAS</h2>
-            <TableCards cards={cards} tabs={tarjetasTabs} />
-          </div>
-          <div>
-            <Sanctions sanciones={[]} />
-          </div>
+          {Object.keys(cards).length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold mb-4">TARJETAS</h2>
+              <TableCards
+                cards={cards}
+                tabs={Object.keys(cards).sort()}
+                initialZone={activeZone}
+              />
+            </div>
+          )}
+          {Object.keys(scorers).length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold mb-4">GOLEADORES</h2>
+              <TableScorers scorersByZona={scorers} initialZone={activeZone} />
+            </div>
+          )}
         </div>
       )}
 
+      {/* Sede / Mapa */}
       {torneo?.latitud && torneo?.longitud ? (
         <div className="border border-gray-300 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold mb-4">

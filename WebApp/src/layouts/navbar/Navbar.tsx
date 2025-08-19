@@ -58,12 +58,12 @@ export const Navbar: React.FC = () => {
 
   return (
     <Disclosure as="nav" className="bg-gray-800 relative z-[100]">
-      {({ open }) => (
+      {({ open, close }) => (
         <>
           {/* TOP BAR */}
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
-              <RouteLink to="/" className="shrink-0">
+              <RouteLink to="/" className="shrink-0" onClick={() => close()}>
                 <img src={Logo} alt="LIGA NP" className="h-12 w-auto" />
               </RouteLink>
 
@@ -86,7 +86,6 @@ export const Navbar: React.FC = () => {
                         leaveFrom="transform opacity-100 scale-100"
                         leaveTo="transform opacity-0 scale-95"
                       >
-                        {/* Menú principal (nivel 1) */}
                         <Menu.Items
                           className="absolute mt-2 min-w-[280px] bg-white rounded-md shadow-lg ring-1 ring-black/10 focus:outline-none z-[120] overflow-visible"
                           static
@@ -106,11 +105,10 @@ export const Navbar: React.FC = () => {
                                   className="relative"
                                   onMouseEnter={() => setOpenSub(idopcion)}
                                 >
-                                  {/* Botón de categoría (NO es otro <Menu>) */}
                                   <button
                                     type="button"
                                     className="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 flex justify-between items-center"
-                                    onMouseDown={(e) => e.preventDefault()} // evita que HeadlessUI cierre por mousedown
+                                    onMouseDown={(e) => e.preventDefault()}
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
@@ -127,7 +125,6 @@ export const Navbar: React.FC = () => {
                                     )}
                                   </button>
 
-                                  {/* Submenú (nivel 2) */}
                                   {torneosCat.length > 0 &&
                                     openSub === idopcion && (
                                       <div className="absolute left-full top-0 ml-1 w-64 bg-white rounded-md shadow-lg ring-1 ring-black/10 focus:outline-none z-[130]">
@@ -137,9 +134,6 @@ export const Navbar: React.FC = () => {
                                               key={`torneo-${torneo.idopcion}-${torneo.orden}`}
                                               to={`/torneos/${torneo.idtorneo}`}
                                               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                              onClick={(e) =>
-                                                e.stopPropagation()
-                                              }
                                             >
                                               {torneo.descripcion ?? "Torneo"}
                                             </RouteLink>
@@ -179,7 +173,7 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          {/* MOBILE MENU (acordeones limpios) */}
+          {/* MOBILE MENU */}
           <Disclosure.Panel className="lg:hidden bg-gray-800 text-white border-t border-gray-700">
             <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
               {navItems.map((item) =>
@@ -216,6 +210,7 @@ export const Navbar: React.FC = () => {
                                         key={`mobile-${torneo.idopcion}-${torneo.orden}`}
                                         to={`/torneos/${torneo.idtorneo}`}
                                         className="block rounded-md px-3 py-2 text-sm text-gray-200 hover:bg-gray-700/70"
+                                        onClick={() => close()} // <-- CIERRA TODO
                                       >
                                         {torneo.descripcion ?? "Torneo"}
                                       </RouteLink>
@@ -238,6 +233,7 @@ export const Navbar: React.FC = () => {
                     key={item.name}
                     to={item.link || "/"}
                     className="block rounded-md px-3 py-2 text-base font-medium text-gray-200 hover:bg-gray-700"
+                    onClick={() => close()} // <-- CIERRA TODO
                   >
                     {item.name}
                   </RouteLink>

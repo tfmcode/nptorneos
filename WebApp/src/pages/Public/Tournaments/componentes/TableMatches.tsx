@@ -12,17 +12,16 @@ export interface Match {
   partido: string;
   fecha: string;
   sede: string;
+  
 }
 
 interface TableMatchesProps {
   matches: Match[];
-  itemsPerPage: number;
   onSelectMatch?: (idpartido: number) => void;
 }
 
 const TableMatches: React.FC<TableMatchesProps> = ({
   matches,
-  itemsPerPage,
   onSelectMatch,
 }) => {
   const zonas = Array.from(new Set(matches.map((m) => m.zona))).sort();
@@ -80,7 +79,7 @@ const TableMatches: React.FC<TableMatchesProps> = ({
     };
   });
 
-  return <TournamentsTable data={data} itemsPerPage={itemsPerPage} />;
+  return <TournamentsTable data={data} />;
 };
 
 export default TableMatches;

@@ -6,9 +6,15 @@ export interface IComprobante {
   descripcion: string;
   dc: number;
   visible: number;
+  modulo: number;
 }
 
-const crComprobante = `codigo, descripcion, dc, visible`;
+export enum Modulo {
+  Facturacion = 1,
+  CajaMovimiento = 2,
+}
+
+const crComprobante = `codigo, descripcion, dc, visible, modulo`;
 
 
 export const getAllComprobantes = async (): Promise<IComprobante[]> => {
@@ -16,6 +22,14 @@ export const getAllComprobantes = async (): Promise<IComprobante[]> => {
     `SELECT ${crComprobante} FROM comprobante ORDER BY descripcion;`
   );
   return rows;
+};
+
+export const getComprobanteByModulo = async (modulo: Modulo): Promise<IComprobante[] | null> => {
+  const { rows } = await pool.query(
+    `SELECT ${crComprobante} FROM comprobante WHERE modulo = $1 And visible = 1;`,
+    [modulo]
+  );
+  return rows.length > 0 ? rows : null;
 };
 
 export const getComprobanteByCodigo = async (codigo: string): Promise<IComprobante | null> => {

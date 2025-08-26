@@ -7,6 +7,8 @@ import {
   createComprobante,
   updateComprobante,
   deleteComprobante,
+  getComprobanteByModulo,
+  Modulo
 } from "../models/comprobantesModel";
 
 export const getComprobantesController = async (req: Request, res: Response) => {
@@ -31,6 +33,26 @@ export const getComprobantesController = async (req: Request, res: Response) => 
   } catch (error) {
     console.error("❌ Error al obtener las comprobantes:", error);
     res.status(500).json({ message: "Error al obtener las comprobantes.", error });
+  }
+};
+
+export const getComprobanteModulo = async (req: Request, res: Response) => {
+  try {
+    const moduloParam = parseInt(req.params.modulo);
+
+    if (!Object.values(Modulo).includes(moduloParam)) {
+      return res.status(400).json({ message: "Módulo inválido." });
+    }
+    const comprobantes = await getComprobanteByModulo(moduloParam);
+
+    if (!comprobantes) {
+      return res.status(404).json({ message: "No se encontraron comprobantes para este módulo." });
+    }
+
+    res.status(200).json(comprobantes);
+  } catch (error) {
+    console.error("❌ Error al obtener comprobante:", error);
+    res.status(500).json({ message: "Error al obtener el comprobante.", error });
   }
 };
 

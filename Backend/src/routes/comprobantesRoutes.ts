@@ -5,6 +5,7 @@ import {
   updateComprobanteController,
   deleteComprobanteController,
   getComprobantesController,
+  getComprobanteModulo
 } from "../controllers/comprobantesController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.get("/", authMiddleware, asyncHandler(getComprobantesController));
 router.get("/:codigo", authMiddleware, asyncHandler(getComprobante));
+router.get("/modulo/:modulo", authMiddleware, asyncHandler(getComprobanteModulo));
 
 router.post(
   "/",

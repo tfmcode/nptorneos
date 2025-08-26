@@ -16,6 +16,7 @@ export { default as Sedes } from './Privado/Sedes';
 export { default as System } from './Privado/System';
 export { default as Torneos } from './Privado/Torneos';
 export { default as Usuarios } from './Privado/Usuarios';
+export { default as CajaMovimientos } from './Privado/CajaMovimientos'
 export * from './Public/About';
 export * from './Public/Concents';
 export * from './Public/Contact/components';

@@ -3,6 +3,7 @@ export interface Factura {
   fechaorigen: string;
   proveedor: string;
   comprobante: string;
+  desccomprobante?: string;
   tipo: string;
   nrocomprobante: number;
   fechavencimiento: string;

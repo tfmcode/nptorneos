@@ -19,7 +19,7 @@ export const facturaColumns = [
   },
   {
     header: "Comprobante",
-    accessor: "comprobante" as keyof Factura,
+    accessor: "desccomprobante" as keyof Factura,
   },
   {
     header: "Tipo",

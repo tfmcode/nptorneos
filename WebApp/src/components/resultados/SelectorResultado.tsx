@@ -49,6 +49,9 @@ const SelectorTorneoZonaFecha = ({ onSeleccionar }: Props) => {
     new Set(partidos.map((p) => p.nrofecha).filter((n) => n != null))
   ).sort((a, b) => Number(a) - Number(b));
 
+  // Filtrar torneos activos en el frontend (por si el backend no soporta el filtro)
+  const torneosActivos = torneos.filter((t) => t.codestado === 1);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
       <div>
@@ -59,7 +62,7 @@ const SelectorTorneoZonaFecha = ({ onSeleccionar }: Props) => {
           onChange={(e) => setIdTorneo(Number(e.target.value))}
         >
           <option value={0}>Seleccionar Torneo</option>
-          {torneos.map((t) => (
+          {torneosActivos.map((t) => (
             <option key={t.id} value={t.id}>
               {t.nombre}
             </option>

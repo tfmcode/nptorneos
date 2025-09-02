@@ -20,7 +20,7 @@ interface DataTableProps<T> {
   data: T[];
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
-  onToggleEstado?: (row: T) => void; // Renombrado para manejar ambos (habilitado/codestado)
+  onToggleEstado?: (row: T) => void;
 }
 
 const DataTable = <T extends Record<string, unknown>>({
@@ -28,7 +28,7 @@ const DataTable = <T extends Record<string, unknown>>({
   data,
   onEdit,
   onDelete,
-  onToggleEstado, // Maneja habilitado o codestado
+  onToggleEstado,
 }: DataTableProps<T>) => {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T;
@@ -84,16 +84,20 @@ const DataTable = <T extends Record<string, unknown>>({
                   </div>
                 </th>
               ))}
+
+              {/* Columnas de acción condicionales */}
               <th className="w-[50px] border text-sm">Estado</th>
-              <th className="w-[50px] border text-sm">Editar</th>
-              <th className="w-[50px] border text-sm">Eliminar</th>
+              {onEdit && <th className="w-[50px] border text-sm">Editar</th>}
+              {onDelete && (
+                <th className="w-[50px] border text-sm">Eliminar</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {sortedData.map((row, rowIndex) => {
               const estado =
-                row.habilitado !== undefined ? row.habilitado : row.codestado; // 🔹 Detecta cuál usar
-              const isActive = estado === 1;
+                row.habilitado !== undefined ? row.habilitado : row.codestado;
+              const isActive = estado === 1 || estado === "1"; // Maneja tanto number como string
 
               return (
                 <tr key={rowIndex} className="hover:bg-gray-100 text-sm">
@@ -107,46 +111,65 @@ const DataTable = <T extends Record<string, unknown>>({
                     </td>
                   ))}
 
-                  {/* 🔹 Botón de habilitación/deshabilitación dinámico */}
-                  <td className="px-4 py-2 border">
-                    <button
-                      onClick={() => onToggleEstado?.(row)}
-                      className={`px-2 py-1 rounded text-white ${
-                        isActive
-                          ? "bg-green-600 hover:bg-green-800"
-                          : "bg-red-600 hover:bg-red-800"
-                      }`}
-                      title={isActive ? "Habilitado" : "Deshabilitado"}
-                    >
-                      {isActive ? (
-                        <CheckCircleIcon className="h-5 w-5" />
-                      ) : (
-                        <XCircleIcon className="h-5 w-5" />
-                      )}
-                    </button>
+                  {/* Botón de estado - siempre se muestra */}
+                  <td className="px-4 py-2 border text-center">
+                    {onToggleEstado ? (
+                      <button
+                        onClick={() => onToggleEstado(row)}
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white transition-colors ${
+                          isActive
+                            ? "bg-green-600 hover:bg-green-800"
+                            : "bg-red-600 hover:bg-red-800"
+                        }`}
+                        title={isActive ? "Habilitado" : "Deshabilitado"}
+                      >
+                        {isActive ? (
+                          <CheckCircleIcon className="h-5 w-5" />
+                        ) : (
+                          <XCircleIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white ${
+                          isActive ? "bg-green-600" : "bg-red-600"
+                        }`}
+                        title={isActive ? "Habilitado" : "Deshabilitado"}
+                      >
+                        {isActive ? (
+                          <CheckCircleIcon className="h-5 w-5" />
+                        ) : (
+                          <XCircleIcon className="h-5 w-5" />
+                        )}
+                      </span>
+                    )}
                   </td>
 
-                  {/* Botón de edición */}
-                  <td className="px-4 py-2 border">
-                    <button
-                      onClick={() => onEdit?.(row)}
-                      className="px-2 py-1 text-blue-600 hover:text-blue-800"
-                      title="Editar"
-                    >
-                      <PencilSquareIcon className="h-5 w-5" />
-                    </button>
-                  </td>
+                  {/* Botón de edición - solo si onEdit existe */}
+                  {onEdit && (
+                    <td className="px-4 py-2 border">
+                      <button
+                        onClick={() => onEdit(row)}
+                        className="px-2 py-1 text-blue-600 hover:text-blue-800"
+                        title="Editar"
+                      >
+                        <PencilSquareIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  )}
 
-                  {/* Botón de eliminación */}
-                  <td className="px-4 py-2 border">
-                    <button
-                      onClick={() => onDelete?.(row)}
-                      className="px-2 py-1 text-red-600 hover:text-red-800"
-                      title="Eliminar"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
+                  {/* Botón de eliminación - solo si onDelete existe */}
+                  {onDelete && (
+                    <td className="px-4 py-2 border">
+                      <button
+                        onClick={() => onDelete(row)}
+                        className="px-2 py-1 text-red-600 hover:text-red-800"
+                        title="Eliminar"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}

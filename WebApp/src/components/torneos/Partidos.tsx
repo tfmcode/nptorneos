@@ -47,11 +47,11 @@ function Partidos({ idtorneo }: PartidosProps) {
   const initialFormData: Partido = {
     id: undefined,
     idzona: 0,
-    nrofecha: 0,
+    nrofecha: 1, // Valor por defecto más lógico
     fecha: "",
     horario: "",
     idsede: 0,
-    codtipo: 0,
+    codtipo: 9, // "Zona" por defecto
     idequipo1: 0,
     idequipo2: 0,
     codestado: 1,
@@ -81,9 +81,18 @@ function Partidos({ idtorneo }: PartidosProps) {
 
   const [equiposPartido, setEquiposPartido] = useState<ZonaEquipo[]>([]);
   const [horario, setHorario] = useState<string>("00:00");
+  // ✅ Estados para mantener los filtros persistentes
+  const [persistentFilters, setPersistentFilters] = useState({
+    idzona: 0,
+    nrofecha: 1,
+    fecha: "",
+    idsede: 0,
+    codtipo: 9,
+  });
 
   const { formData, setFormData, handleInputChange } = useCrudForm<Partido>({
     ...initialFormData,
+    ...persistentFilters, // ✅ Inicializar con filtros persistentes
   });
 
   useEffect(() => {
@@ -102,24 +111,112 @@ function Partidos({ idtorneo }: PartidosProps) {
     }
   }, [formData.fecha]);
 
+  // ✅ Función para validar duplicados
+  const validatePartido = (): string[] => {
+    const errores: string[] = [];
+
+    // Validación básica
+    if (!formData.idzona || formData.idzona === 0) {
+      errores.push("• Seleccionar una zona");
+    }
+    if (!formData.nrofecha || formData.nrofecha === 0) {
+      errores.push("• Ingresar el número de fecha");
+    }
+    if (!formData.fecha) {
+      errores.push("• Ingresar la fecha del partido");
+    }
+    if (!formData.idsede || formData.idsede === 0) {
+      errores.push("• Seleccionar una sede");
+    }
+    if (!formData.idequipo1 || formData.idequipo1 === 0) {
+      errores.push("• Seleccionar equipo local");
+    }
+    if (!formData.idequipo2 || formData.idequipo2 === 0) {
+      errores.push("• Seleccionar equipo visitante");
+    }
+
+    // ✅ Validación: mismo equipo
+    if (formData.idequipo1 === formData.idequipo2 && formData.idequipo1 !== 0) {
+      errores.push("• No se puede crear un partido entre el mismo equipo");
+    }
+
+    // ✅ Validación: equipo ya tiene partido en esa fecha
+    const partidosExistentes = partidos.filter(
+      (p) =>
+        p.nrofecha === formData.nrofecha &&
+        p.idzona === formData.idzona &&
+        p.id !== formData.id // Excluir el partido actual si estamos editando
+    );
+
+    const equiposOcupados = new Set<number>();
+    partidosExistentes.forEach((p) => {
+      if (p.idequipo1) equiposOcupados.add(p.idequipo1);
+      if (p.idequipo2) equiposOcupados.add(p.idequipo2);
+    });
+
+    if (formData.idequipo1 && equiposOcupados.has(formData.idequipo1)) {
+      const nombreEquipo1 =
+        equiposPartido.find((e) => e.idequipo === formData.idequipo1)?.nombre ||
+        "Equipo local";
+      errores.push(
+        `• ${nombreEquipo1} ya tiene un partido programado en la fecha ${formData.nrofecha}`
+      );
+    }
+
+    if (formData.idequipo2 && equiposOcupados.has(formData.idequipo2)) {
+      const nombreEquipo2 =
+        equiposPartido.find((e) => e.idequipo === formData.idequipo2)?.nombre ||
+        "Equipo visitante";
+      errores.push(
+        `• ${nombreEquipo2} ya tiene un partido programado en la fecha ${formData.nrofecha}`
+      );
+    }
+
+    return errores;
+  };
+
   const handleSubmitPartido = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ Validar antes de enviar
+    const errores = validatePartido();
+    if (errores.length > 0) {
+      dispatch(setZonasError(errores.join("\n")));
+      return;
+    }
+
     try {
-      if (formData.idzona == null || formData.idzona == 0) {
-        dispatch(
-          setZonasError(
-            "No se puede guardar un partido sin una zona seleccionada"
-          )
-        );
-        return;
-      }
       if (formData.fecha) {
         formData.fecha = `${formData.fecha.split(" ")[0]} ${horario}`;
       }
+
       const { id, ...partidoData } = formData;
       await dispatch(savePartidoThunk(id ? formData : partidoData)).unwrap();
       dispatch(fetchPartidosByZona(formData.idzona ?? 0));
-      setFormData({ ...initialFormData, idzona: formData.idzona ?? 0 });
+
+      // ✅ Mantener filtros persistentes, solo resetear equipos
+      const newFormData = {
+        ...initialFormData,
+        idzona: formData.idzona,
+        nrofecha: formData.nrofecha,
+        fecha: formData.fecha ? formData.fecha.split(" ")[0] : "", // Mantener fecha sin hora
+        idsede: formData.idsede,
+        codtipo: formData.codtipo,
+        // Solo resetear equipos
+        idequipo1: 0,
+        idequipo2: 0,
+      };
+
+      setFormData(newFormData);
+
+      // ✅ Actualizar filtros persistentes
+      setPersistentFilters({
+        idzona: formData.idzona ?? 0,
+        nrofecha: formData.nrofecha ?? 1,
+        fecha: formData.fecha ? formData.fecha.split(" ")[0] : "",
+        idsede: formData.idsede ?? 0,
+        codtipo: formData.codtipo ?? 9,
+      });
     } catch (err) {
       console.error("Error al guardar partido:", err);
     }
@@ -129,6 +226,30 @@ function Partidos({ idtorneo }: PartidosProps) {
     await dispatch(removePartido(partido.id!)).unwrap();
     dispatch(fetchPartidosByZona(formData.idzona ?? 0));
   };
+
+  // ✅ Filtrar equipos disponibles (excluir los que ya tienen partido en esa fecha)
+  const getEquiposDisponibles = (): ZonaEquipo[] => {
+    if (!formData.nrofecha || !formData.idzona) return equiposPartido;
+
+    const partidosEnFecha = partidos.filter(
+      (p) =>
+        p.nrofecha === formData.nrofecha &&
+        p.idzona === formData.idzona &&
+        p.id !== formData.id // Excluir el partido actual si estamos editando
+    );
+
+    const equiposOcupados = new Set<number>();
+    partidosEnFecha.forEach((p) => {
+      if (p.idequipo1) equiposOcupados.add(p.idequipo1);
+      if (p.idequipo2) equiposOcupados.add(p.idequipo2);
+    });
+
+    return equiposPartido.filter(
+      (equipo) => !equiposOcupados.has(equipo.idequipo ?? 0)
+    );
+  };
+
+  const equiposDisponibles = getEquiposDisponibles();
 
   const filteredPartidos = Array.isArray(partidos)
     ? partidos.filter((partido) => partido.idzona === formData.idzona)
@@ -157,7 +278,7 @@ function Partidos({ idtorneo }: PartidosProps) {
           {
             name: "fecha",
             type: "date",
-            value: formData.fecha ?? "",
+            value: formData.fecha?.split(" ")[0] ?? "",
             label: "Fecha",
           },
           {
@@ -199,7 +320,7 @@ function Partidos({ idtorneo }: PartidosProps) {
             type: "select",
             value: formData.idequipo1 ?? 0,
             label: "Equipo Local",
-            options: equiposPartido.map((equipo) => ({
+            options: equiposDisponibles.map((equipo) => ({
               value: equipo.idequipo ?? 0,
               label: equipo.nombre ?? "",
             })),
@@ -209,16 +330,19 @@ function Partidos({ idtorneo }: PartidosProps) {
             type: "select",
             value: formData.idequipo2 ?? 0,
             label: "Equipo Visitante",
-            options: equiposPartido.map((equipo) => ({
-              value: equipo.idequipo ?? 0,
-              label: equipo.nombre ?? "",
-            })),
+            options: equiposDisponibles
+              .filter((equipo) => equipo.idequipo !== formData.idequipo1)
+              .map((equipo) => ({
+                value: equipo.idequipo ?? 0,
+                label: equipo.nombre ?? "",
+              })),
           },
         ]}
         onChange={handleInputChange}
         onSubmit={handleSubmitPartido}
         submitLabel="Agregar"
       />
+
       <StatusMessage loading={loading} error={error} />
 
       <DataTable<Partido>
@@ -227,6 +351,22 @@ function Partidos({ idtorneo }: PartidosProps) {
         onEdit={(row) => setFormData(row as Partido)}
         onDelete={(row) => handleDeletePartido(row as Partido)}
       />
+
+      {/* ✅ Mostrar información útil sobre equipos disponibles */}
+      {formData.nrofecha && formData.idzona && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-sm text-blue-700">
+            <strong>Fecha {formData.nrofecha}:</strong>{" "}
+            {equiposDisponibles.length} equipos disponibles
+            {equiposDisponibles.length < equiposPartido.length && (
+              <span className="text-orange-600 ml-2">
+                ({equiposPartido.length - equiposDisponibles.length} equipos ya
+                tienen partido programado)
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

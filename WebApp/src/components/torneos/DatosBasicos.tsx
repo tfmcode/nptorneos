@@ -20,9 +20,14 @@ interface DatosBasicosProps {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => void;
+  onTorneoCreated?: (torneo: Torneo) => void; // ✅ Nueva prop para notificar creación
 }
 
-function DatosBasicos({ formData, onChange }: DatosBasicosProps) {
+function DatosBasicos({
+  formData,
+  onChange,
+  onTorneoCreated,
+}: DatosBasicosProps) {
   const dispatch = useDispatch<AppDispatch>();
 
   const { campeonatos, campeonatosGaleria } = useSelector(
@@ -70,7 +75,15 @@ function DatosBasicos({ formData, onChange }: DatosBasicosProps) {
     e.preventDefault();
     try {
       const { id, ...torneoData } = formData;
-      await dispatch(saveTorneoThunk(id ? formData : torneoData)).unwrap();
+      const resultado = await dispatch(
+        saveTorneoThunk(id ? formData : torneoData)
+      ).unwrap();
+
+      // ✅ Si es un torneo nuevo y se creó exitosamente, notificar al padre
+      if (!id && resultado && resultado.id && onTorneoCreated) {
+        console.log("🎯 Torneo creado con ID:", resultado.id); // Para debug
+        onTorneoCreated(resultado);
+      }
     } catch (err) {
       console.error("Error al guardar torneo:", err);
     }

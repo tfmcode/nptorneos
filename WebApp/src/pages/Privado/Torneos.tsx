@@ -31,6 +31,7 @@ const Torneos: React.FC = () => {
 
   const {
     formData,
+    setFormData, // ✅ Necesitamos esta función para actualizar el formData
     isModalOpen,
     handleInputChange,
     handleOpenModal,
@@ -80,6 +81,17 @@ const Torneos: React.FC = () => {
 
   const handleDelete = async (torneo: Torneo) => {
     await dispatch(removeTorneo(torneo.id!)).unwrap();
+    dispatch(fetchTorneos({ page, limit, searchTerm }));
+  };
+
+  // ✅ Función para manejar cuando se crea un nuevo torneo
+  const handleTorneoCreated = (torneoCreado: Torneo) => {
+    console.log("🔥 Callback ejecutado! Torneo creado:", torneoCreado); // Debug
+
+    // Actualizar el formData COMPLETO con todos los datos del torneo creado
+    setFormData(torneoCreado);
+
+    // Actualizar la lista de torneos
     dispatch(fetchTorneos({ page, limit, searchTerm }));
   };
 
@@ -150,7 +162,11 @@ const Torneos: React.FC = () => {
         >
           <Accordion>
             <AccordionItem title="Datos Básicos" defaultOpen={true}>
-              <DatosBasicos formData={formData} onChange={handleInputChange} />
+              <DatosBasicos
+                formData={formData}
+                onChange={handleInputChange}
+                onTorneoCreated={handleTorneoCreated} // ✅ Pasar la función callback
+              />
             </AccordionItem>
             <AccordionItem title="Zonas" defaultOpen={false}>
               <Zonas idtorneo={formData.id ?? 0} />

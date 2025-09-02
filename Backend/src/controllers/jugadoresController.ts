@@ -35,15 +35,42 @@ export const getJugador = async (req: Request, res: Response) => {
   }
 };
 
+// ✅ MANEJO ESPECÍFICO DE ERROR DE DOCUMENTO DUPLICADO
+const handleDatabaseError = (error: any) => {
+  // PostgreSQL error code para unique constraint violation
+  if (error.code === "23505") {
+    if (error.constraint === "uk_jugadores_docnro") {
+      return {
+        status: 409, // Conflict
+        message: "El número de documento ya existe en el sistema",
+        type: "DUPLICATE_DOCUMENT",
+      };
+    }
+  }
+
+  // Error genérico de base de datos
+  return {
+    status: 500,
+    message: "Error interno del servidor",
+    type: "DATABASE_ERROR",
+  };
+};
+
 export const createJugadorController = async (req: Request, res: Response) => {
   try {
     const newJugador = await createJugador(req.body);
     res
       .status(201)
       .json({ message: "Jugador creado exitosamente.", jugador: newJugador });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error en createJugadorController:", error);
-    res.status(500).json({ message: "Error al crear jugador.", error });
+
+    const dbError = handleDatabaseError(error);
+    res.status(dbError.status).json({
+      message: dbError.message,
+      type: dbError.type,
+      error: dbError.type === "DATABASE_ERROR" ? error : undefined,
+    });
   }
 };
 
@@ -61,9 +88,15 @@ export const updateJugadorController = async (req: Request, res: Response) => {
     res
       .status(200)
       .json({ message: "Jugador actualizado.", jugador: jugadorActualizado });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error en updateJugadorController:", error);
-    res.status(500).json({ message: "Error al actualizar el jugador.", error });
+
+    const dbError = handleDatabaseError(error);
+    res.status(dbError.status).json({
+      message: dbError.message,
+      type: dbError.type,
+      error: dbError.type === "DATABASE_ERROR" ? error : undefined,
+    });
   }
 };
 

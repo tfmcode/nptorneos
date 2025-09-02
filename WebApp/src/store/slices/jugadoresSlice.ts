@@ -4,16 +4,30 @@ import {
   createJugador,
   updateJugador,
   deleteJugador,
+  DuplicateDocumentError,
 } from "../../api/jugadoresService";
 import { Jugador, JugadorInput } from "../../types/jugadores";
 
-const initialState = {
-  jugadores: [] as Jugador[],
+// ✅ Interfaz para el estado con información adicional de error
+interface JugadoresState {
+  jugadores: Jugador[];
+  total: number;
+  page: number;
+  limit: number;
+  loading: boolean;
+  error: string | null;
+  errorType: string | null; // ✅ Nuevo campo para tipo de error
+  searchTerm: string;
+}
+
+const initialState: JugadoresState = {
+  jugadores: [],
   total: 0,
   page: 1,
   limit: 10,
   loading: false,
-  error: null as string | null,
+  error: null,
+  errorType: null, // ✅ Inicializar nuevo campo
   searchTerm: "",
 };
 
@@ -30,9 +44,10 @@ export const fetchJugadores = createAsyncThunk(
     try {
       return await getJugadores(page, limit, searchTerm);
     } catch (error: unknown) {
-      return rejectWithValue(
-        (error as Error).message || "Error al obtener jugadores."
-      );
+      return rejectWithValue({
+        message: (error as Error).message || "Error al obtener jugadores.",
+        type: (error as Error).name || "GENERIC_ERROR",
+      });
     }
   }
 );
@@ -45,9 +60,18 @@ export const saveJugadorThunk = createAsyncThunk(
         ? await updateJugador(jugadorData.id, jugadorData)
         : await createJugador(jugadorData);
     } catch (error: unknown) {
-      return rejectWithValue(
-        (error as Error).message || "Error al guardar jugador."
-      );
+      // ✅ Manejar específicamente el error de documento duplicado
+      if (error instanceof DuplicateDocumentError) {
+        return rejectWithValue({
+          message: error.message,
+          type: "DUPLICATE_DOCUMENT",
+        });
+      }
+
+      return rejectWithValue({
+        message: (error as Error).message || "Error al guardar jugador.",
+        type: (error as Error).name || "GENERIC_ERROR",
+      });
     }
   }
 );
@@ -59,9 +83,10 @@ export const removeJugador = createAsyncThunk(
       await deleteJugador(id);
       return id;
     } catch (error: unknown) {
-      return rejectWithValue(
-        (error as Error).message || "Error al eliminar jugador."
-      );
+      return rejectWithValue({
+        message: (error as Error).message || "Error al eliminar jugador.",
+        type: (error as Error).name || "GENERIC_ERROR",
+      });
     }
   }
 );
@@ -73,12 +98,18 @@ const jugadoresSlice = createSlice({
     setSearchTerm(state, action) {
       state.searchTerm = action.payload;
     },
+    // ✅ Acción para limpiar errores
+    clearError(state) {
+      state.error = null;
+      state.errorType = null;
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchJugadores.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.errorType = null;
       })
       .addCase(fetchJugadores.fulfilled, (state, action) => {
         state.loading = false;
@@ -89,7 +120,9 @@ const jugadoresSlice = createSlice({
       })
       .addCase(fetchJugadores.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as { message: string; type: string };
+        state.error = payload.message;
+        state.errorType = payload.type;
       })
 
       .addCase(saveJugadorThunk.fulfilled, (state, action) => {
@@ -109,10 +142,13 @@ const jugadoresSlice = createSlice({
       .addCase(saveJugadorThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.errorType = null;
       })
       .addCase(saveJugadorThunk.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as { message: string; type: string };
+        state.error = payload.message;
+        state.errorType = payload.type;
       })
 
       .addCase(removeJugador.fulfilled, (state, action) => {
@@ -124,13 +160,16 @@ const jugadoresSlice = createSlice({
       .addCase(removeJugador.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.errorType = null;
       })
       .addCase(removeJugador.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as { message: string; type: string };
+        state.error = payload.message;
+        state.errorType = payload.type;
       });
   },
 });
 
-export const { setSearchTerm } = jugadoresSlice.actions;
+export const { setSearchTerm, clearError } = jugadoresSlice.actions;
 export default jugadoresSlice.reducer;

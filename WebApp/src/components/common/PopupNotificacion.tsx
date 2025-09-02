@@ -23,7 +23,7 @@ export const PopupNotificacion: React.FC<Props> = ({
   if (!open) return null;
 
   const baseStyle =
-    "rounded-md p-4 shadow-md border flex items-start gap-3 max-w-sm w-full animate-fade-in-up";
+    "rounded-md p-4 shadow-lg border flex items-start gap-3 max-w-sm w-full animate-fade-in-up";
   const typeStyles = {
     success: "bg-green-50 border-green-400 text-green-700",
     error: "bg-red-50 border-red-400 text-red-700",
@@ -38,7 +38,8 @@ export const PopupNotificacion: React.FC<Props> = ({
 
   return (
     <>
-      <div className="fixed inset-0 flex justify-center items-start z-50 pointer-events-none p-4 sm:p-6">
+      {/* Overlay para centrar el popup */}
+      <div className="fixed inset-0 flex justify-center items-center z-50 pointer-events-none p-4">
         <div className={`${baseStyle} ${typeStyles[type]} pointer-events-auto`}>
           <div className="text-xl">{icon}</div>
           <div className="flex-1">
@@ -49,6 +50,14 @@ export const PopupNotificacion: React.FC<Props> = ({
             </p>
             <p dangerouslySetInnerHTML={{ __html: message }} />
           </div>
+
+          {/* Botón de cerrar opcional */}
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 ml-2 text-lg leading-none"
+          >
+            ×
+          </button>
         </div>
       </div>
 
@@ -56,16 +65,16 @@ export const PopupNotificacion: React.FC<Props> = ({
         @keyframes fadeInUp {
           0% {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(-10px) scale(0.95);
           }
           100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
 
         .animate-fade-in-up {
-          animation: fadeInUp 0.4s ease-out;
+          animation: fadeInUp 0.3s ease-out;
         }
       `}</style>
     </>

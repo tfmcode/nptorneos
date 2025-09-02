@@ -56,25 +56,60 @@ function ZonasEquipos({ idtorneo, valor_fecha }: ZonasEquiposProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.nombre]);
 
+  // ✅ Función para validar equipo duplicado
+  const validateEquipoEnZona = (): string[] => {
+    const errores: string[] = [];
+
+    // Validaciones básicas
+    if (!formData.idzona || formData.idzona === 0) {
+      errores.push("• Seleccionar una zona");
+    }
+    if (!formData.idequipo || formData.idequipo === 0) {
+      errores.push("• Seleccionar un equipo");
+    }
+
+    // ✅ Validación: equipo ya existe en la zona
+    if (formData.idzona && formData.idequipo) {
+      const equipoYaEnZona = zonasEquipos.find(
+        (ze) =>
+          ze.idzona === formData.idzona &&
+          ze.idequipo === formData.idequipo &&
+          ze.id !== formData.id // Excluir el registro actual si estamos editando
+      );
+
+      if (equipoYaEnZona) {
+        const nombreZona =
+          zonas.find((z) => z.id === formData.idzona)?.nombre || "esta zona";
+        errores.push(`• El equipo ya está asignado a ${nombreZona}`);
+      }
+    }
+
+    return errores;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ Validar antes de enviar
+    const errores = validateEquipoEnZona();
+    if (errores.length > 0) {
+      dispatch(setZonasEquiposError(errores.join("\n")));
+      return;
+    }
+
     try {
-      if (formData.idzona == null || formData.idzona == 0) {
-        dispatch(
-          setZonasEquiposError(
-            "No se puede guardar un equipo sin una zona seleccionada"
-          )
-        );
-        return;
-      }
       const { id, ...zonaEquipoData } = formData;
       await dispatch(
         saveZonaEquipoThunk(id ? formData : zonaEquipoData)
       ).unwrap();
       dispatch(fetchZonasEquiposByTorneo(idtorneo ?? 0));
+
+      // ✅ Mantener la zona seleccionada, solo resetear el equipo
       setFormData({
         ...initialFormData,
         idzona: formData.idzona,
+        valor_insc: formData.valor_insc,
+        valor_fecha: formData.valor_fecha,
       });
     } catch (err) {
       console.error("Error al guardar zona equipo:", err);
@@ -89,6 +124,13 @@ function ZonasEquipos({ idtorneo, valor_fecha }: ZonasEquiposProps) {
   const filteredZonasEquipos = Array.isArray(zonasEquipos)
     ? zonasEquipos.filter((zonaEquipo) => zonaEquipo.idzona === formData.idzona)
     : [];
+
+  // ✅ Obtener equipos ya asignados a la zona actual
+  const equiposYaAsignados = new Set(
+    zonasEquipos
+      .filter((ze) => ze.idzona === formData.idzona && ze.id !== formData.id)
+      .map((ze) => ze.idequipo)
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,11 +169,16 @@ function ZonasEquipos({ idtorneo, valor_fecha }: ZonasEquiposProps) {
           <EquipoAutocomplete
             value={formData.idequipo ?? 0}
             onChange={(equipo) =>
-              setFormData({ ...formData, idequipo: equipo.id ?? 0 })
+              setFormData({
+                ...formData,
+                idequipo: equipo.id ?? 0,
+                nombre: equipo.nombre ?? "",
+              })
             }
           />
         </div>
       </div>
+
       <div className="flex gap-4 justify-between items-center">
         <div className="w-1/2">
           <label
@@ -186,6 +233,23 @@ function ZonasEquipos({ idtorneo, valor_fecha }: ZonasEquiposProps) {
         onEdit={(row) => setFormData(row as ZonaEquipo)}
         onDelete={(row) => handleDelete(row as ZonaEquipo)}
       />
+
+      {/* ✅ Mostrar información sobre equipos en la zona */}
+      {formData.idzona && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-sm text-blue-700">
+            <strong>Zona seleccionada:</strong>{" "}
+            {zonas.find((z) => z.id === formData.idzona)?.nombre}
+            <br />
+            <strong>Equipos en esta zona:</strong> {filteredZonasEquipos.length}
+            {equiposYaAsignados.size > 0 && (
+              <span className="text-orange-600 ml-2">
+                ({equiposYaAsignados.size} equipos ya asignados)
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

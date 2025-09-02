@@ -2,10 +2,7 @@ import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import DataTable from "../../components/tables/DataTable";
-import {
-  fetchPartidosByZona,
-  removePartido,
-} from "../../store/slices/partidoSlice";
+import { fetchPartidosByZona } from "../../store/slices/partidoSlice";
 import {
   PageHeader,
   StatusMessage,
@@ -68,9 +65,7 @@ const Resultados: React.FC = () => {
     idfecha: 0,
   });
 
-  const [idzonaSeleccionada, setIdzonaSeleccionada] = useState<number | null>(
-    null
-  );
+  const [, setIdzonaSeleccionada] = useState<number | null>(null);
   const [nrofechaSeleccionada, setNrofechaSeleccionada] = useState<
     number | null
   >(null);
@@ -79,14 +74,6 @@ const Resultados: React.FC = () => {
     setIdzonaSeleccionada(idzona);
     setNrofechaSeleccionada(nrofecha);
     dispatch(fetchPartidosByZona(idzona));
-  };
-
-  const handleDelete = async (partido: Partido) => {
-    if (!partido.id) return;
-    await dispatch(removePartido(partido.id)).unwrap();
-    if (idzonaSeleccionada !== null) {
-      dispatch(fetchPartidosByZona(idzonaSeleccionada));
-    }
   };
 
   const partidosFiltrados =
@@ -105,7 +92,7 @@ const Resultados: React.FC = () => {
           columns={resultadoColumns}
           data={partidosFiltrados}
           onEdit={(row) => handleOpenModal(row)}
-          onDelete={(row) => handleDelete(row)}
+          // onDelete removido - los resultados no se eliminan
         />
 
         <Modal

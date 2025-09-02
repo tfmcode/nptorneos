@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
       { title: "C.Corriente" },
     ],
   },
-  { name: "Fecha Torneos", submenus: [{ title: "Fecha Torneos" }] },
+  { name: "Caja", submenus: [{ title: "Caja" }] },
   { name: "Reportes", submenus: [{ title: "Reportes" }] },
   { name: "Usuarios" },
 ];

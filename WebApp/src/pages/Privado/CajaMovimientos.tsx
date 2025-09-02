@@ -30,7 +30,6 @@ const CajaMovimientos: React.FC = () => {
     formData,
     setFormData,
     isModalOpen,
-    handleInputChange,
     handleOpenModal,
     handleCloseModal,
   } = useCrudForm<CajaMovimiento>({

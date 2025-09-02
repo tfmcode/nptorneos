@@ -70,3 +70,11 @@ export const getFichaPartido = async (
   );
   return data;
 };
+
+
+export const getSancionesByTorneoId = async (idtorneo: number) => {
+  const { data } = await axios.get(
+    `${API_URL}/api/public/torneos/${idtorneo}/sanciones`
+  );
+  return data;
+};

@@ -31,6 +31,42 @@ router.get(
   })
 );
 
+// ✅ AGREGAR ESTE ENDPOINT en publicTorneosRoutes.ts
+
+router.get(
+  "/:id/sanciones",
+  [
+    param("id")
+      .isInt()
+      .withMessage("El ID del torneo debe ser un número entero."),
+  ],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const { rows } = await pool.query(
+      `SELECT 
+        s.id, 
+        TO_CHAR(s.fecha, 'DD/MM/YYYY') as fecha,
+        s.titulo, 
+        s.descripcion, 
+        TO_CHAR(s.fechafin, 'DD/MM/YYYY') as fechafin,
+        CONCAT(j.apellido, ' ', j.nombres) as jugador,
+        e.nombre as equipo
+      FROM sanciones s
+      INNER JOIN jugadores j ON s.idjugador = j.id
+      INNER JOIN wequipos e ON s.idequipo = e.id
+      WHERE s.idtorneo = $1 
+        AND s.fhbaja IS NULL 
+        AND s.codestado = 1
+      ORDER BY s.fecha DESC`,
+      [id]
+    );
+
+    res.json(rows);
+  })
+);
+
 router.get(
   "/partido/:id/ficha",
   [

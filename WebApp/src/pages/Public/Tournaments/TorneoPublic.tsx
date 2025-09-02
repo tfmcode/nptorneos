@@ -6,6 +6,7 @@ import {
   getGoleadoresByZonaId,
   getSancionesPorZona,
   getFichaPartido,
+  getSancionesByTorneoId,
 } from "../../../api/torneosPublicService";
 import {
   Torneo,
@@ -14,6 +15,7 @@ import {
   Posicion,
   Goleador,
   FichaPartido,
+  Sancion,
 } from "../../../types";
 import {
   ModalFichaPartido,
@@ -21,6 +23,7 @@ import {
   TableMatches,
   TablePosition,
   TableScorers,
+  Sanctions,
 } from "./componentes";
 import { Match } from "./componentes/TableMatches";
 import { Card } from "./componentes/TableCards";
@@ -34,6 +37,7 @@ const TorneoPublic: React.FC = () => {
   const [torneo, setTorneo] = useState<Torneo | null>(null);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [partidos, setPartidos] = useState<Partido[]>([]);
+  const [sanciones, setSanciones] = useState<Sancion[]>([]);
   const [fichaPartido, setFichaPartido] = useState<FichaPartido | null>(null);
   const [positions, setPositions] = useState<Record<string, Posicion[]>>({});
   const [scorers, setScorers] = useState<Record<string, Goleador[]>>({});
@@ -54,9 +58,11 @@ const TorneoPublic: React.FC = () => {
       try {
         setLoading(true);
 
-        const [data, posicionesData] = await Promise.all([
+        // Corregir el Promise.all para incluir las 3 llamadas
+        const [data, posicionesData, sancionesData] = await Promise.all([
           getPublicTorneoById(Number(id)),
           getPosicionesByTorneoId(Number(id)),
+          getSancionesByTorneoId(Number(id)),
         ]);
 
         setTorneo(data.torneo ?? null);
@@ -72,6 +78,9 @@ const TorneoPublic: React.FC = () => {
             .filter((z) => typeof z.id === "number")
             .map((z) => z.id as number)
         );
+
+        // Establecer las sanciones obtenidas
+        setSanciones(sancionesData || []);
 
         const partidosPublic = (data.partidos ?? []).filter((p) =>
           zonasPublicIds.has(Number(p.idzona))
@@ -104,9 +113,9 @@ const TorneoPublic: React.FC = () => {
         const tarjetasByZona: Record<string, Card[]> = {};
         for (const zona of zonasPublic) {
           if (typeof zona.id === "number") {
-            const sanciones = await getSancionesPorZona(zona.id);
+            const sancionesTarjetas = await getSancionesPorZona(zona.id);
             const key = zona.abrev ?? zona.nombre;
-            tarjetasByZona[key] = sanciones.map((s, idx) => ({
+            tarjetasByZona[key] = sancionesTarjetas.map((s, idx) => ({
               pos: idx + 1,
               jugador: s.jugador,
               equipo: s.equipo,
@@ -191,10 +200,10 @@ const TorneoPublic: React.FC = () => {
         typeof p.nombre_sede === "string" && p.nombre_sede.trim() !== ""
           ? p.nombre_sede
           : "SIN SEDE",
+      nrofecha: p.nrofecha,
     };
   });
 
-  // Tabs globales: usamos la unión de todas las zonas disponibles
   const allZonesTabs = useMemo(() => {
     const pos = Object.keys(positions);
     const sc = Object.keys(scorers);
@@ -278,6 +287,9 @@ const TorneoPublic: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* 4) SANCIONES - Usando componente modular */}
+      <Sanctions sanciones={sanciones} />
 
       {/* Sede / Mapa */}
       {torneo?.latitud && torneo?.longitud ? (

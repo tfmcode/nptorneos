@@ -2,11 +2,35 @@ import { AxiosError } from "axios";
 import API from "./httpClient";
 import { Jugador, JugadorInput } from "../types/jugadores";
 
-const handleAxiosError = (error: unknown): never => {
-  if (error instanceof AxiosError && error.response?.data?.message) {
-    console.error("❌ API Error:", error.response.data.message);
-    throw new Error(error.response.data.message);
+// ✅ Interfaz para errores tipados
+interface ApiErrorResponse {
+  message: string;
+  type?: string;
+}
+
+// ✅ Clase de error personalizada para documento duplicado
+export class DuplicateDocumentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicateDocumentError";
   }
+}
+
+const handleAxiosError = (error: unknown): never => {
+  if (error instanceof AxiosError && error.response?.data) {
+    const errorData = error.response.data as ApiErrorResponse;
+
+    console.error("❌ API Error:", errorData.message);
+
+    // ✅ Manejar específicamente el error de documento duplicado
+    if (errorData.type === "DUPLICATE_DOCUMENT") {
+      throw new DuplicateDocumentError(errorData.message);
+    }
+
+    // Otros errores de la API
+    throw new Error(errorData.message);
+  }
+
   console.error("❌ Unexpected Error:", error);
   throw new Error("Ocurrió un error inesperado.");
 };

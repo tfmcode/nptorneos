@@ -43,13 +43,23 @@ export const getAllJugadores = async (
   searchTerm: string
 ): Promise<{ jugadores: IJugador[]; total: number }> => {
   const offset = (page - 1) * limit;
-  
+
   let totalQuery: string;
   let jugadoresQuery: string;
   let params: any[];
 
   if (searchTerm) {
-    totalQuery = `SELECT COUNT(*) FROM jugadores WHERE fhbaja IS NULL AND (LOWER(nombres) LIKE LOWER($1) OR LOWER(apellido) LIKE LOWER($1));`;
+    // ✅ ACTUALIZADO: Incluye búsqueda por documento
+    totalQuery = `
+      SELECT COUNT(*) 
+      FROM jugadores 
+      WHERE fhbaja IS NULL 
+      AND (
+        LOWER(nombres) LIKE LOWER($1) 
+        OR LOWER(apellido) LIKE LOWER($1)
+        OR CAST(docnro AS TEXT) LIKE $1
+      );`;
+
     jugadoresQuery = `
       SELECT id, nombres, apellido, 
           TO_CHAR(fhnacimiento, 'YYYY-MM-DD') as fhnacimiento, 
@@ -57,9 +67,15 @@ export const getAllJugadores = async (
           peso, altura, apodo, posicion, categoria, 
           piernahabil, codestado, fhcarga, fhbaja, fhultmod, usrultmod, foto
       FROM jugadores 
-      WHERE fhbaja IS NULL AND (LOWER(nombres) LIKE LOWER($1) OR LOWER(apellido) LIKE LOWER($1))
+      WHERE fhbaja IS NULL 
+      AND (
+        LOWER(nombres) LIKE LOWER($1) 
+        OR LOWER(apellido) LIKE LOWER($1)
+        OR CAST(docnro AS TEXT) LIKE $1
+      )
       ORDER BY fhcarga DESC 
       LIMIT $2 OFFSET $3;`;
+
     params = [`%${searchTerm}%`, limit, offset];
   } else {
     totalQuery = `SELECT COUNT(*) FROM jugadores WHERE fhbaja IS NULL;`;
@@ -76,7 +92,10 @@ export const getAllJugadores = async (
     params = [limit, offset];
   }
 
-  const totalResult = await pool.query(totalQuery, searchTerm ? [`%${searchTerm}%`] : []);
+  const totalResult = await pool.query(
+    totalQuery,
+    searchTerm ? [`%${searchTerm}%`] : []
+  );
   const { rows } = await pool.query(jugadoresQuery, params);
 
   return {
@@ -104,7 +123,7 @@ export const createJugador = async (jugador: IJugador): Promise<IJugador> => {
     [
       jugador.nombres,
       jugador.apellido,
-      fechaNacimiento, 
+      fechaNacimiento,
       jugador.docnro,
       jugador.telefono,
       jugador.email,

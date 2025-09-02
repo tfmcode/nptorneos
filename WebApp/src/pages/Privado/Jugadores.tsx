@@ -9,6 +9,7 @@ import {
   fetchJugadores,
   saveJugadorThunk,
   removeJugador,
+  clearError, // ✅ Importar nueva acción
 } from "../../store/slices/jugadoresSlice";
 import {
   Modal,
@@ -22,9 +23,11 @@ import { jugadorColumns } from "../../components/tables/columns/jugadorColumns";
 
 const Jugadores: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { jugadores, loading, error, page, limit, total } = useSelector(
-    (state: RootState) => state.jugadores
-  );
+  const { jugadores, loading, error, errorType, page, limit, total } =
+    useSelector(
+      // ✅ Agregar errorType
+      (state: RootState) => state.jugadores
+    );
 
   const {
     formData,
@@ -77,7 +80,8 @@ const Jugadores: React.FC = () => {
     if (!formData.apellido) errores.push("• Ingresar el apellido");
     if (!formData.nombres) errores.push("• Ingresar el nombre");
     if (!formData.docnro) errores.push("• Ingresar el documento");
-    if (!formData.fhnacimiento) errores.push("• Ingresar la fecha de nacimiento");
+    if (!formData.fhnacimiento)
+      errores.push("• Ingresar la fecha de nacimiento");
 
     if (errores.length > 0) {
       showPopup("warning", errores.join("<br />"));
@@ -90,20 +94,59 @@ const Jugadores: React.FC = () => {
       dispatch(fetchJugadores({ page, limit, searchTerm }));
       handleCloseModal();
       showPopup("success", "Jugador guardado correctamente");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error al guardar jugador:", err);
-      showPopup("error", "Error al guardar el jugador");
+
+      // ✅ Manejar específicamente el error de documento duplicado
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "type" in err &&
+        (err as { type?: string }).type === "DUPLICATE_DOCUMENT"
+      ) {
+        showPopup(
+          "error",
+          "⚠️ El número de documento ya existe en el sistema. Por favor, ingrese un documento diferente."
+        );
+      } else {
+        const message =
+          typeof err === "object" &&
+          err !== null &&
+          "message" in err &&
+          typeof (err as { message?: unknown }).message === "string"
+            ? (err as { message: string }).message
+            : "Error al guardar el jugador";
+        showPopup("error", message);
+      }
     }
   };
 
   const handleDelete = async (jugador: Jugador) => {
-    await dispatch(removeJugador(jugador.id!)).unwrap();
-    dispatch(fetchJugadores({ page, limit, searchTerm }));
+    try {
+      await dispatch(removeJugador(jugador.id!)).unwrap();
+      dispatch(fetchJugadores({ page, limit, searchTerm }));
+      showPopup("success", "Jugador eliminado correctamente");
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" &&
+        err !== null &&
+        "message" in err &&
+        typeof (err as { message?: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : "Error al eliminar el jugador";
+      showPopup("error", message);
+    }
   };
 
   const handleSearch = () => {
     dispatch(fetchJugadores({ page: 1, limit, searchTerm: pendingSearchTerm }));
     setSearchTerm(pendingSearchTerm);
+  };
+
+  // ✅ Función para cerrar modal y limpiar errores
+  const handleCloseModalAndClearError = () => {
+    handleCloseModal();
+    dispatch(clearError());
   };
 
   return (
@@ -162,7 +205,7 @@ const Jugadores: React.FC = () => {
 
         <Modal
           isOpen={isModalOpen}
-          onClose={handleCloseModal}
+          onClose={handleCloseModalAndClearError} // ✅ Usar nueva función
           title={formData.id ? "Editar Jugador" : "Crear Jugador"}
         >
           <DynamicForm
@@ -247,6 +290,15 @@ const Jugadores: React.FC = () => {
             onSubmit={handleSubmit}
             submitLabel="Guardar"
           />
+
+          {/* ✅ Mostrar error específico de documento duplicado en el modal */}
+          {errorType === "DUPLICATE_DOCUMENT" && (
+            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              <strong>⚠️ Documento duplicado:</strong> El número de documento
+              ingresado ya existe en el sistema.
+            </div>
+          )}
+
           <PopupNotificacion
             open={popup.open}
             type={popup.type}

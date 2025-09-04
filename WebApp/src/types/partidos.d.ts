@@ -34,6 +34,7 @@ export interface Partido {
   ausente1?: number;
   ausente2?: number;
   idfecha?: number;
+  horario?: string;
   [key: string]: unknown;
 }
 
@@ -46,4 +47,5 @@ export interface PartidoInput {
   codtipo: number;
   idequipo1: number;
   idequipo2: number;
+  nrofecha: number;
 }

@@ -8,6 +8,7 @@ import {
 } from "../../store/slices/partidoSlice";
 import { fetchSedes } from "../../store/slices/sedeSlice";
 import { fetchUsuarios } from "../../store/slices/usuarioSlice";
+import { fetchProveedores } from "../../store/slices/proveedoresSlice";
 
 function DatosBasicos({
   formData,
@@ -22,10 +23,12 @@ function DatosBasicos({
 }) {
   const dispatch = useDispatch<AppDispatch>();
   const { sedes } = useSelector((state: RootState) => state.sedes);
+  const { proveedores } = useSelector((state: RootState) => state.proveedores);
 
   useEffect(() => {
     dispatch(fetchSedes());
     dispatch(fetchUsuarios());
+    dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
   }, [dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +38,8 @@ function DatosBasicos({
         ...formData,
         ausente1: Number(formData.ausente1),
         ausente2: Number(formData.ausente2),
-        codestado: Number(formData.codestado), // ✅ casteo correcto
+        codestado: Number(formData.codestado),
+        idprofesor: Number(formData.idprofesor || 0),
       };
       await dispatch(savePartidoThunk(partido)).unwrap();
       dispatch(fetchPartidosByZona(formData.idzona));
@@ -44,16 +48,21 @@ function DatosBasicos({
     }
   };
 
+  // Filtrar solo los profesores (codtipo = 2)
+  const profesores = Array.isArray(proveedores)
+    ? proveedores.filter((p) => p.codtipo === 2)
+    : [];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 text-sm text-gray-800">
       {/* Info principal */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
         <div>
           <label className="block font-medium mb-1">Fecha</label>
           <input
             type="date"
             name="fecha"
-            value={formData.fecha ?? ""}
+            value={formData.fecha ? formData.fecha.split("T")[0] : ""}
             onChange={onChange}
             className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
@@ -71,6 +80,23 @@ function DatosBasicos({
             {sedes.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-medium mb-1">Profesor/Árbitro</label>
+          <select
+            name="idprofesor"
+            value={formData.idprofesor ?? 0}
+            onChange={onChange}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value={0}>Sin asignar</option>
+            {profesores.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
               </option>
             ))}
           </select>
@@ -98,6 +124,18 @@ function DatosBasicos({
             <option value={70}>No Computa</option>
           </select>
         </div>
+
+        {/* <div>
+          <label className="block font-medium mb-1">Árbitro (Texto)</label>
+          <input
+            type="text"
+            name="arbitro"
+            value={formData.arbitro ?? ""}
+            onChange={onChange}
+            placeholder="Nombre del árbitro"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div> */}
       </section>
 
       {/* Equipo 1 */}

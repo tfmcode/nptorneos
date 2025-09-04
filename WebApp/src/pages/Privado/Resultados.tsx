@@ -42,6 +42,7 @@ const Resultados: React.FC = () => {
     idequipo2: 0,
     codestado: 1,
     idusuario: 0,
+    idprofesor: 0, // Campo agregado
     fhcarga: new Date().toISOString(),
     fhbaja: undefined,
     nombre1: "",
@@ -107,17 +108,27 @@ const Resultados: React.FC = () => {
 
             {formData.id && (
               <>
-                <AccordionItem title={`Equipo Local ${formData.idequipo1}`}>
+                <AccordionItem
+                  title={`Equipo Local - ${
+                    formData.nombre1 || formData.idequipo1
+                  }`}
+                >
                   <JugadoresEquipo
                     idpartido={formData.id}
                     idequipo={formData.idequipo1}
+                    nombreEquipo={formData.nombre1}
                   />
                 </AccordionItem>
 
-                <AccordionItem title={`Equipo Visitante ${formData.idequipo2}`}>
+                <AccordionItem
+                  title={`Equipo Visitante - ${
+                    formData.nombre2 || formData.idequipo2
+                  }`}
+                >
                   <JugadoresEquipo
                     idpartido={formData.id}
                     idequipo={formData.idequipo2}
+                    nombreEquipo={formData.nombre2}
                   />
                 </AccordionItem>
               </>

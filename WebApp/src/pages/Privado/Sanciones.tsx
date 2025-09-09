@@ -374,8 +374,10 @@ const Sanciones: React.FC = () => {
               <JugadorAutocomplete
                 value={formData.idjugador ?? 0}
                 onChange={(jugador) => {
-                  setFieldManualmente("idjugador", jugador.id!);
-                  setJugadorSeleccionado(jugador);
+                  if (jugador && jugador.id) {
+                    setFieldManualmente("idjugador", jugador.id);
+                    setJugadorSeleccionado(jugador as Jugador);
+                  }
                 }}
               />
             </div>

@@ -22,15 +22,23 @@ export interface PartidoJugadorInput {
   amarilla: number;
   azul: number;
   roja: number;
-  fhcarga?: string;   // Agregar este campo
+  fhcarga?: string; // Agregar este campo
   idusuario?: number; // Agregar este campo
 }
 
 export type PartidoJugadorExtendido = PartidoJugador & {
   nombre: string;
-  docnro: string;
-  tipo: number;
+  docnro: number; // ← Corregido: debería ser number según tu DB
+  codtipo: number; // 1 = OFICIAL, 2 = INVITADO
   foto: string;
-  sancion?: number;
-  listanegra?: number;
+  marca?: number; // ← Agregado: campo que usas en el backend
+  sancion?: number; // 1 = sancionado, 0 = no sancionado
+  listanegra?: number; // 1 = en lista negra, 0 = no está
 };
+
+// Para la respuesta del backend
+export interface PartidoJugadorResponse {
+  success: boolean;
+  message: string;
+  data?: PartidoJugadorExtendido;
+}

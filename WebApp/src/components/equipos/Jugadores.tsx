@@ -28,12 +28,24 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
   const [selectedCodTipo, setSelectedCodTipo] = useState<number>(1); // Por defecto OFICIAL
 
   useEffect(() => {
-    dispatch(fetchEquipoJugadoresByEquipo(idequipo));
+    if (idequipo) {
+      dispatch(fetchEquipoJugadoresByEquipo(idequipo));
+    }
   }, [dispatch, idequipo]);
 
   const handleAddJugador = async () => {
     if (!selectedJugadorId) {
       dispatch(setEquiposJugadoresError("Debe seleccionar un jugador válido."));
+      return;
+    }
+
+    // Verificar si el jugador ya está en el equipo
+    const jugadorExistente = equiposJugadores.find(
+      (j) => j.idjugador === selectedJugadorId
+    );
+
+    if (jugadorExistente) {
+      dispatch(setEquiposJugadoresError("Este jugador ya está en el equipo."));
       return;
     }
 
@@ -49,6 +61,7 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
           idusuario: user?.idusuario ?? 0,
         })
       ).unwrap();
+
       dispatch(fetchEquipoJugadoresByEquipo(idequipo));
       setSelectedJugadorId(0);
       setSelectedCodTipo(1); // Reset a OFICIAL
@@ -58,11 +71,33 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
   };
 
   const handleDelete = async (jugador: EquipoJugador) => {
-    await dispatch(removeEquipoJugador(jugador.id!)).unwrap();
-    dispatch(fetchEquipoJugadoresByEquipo(idequipo));
+    if (!jugador.id) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede eliminar este jugador porque no tiene ID válido."
+        )
+      );
+      return;
+    }
+
+    try {
+      await dispatch(removeEquipoJugador(jugador.id)).unwrap();
+      dispatch(fetchEquipoJugadoresByEquipo(idequipo));
+    } catch (error) {
+      console.error("Error al eliminar jugador:", error);
+    }
   };
 
   const handleToggleCapitan = async (jugador: EquipoJugador) => {
+    if (!jugador.id) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar este jugador porque no tiene ID válido."
+        )
+      );
+      return;
+    }
+
     try {
       const esCapitanActual = jugador.capitan === 1;
 
@@ -85,7 +120,7 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
 
         // 1. Quitar capitán actual
         const capitanActual = equiposJugadores.find((j) => j.capitan === 1);
-        if (capitanActual) {
+        if (capitanActual && capitanActual.id) {
           await dispatch(
             saveEquipoJugadorThunk({
               id: capitanActual.id,
@@ -122,6 +157,15 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
   };
 
   const handleToggleSubcapitan = async (jugador: EquipoJugador) => {
+    if (!jugador.id) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar este jugador porque no tiene ID válido."
+        )
+      );
+      return;
+    }
+
     try {
       const esSubcapitanActual = jugador.subcapitan === 1;
 
@@ -146,7 +190,7 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
         const subcapitanActual = equiposJugadores.find(
           (j) => j.subcapitan === 1
         );
-        if (subcapitanActual) {
+        if (subcapitanActual && subcapitanActual.id) {
           await dispatch(
             saveEquipoJugadorThunk({
               id: subcapitanActual.id,
@@ -183,11 +227,21 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
   };
 
   const handleToggleCodTipo = async (jugador: EquipoJugador) => {
+    if (!jugador.id) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar este jugador porque no tiene ID válido."
+        )
+      );
+      return;
+    }
+
     try {
       const nuevoCodTipo = jugador.codtipo === 1 ? 2 : 1; // Toggle OFICIAL/INVITADO
+
       await dispatch(
         saveEquipoJugadorThunk({
-          id: jugador.id,
+          id: jugador.id, // IMPORTANTE: Incluir el ID para actualizar, no crear
           idjugador: jugador.idjugador,
           idequipo,
           capitan: jugador.capitan ?? 0,
@@ -197,10 +251,16 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
           idusuario: user?.idusuario ?? 0,
         })
       ).unwrap();
+
       dispatch(fetchEquipoJugadoresByEquipo(idequipo));
     } catch (error) {
       console.error("Error al cambiar tipo de jugador:", error);
     }
+  };
+
+  // Filtrar jugadores que no estén ya en el equipo para el autocomplete
+  const handleJugadorChange = (jugador: { id?: number } | null) => {
+    setSelectedJugadorId(jugador?.id ?? 0);
   };
 
   // Crear las columnas con las funciones de callback
@@ -212,8 +272,8 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
 
   // Ordenar jugadores alfabéticamente por nombre
   const jugadoresOrdenados = [...equiposJugadores].sort((a, b) => {
-    const nombreA = (a.nombre || a.nombres || "").toLowerCase();
-    const nombreB = (b.nombre || b.nombres || "").toLowerCase();
+    const nombreA = (a.nombres || "").toLowerCase();
+    const nombreB = (b.nombres || "").toLowerCase();
     return nombreA.localeCompare(nombreB);
   });
 
@@ -224,7 +284,8 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
         <div className="flex-1">
           <JugadorAutocomplete
             value={selectedJugadorId}
-            onChange={(jugador) => setSelectedJugadorId(jugador.id ?? 0)}
+            onChange={handleJugadorChange}
+            excludeIds={equiposJugadores.map((j) => j.idjugador)} // Agregar esta línea
           />
         </div>
         <div className="flex-shrink-0">
@@ -248,31 +309,48 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
 
       <StatusMessage loading={loading} error={error} />
 
+      {/* Verificar que solo mostramos jugadores con ID válido */}
       <DataTable<EquipoJugador>
         columns={columnsWithActions}
-        data={jugadoresOrdenados}
+        data={jugadoresOrdenados.filter(
+          (j) => j.id !== null && j.id !== undefined
+        )}
         onDelete={handleDelete}
       />
 
       {/* INFO: Resumen del equipo */}
       <div className="mt-4 text-sm text-gray-600">
         <p>
-          <strong>Total jugadores:</strong> {equiposJugadores.length} |{" "}
+          <strong>Total jugadores:</strong>{" "}
+          {equiposJugadores.filter((j) => j.id).length} |{" "}
           <strong>Oficiales:</strong>{" "}
-          {equiposJugadores.filter((j) => j.codtipo === 1).length} |{" "}
+          {equiposJugadores.filter((j) => j.codtipo === 1 && j.id).length} |{" "}
           <strong>Invitados:</strong>{" "}
-          {equiposJugadores.filter((j) => j.codtipo === 2).length}
+          {equiposJugadores.filter((j) => j.codtipo === 2 && j.id).length}
         </p>
-        {equiposJugadores.find((j) => j.capitan === 1) && (
+        {equiposJugadores.find((j) => j.capitan === 1 && j.id) && (
           <p>
             <strong>Capitán:</strong>{" "}
-            {equiposJugadores.find((j) => j.capitan === 1)?.nombres}
+            {`${equiposJugadores.find((j) => j.capitan === 1)?.nombres || ""} ${
+              equiposJugadores.find((j) => j.capitan === 1)?.apellido || ""
+            }`.trim()}
           </p>
         )}
-        {equiposJugadores.find((j) => j.subcapitan === 1) && (
+        {equiposJugadores.find((j) => j.subcapitan === 1 && j.id) && (
           <p>
             <strong>Subcapitán:</strong>{" "}
-            {equiposJugadores.find((j) => j.subcapitan === 1)?.nombres}
+            {`${
+              equiposJugadores.find((j) => j.subcapitan === 1)?.nombres || ""
+            } ${
+              equiposJugadores.find((j) => j.subcapitan === 1)?.apellido || ""
+            }`.trim()}
+          </p>
+        )}
+        {/* Advertencia si hay registros sin ID */}
+        {equiposJugadores.some((j) => !j.id) && (
+          <p className="text-red-600 font-bold mt-2">
+            ⚠️ Hay jugadores sin ID válido en la base de datos. Ejecute el
+            script SQL de limpieza.
           </p>
         )}
       </div>

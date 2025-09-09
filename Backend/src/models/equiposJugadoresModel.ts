@@ -1,3 +1,4 @@
+// Backend/src/models/equiposJugadoresModel.ts
 import { pool } from "../config/db";
 
 export interface IEquipoJugador {
@@ -40,10 +41,30 @@ export const getJugadoresByEquipo = async (
   return rows;
 };
 
+// Verificar si un jugador ya está en el equipo
+export const checkJugadorInEquipo = async (
+  idjugador: number,
+  idequipo: number
+): Promise<boolean> => {
+  const { rows } = await pool.query(
+    `SELECT id FROM wequipos_jugadores 
+     WHERE idjugador = $1 AND idequipo = $2 AND fhbaja IS NULL
+     LIMIT 1;`,
+    [idjugador, idequipo]
+  );
+  return rows.length > 0;
+};
+
 // Crear jugador en el equipo
 export const createEquipoJugador = async (
   data: IEquipoJugador
 ): Promise<IEquipoJugador> => {
+  // Verificar si el jugador ya está en el equipo
+  const exists = await checkJugadorInEquipo(data.idjugador, data.idequipo);
+  if (exists) {
+    throw new Error("El jugador ya está en el equipo.");
+  }
+
   // Conversión segura de booleanos a enteros
   const capitanDb = data.capitan ? 1 : 0;
   const subcapitanDb = data.subcapitan ? 1 : 0;
@@ -60,7 +81,7 @@ export const createEquipoJugador = async (
       data.camiseta ?? null,
       capitanDb,
       subcapitanDb,
-      data.codtipo ?? null,
+      data.codtipo ?? 1, // Por defecto OFICIAL
       data.codestado ?? 1,
       data.idusuario,
     ]
@@ -73,6 +94,12 @@ export const updateEquipoJugador = async (
   id: number,
   data: Partial<IEquipoJugador>
 ): Promise<IEquipoJugador | null> => {
+  // Si no hay ID, no se puede actualizar
+  if (!id) {
+    throw new Error("ID es requerido para actualizar.");
+  }
+
+  // Manejo de capitán único
   if (data.capitan === true && data.idequipo) {
     await pool.query(
       `UPDATE wequipos_jugadores SET capitan = 0 WHERE idequipo = $1 AND id <> $2 AND fhbaja IS NULL;`,
@@ -80,6 +107,7 @@ export const updateEquipoJugador = async (
     );
   }
 
+  // Manejo de subcapitán único
   if (data.subcapitan === true && data.idequipo) {
     await pool.query(
       `UPDATE wequipos_jugadores SET subcapitan = 0 WHERE idequipo = $1 AND id <> $2 AND fhbaja IS NULL;`,
@@ -94,6 +122,7 @@ export const updateEquipoJugador = async (
 
   const dataCopy: Partial<IEquipoJugador> = { ...data };
 
+  // Conversión de booleanos
   if (typeof data.capitan === "boolean") {
     dataCopy.capitan = data.capitan ? 1 : (0 as any);
   }
@@ -102,8 +131,9 @@ export const updateEquipoJugador = async (
     dataCopy.subcapitan = data.subcapitan ? 1 : (0 as any);
   }
 
+  // Construir la consulta de actualización
   for (const key in dataCopy) {
-    if (dataCopy[key as keyof IEquipoJugador] !== undefined) {
+    if (dataCopy[key as keyof IEquipoJugador] !== undefined && key !== "id") {
       updates.push(`${key} = $${index}`);
       values.push(dataCopy[key as keyof IEquipoJugador]);
       index++;
@@ -118,7 +148,8 @@ export const updateEquipoJugador = async (
 
   const query = `UPDATE wequipos_jugadores SET ${updates.join(
     ", "
-  )} WHERE id = $${index} RETURNING *;`;
+  )} WHERE id = $${index} AND fhbaja IS NULL RETURNING *;`;
+
   const { rows } = await pool.query(query, values);
   return rows.length > 0 ? rows[0] : null;
 };
@@ -126,6 +157,10 @@ export const updateEquipoJugador = async (
 // Soft delete
 export const deleteEquipoJugador = async (id: number): Promise<boolean> => {
   try {
+    if (!id) {
+      throw new Error("ID es requerido para eliminar.");
+    }
+
     const result = await pool.query(
       `UPDATE wequipos_jugadores SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL;`,
       [id]

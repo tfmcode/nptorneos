@@ -13,7 +13,8 @@ export type PartidoJugador = PartidoJugadorBase & {
   jugo: boolean;
 };
 
-export type PartidoJugadorInput = {
+// En types/partidosJugadores.d.ts
+export interface PartidoJugadorInput {
   idjugador: number;
   jugo: boolean;
   camiseta: string;
@@ -21,7 +22,9 @@ export type PartidoJugadorInput = {
   amarilla: number;
   azul: number;
   roja: number;
-};
+  fhcarga?: string;   // Agregar este campo
+  idusuario?: number; // Agregar este campo
+}
 
 export type PartidoJugadorExtendido = PartidoJugador & {
   nombre: string;

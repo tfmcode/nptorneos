@@ -18,6 +18,7 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
+import API from "../../api/httpClient";
 
 interface JugadoresEquipoProps {
   idpartido: number;
@@ -71,6 +72,23 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     fetchJugadores();
   }, [idpartido, idequipo]);
 
+  // Función para agregar jugador al equipo
+  const addJugadorToEquipo = async (idjugador: number) => {
+    try {
+      await API.post("/api/equipos-jugadores", {
+        idjugador,
+        idequipo,
+        codtipo: 1, // OFICIAL
+        codestado: 1, // ACTIVO
+        capitan: 0,
+        subcapitan: 0,
+        idusuario: 1,
+      });
+    } catch (error) {
+      console.warn("No se pudo agregar al equipo automáticamente:", error);
+    }
+  };
+
   const handleUpdate = async (
     jugador: PartidoJugadorExtendido,
     campo: keyof PartidoJugadorInput,
@@ -85,7 +103,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
       azul: campo === "azul" ? Number(valor) : jugador.azul,
       roja: campo === "roja" ? Number(valor) : jugador.roja,
       fhcarga: new Date().toISOString(),
-      idusuario: 1, // Deberías obtenerlo del contexto de autenticación
+      idusuario: 1,
     };
 
     await savePartidoJugador(idpartido, idequipo, input);
@@ -113,6 +131,30 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     handleUpdate(jugador, campo, parsed);
   };
 
+  const handleDeleteJugador = async (jugador: PartidoJugadorExtendido) => {
+    if (!confirm(`¿Está seguro de eliminar a ${jugador.nombre} del partido?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Llamar al backend para eliminar el jugador del partido
+      await API.delete(
+        `/api/partidos/${idpartido}/equipos/${idequipo}/jugadores/${jugador.idjugador}`
+      );
+
+      // Recargar los datos
+      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
+      setJugadoresPartido(updatedData);
+    } catch (err: unknown) {
+      console.error("Error al eliminar jugador:", err);
+      setError("Error al eliminar jugador del partido");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddJugador = async () => {
     if (!selectedJugadorId) {
       setError("Debe seleccionar un jugador");
@@ -132,6 +174,10 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
     try {
       setLoading(true);
+
+      // Intentar agregar al equipo primero (por si no está)
+      await addJugadorToEquipo(selectedJugadorId);
+
       const input: PartidoJugadorInput = {
         idjugador: selectedJugadorId,
         jugo: false,
@@ -141,25 +187,35 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         azul: 0,
         roja: 0,
         fhcarga: new Date().toISOString(),
-        idusuario: 1, // Deberías obtenerlo del contexto de autenticación
+        idusuario: 1,
       };
 
       await savePartidoJugador(idpartido, idequipo, input);
 
-      // Esperar un momento antes de recargar
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Recargar los datos
-      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
-      console.log("Datos actualizados:", updatedData);
-      setJugadoresPartido(updatedData);
-
+      // Limpiar estado inmediatamente
       setSelectedJugadorId(0);
       setShowAddPlayer(false);
       setError(null);
-    } catch (err) {
+
+      // Recargar los datos
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
+      setJugadoresPartido(updatedData);
+    } catch (err: unknown) {
       console.error("Error al agregar jugador:", err);
-      setError("Error al agregar jugador al partido");
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "message" in err &&
+        typeof (err as { message?: string }).message === "string" &&
+        (err as { message: string }).message.includes("no pertenece")
+      ) {
+        setError(
+          "El jugador no está en este equipo. Debe agregarlo al equipo primero desde la gestión de equipos."
+        );
+      } else {
+        setError("Error al agregar jugador al partido");
+      }
     } finally {
       setLoading(false);
     }
@@ -178,67 +234,79 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
     try {
       setLoading(true);
-      // Crear el jugador
+
+      // 1. Crear el jugador
       const jugadorCreado = await createJugador({
         ...nuevoJugador,
         codestado: 1,
       });
 
-      if (jugadorCreado && jugadorCreado.id) {
-        // Agregar el jugador al partido automáticamente
-        const input: PartidoJugadorInput = {
-          idjugador: jugadorCreado.id,
-          jugo: false,
-          camiseta: "",
-          goles: 0,
-          amarilla: 0,
-          azul: 0,
-          roja: 0,
-          fhcarga: new Date().toISOString(),
-          idusuario: 1, // Deberías obtenerlo del contexto de autenticación
-        };
-
-        await savePartidoJugador(idpartido, idequipo, input);
-
-        // Esperar un momento antes de recargar
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Recargar los datos
-        const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
-        console.log("Jugador creado y datos actualizados:", updatedData);
-        setJugadoresPartido(updatedData);
-
-        // Limpiar formulario
-        setNuevoJugador({
-          nombres: "",
-          apellido: "",
-          docnro: "",
-          fhnacimiento: "",
-          telefono: "",
-          email: "",
-        });
-        setShowCreatePlayer(false);
-        setError(null);
+      if (!jugadorCreado || !jugadorCreado.id) {
+        throw new Error("No se pudo crear el jugador");
       }
+
+      // 2. Agregar al equipo
+      await addJugadorToEquipo(jugadorCreado.id);
+
+      // 3. Agregar al partido
+      const input: PartidoJugadorInput = {
+        idjugador: jugadorCreado.id,
+        jugo: false,
+        camiseta: "",
+        goles: 0,
+        amarilla: 0,
+        azul: 0,
+        roja: 0,
+        fhcarga: new Date().toISOString(),
+        idusuario: 1,
+      };
+
+      await savePartidoJugador(idpartido, idequipo, input);
+
+      // Limpiar formulario
+      setNuevoJugador({
+        nombres: "",
+        apellido: "",
+        docnro: "",
+        fhnacimiento: "",
+        telefono: "",
+        email: "",
+      });
+      setShowCreatePlayer(false);
+      setError(null);
+
+      // Recargar datos
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
+      setJugadoresPartido(updatedData);
     } catch (err: unknown) {
+      console.error("Error al crear jugador:", err);
+
       if (
         typeof err === "object" &&
         err !== null &&
         "message" in err &&
-        typeof (err as { message?: string }).message === "string" &&
-        (err as { message: string }).message.includes("documento")
+        typeof (err as { message?: string }).message === "string"
       ) {
-        setError("El documento ya existe en el sistema");
+        const message = (err as { message: string }).message;
+        if (message.includes("documento")) {
+          setError("El documento ya existe en el sistema");
+        } else if (message.includes("no pertenece")) {
+          setError(
+            "El jugador fue creado pero hay un problema agregándolo al equipo. Recargue la página e intente desde 'Agregar Existente'."
+          );
+        } else {
+          setError(`Error: ${message || "Error al crear el jugador"}`);
+        }
       } else {
         setError("Error al crear el jugador");
       }
-      console.error("Error al crear jugador:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleJugadorSelect = (jugador: Jugador | { id?: number } | null) => {
+  const handleJugadorSelect = (jugador: Jugador | null) => {
     setSelectedJugadorId(jugador?.id ?? 0);
   };
 
@@ -277,7 +345,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
           title="Lista Negra"
         />
       );
-    if (jugador.tipo === 2)
+    if (jugador.codtipo === 2)
       return (
         <span
           className="inline-block w-2 h-2 rounded-full bg-purple-500 mr-1"
@@ -349,10 +417,10 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
             </div>
             <button
               onClick={handleAddJugador}
-              disabled={!selectedJugadorId}
+              disabled={!selectedJugadorId || loading}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Agregar
+              {loading ? "Agregando..." : "Agregar"}
             </button>
             <button
               onClick={() => {
@@ -381,6 +449,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setNuevoJugador({ ...nuevoJugador, nombres: e.target.value })
               }
               className="px-3 py-2 border rounded text-sm"
+              disabled={loading}
             />
             <input
               type="text"
@@ -390,6 +459,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setNuevoJugador({ ...nuevoJugador, apellido: e.target.value })
               }
               className="px-3 py-2 border rounded text-sm"
+              disabled={loading}
             />
             <input
               type="text"
@@ -399,6 +469,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setNuevoJugador({ ...nuevoJugador, docnro: e.target.value })
               }
               className="px-3 py-2 border rounded text-sm"
+              disabled={loading}
             />
             <input
               type="date"
@@ -411,6 +482,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 })
               }
               className="px-3 py-2 border rounded text-sm"
+              disabled={loading}
             />
             <input
               type="text"
@@ -420,6 +492,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setNuevoJugador({ ...nuevoJugador, telefono: e.target.value })
               }
               className="px-3 py-2 border rounded text-sm"
+              disabled={loading}
             />
             <input
               type="email"
@@ -429,14 +502,16 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setNuevoJugador({ ...nuevoJugador, email: e.target.value })
               }
               className="px-3 py-2 border rounded text-sm"
+              disabled={loading}
             />
           </div>
           <div className="flex gap-2 mt-3">
             <button
               onClick={handleCreateNewPlayer}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+              disabled={loading}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Crear y Agregar
+              {loading ? "Creando..." : "Crear y Agregar"}
             </button>
             <button
               onClick={() => {
@@ -452,6 +527,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setError(null);
               }}
               className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600"
+              disabled={loading}
             >
               Cancelar
             </button>
@@ -461,7 +537,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
       <StatusMessage loading={loading} error={error} />
 
-      {!loading && !error && (
+      {!loading && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm border border-gray-300">
             <thead className="bg-gray-100 text-left">
@@ -490,7 +566,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 <th className="px-2 py-2">
                   <div className="flex items-center">
                     Tipo
-                    <SortButton column="tipo" />
+                    <SortButton column="codtipo" />
                   </div>
                 </th>
                 <th className="px-2 py-2">
@@ -517,7 +593,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                         ? "bg-gray-600 text-white opacity-75"
                         : j.sancion === 1
                         ? "bg-red-100"
-                        : j.tipo === 2
+                        : j.codtipo === 2
                         ? "bg-purple-100"
                         : ""
                     }`}
@@ -554,27 +630,33 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                     </td>
                     <td className="px-2 py-2">{j.docnro}</td>
                     <td className="px-2 py-2">
-                      <input
-                        type="text"
+                      <select
                         value={j.camiseta || ""}
                         onChange={(e) =>
                           handleInputChange(j, "camiseta", e.target.value)
                         }
                         disabled={isDisabled}
-                        className={`w-12 border rounded px-1 ${
+                        className={`w-12 border rounded px-1 text-xs ${
                           isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
-                      />
+                      >
+                        <option value="">-</option>
+                        {Array.from({ length: 100 }, (_, i) => (
+                          <option key={i} value={i.toString()}>
+                            {i}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-2 py-2">
                       <span
                         className={`px-2 py-1 rounded text-xs ${
-                          j.tipo === 2
+                          j.codtipo === 2
                             ? "bg-purple-100 text-purple-800"
                             : "bg-blue-100 text-blue-800"
                         }`}
                       >
-                        {j.tipo === 2 ? "INVITADO" : "OFICIAL"}
+                        {j.codtipo === 2 ? "INVITADO" : "OFICIAL"}
                       </span>
                     </td>
                     <td className="px-2 py-2">
@@ -631,12 +713,14 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                     </td>
                     <td className="px-2 py-2 text-center">
                       <button
+                        onClick={() => handleDeleteJugador(j)}
                         className={`hover:text-red-600 ${
                           isDisabled
                             ? "text-gray-400 cursor-not-allowed"
                             : "text-gray-500"
                         }`}
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
+                        title="Eliminar del partido"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>

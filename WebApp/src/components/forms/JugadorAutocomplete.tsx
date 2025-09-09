@@ -4,14 +4,16 @@ import { getJugadores } from "../../api/jugadoresService";
 
 interface Props {
   value: number;
-  onChange: (jugador: Jugador | { id?: number } | null) => void;
+  onChange: (jugador: Jugador | null) => void; // Simplificar el tipo
   excludeIds?: number[]; // Opcional: IDs de jugadores a excluir
+  disabled?: boolean;
 }
 
 const JugadorAutocomplete: React.FC<Props> = ({
   value,
   onChange,
   excludeIds = [],
+  disabled = false,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [sugerencias, setSugerencias] = useState<Jugador[]>([]);
@@ -19,7 +21,7 @@ const JugadorAutocomplete: React.FC<Props> = ({
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      if (inputValue.length >= 2) {
+      if (inputValue.length >= 2 && !disabled) {
         getJugadores(1, 10, inputValue).then((res) => {
           // Filtrar jugadores que ya están en el equipo si se proporcionan excludeIds
           const jugadoresFiltrados = res.jugadores.filter(
@@ -35,7 +37,7 @@ const JugadorAutocomplete: React.FC<Props> = ({
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [inputValue, excludeIds]);
+  }, [inputValue, excludeIds, disabled]);
 
   // Cargar el nombre del jugador seleccionado cuando cambia el value
   useEffect(() => {
@@ -56,13 +58,13 @@ const JugadorAutocomplete: React.FC<Props> = ({
 
   const handleSelect = (jugador: Jugador) => {
     setInputValue(`${jugador.nombres} ${jugador.apellido} - ${jugador.docnro}`);
-    onChange(jugador); // Devuelve el objeto completo
+    onChange(jugador); // Devuelve el objeto Jugador completo
     setShowDropdown(false);
   };
 
   const handleClear = () => {
     setInputValue("");
-    onChange(null); // Enviar null en lugar de un objeto vacío
+    onChange(null); // Enviar null
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,14 +83,19 @@ const JugadorAutocomplete: React.FC<Props> = ({
           value={inputValue}
           placeholder="Buscar jugador por nombre o documento"
           onChange={handleInputChange}
-          className="border rounded px-3 py-2 w-full"
-          onFocus={() => inputValue.length >= 2 && setShowDropdown(true)}
+          disabled={disabled}
+          className={`border rounded px-3 py-2 w-full ${
+            disabled ? "bg-gray-100 cursor-not-allowed opacity-50" : ""
+          }`}
+          onFocus={() =>
+            inputValue.length >= 2 && !disabled && setShowDropdown(true)
+          }
           onBlur={() => {
             // Delay para permitir click en dropdown
             setTimeout(() => setShowDropdown(false), 200);
           }}
         />
-        {value !== 0 && inputValue && (
+        {value !== 0 && inputValue && !disabled && (
           <button
             type="button"
             onClick={handleClear}
@@ -99,7 +106,7 @@ const JugadorAutocomplete: React.FC<Props> = ({
         )}
       </div>
 
-      {showDropdown && sugerencias.length > 0 && (
+      {showDropdown && sugerencias.length > 0 && !disabled && (
         <ul
           className="absolute top-full left-0 w-full bg-white border rounded shadow max-h-60 overflow-y-auto z-[9999]"
           style={{ marginTop: "2px" }}
@@ -116,14 +123,17 @@ const JugadorAutocomplete: React.FC<Props> = ({
         </ul>
       )}
 
-      {showDropdown && sugerencias.length === 0 && inputValue.length >= 2 && (
-        <div
-          className="absolute top-full left-0 w-full bg-white border rounded shadow p-3 text-gray-500 text-sm"
-          style={{ marginTop: "2px" }}
-        >
-          No se encontraron jugadores
-        </div>
-      )}
+      {showDropdown &&
+        sugerencias.length === 0 &&
+        inputValue.length >= 2 &&
+        !disabled && (
+          <div
+            className="absolute top-full left-0 w-full bg-white border rounded shadow p-3 text-gray-500 text-sm"
+            style={{ marginTop: "2px" }}
+          >
+            No se encontraron jugadores
+          </div>
+        )}
     </div>
   );
 };

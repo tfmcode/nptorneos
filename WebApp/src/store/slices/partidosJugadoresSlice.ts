@@ -6,6 +6,7 @@ import {
 import {
   getJugadoresPorEquipo,
   savePartidoJugador,
+  deletePartidoJugador, // ← Agregada la importación
 } from "../../api/partidosJugadoresService";
 
 interface PartidoJugadoresState {
@@ -50,6 +51,26 @@ export const savePartidoJugadorThunk = createAsyncThunk<
   }
 });
 
+// ✅ Nuevo thunk para eliminar jugador
+export const deletePartidoJugadorThunk = createAsyncThunk<
+  number, // Retorna el ID del jugador eliminado
+  { idpartido: number; idequipo: number; idjugador: number },
+  { rejectValue: string }
+>(
+  "partidoJugadores/delete",
+  async ({ idpartido, idequipo, idjugador }, thunkAPI) => {
+    try {
+      await deletePartidoJugador(idpartido, idequipo, idjugador);
+      return idjugador; // Retornamos el ID para poder actualizar el estado local
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return thunkAPI.rejectWithValue(error.message);
+      }
+      return thunkAPI.rejectWithValue("Error desconocido.");
+    }
+  }
+);
+
 const partidosJugadoresSlice = createSlice({
   name: "partidoJugadores",
   initialState,
@@ -57,9 +78,33 @@ const partidosJugadoresSlice = createSlice({
     setPartidoJugadoresError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
+    // ✅ Reducer para actualizar un jugador específico sin hacer fetch completo
+    updateJugadorInState: (
+      state,
+      action: PayloadAction<{
+        idjugador: number;
+        updates: Partial<PartidoJugadorExtendido>;
+      }>
+    ) => {
+      const { idjugador, updates } = action.payload;
+      const jugadorIndex = state.jugadores.findIndex(
+        (j) => j.idjugador === idjugador
+      );
+      if (jugadorIndex !== -1) {
+        state.jugadores[jugadorIndex] = {
+          ...state.jugadores[jugadorIndex],
+          ...updates,
+        };
+      }
+    },
+    // ✅ Reducer para limpiar errores
+    clearError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
+      // Fetch jugadores
       .addCase(fetchPartidoJugadores.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -72,6 +117,8 @@ const partidosJugadoresSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Error al cargar los jugadores.";
       })
+
+      // Save jugador
       .addCase(savePartidoJugadorThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -82,9 +129,28 @@ const partidosJugadoresSlice = createSlice({
       .addCase(savePartidoJugadorThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Error al guardar el jugador.";
+      })
+
+      // ✅ Delete jugador - Nuevos casos agregados
+      .addCase(deletePartidoJugadorThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deletePartidoJugadorThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        // Remover el jugador del estado local
+        state.jugadores = state.jugadores.filter(
+          (jugador) => jugador.idjugador !== action.payload
+        );
+      })
+      .addCase(deletePartidoJugadorThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Error al eliminar el jugador.";
       });
   },
 });
 
-export const { setPartidoJugadoresError } = partidosJugadoresSlice.actions;
+export const { setPartidoJugadoresError, updateJugadorInState, clearError } =
+  partidosJugadoresSlice.actions;
+
 export default partidosJugadoresSlice.reducer;

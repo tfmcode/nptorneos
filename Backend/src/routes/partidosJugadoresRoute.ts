@@ -6,6 +6,7 @@ import { validateRequest } from "../middlewares/validationMiddleware";
 import {
   getJugadoresPartidoEquipoController,
   upsertPartidoJugadorController,
+  deletePartidoJugadorController,
 } from "../controllers/partidosJugadoresController";
 
 const router = express.Router();
@@ -54,6 +55,24 @@ router.post(
   ],
   validateRequest,
   asyncHandler(upsertPartidoJugadorController)
+);
+
+router.delete(
+  "/:idpartido/equipos/:idequipo/jugadores/:idjugador",
+  authMiddleware,
+  [
+    param("idpartido")
+      .isInt()
+      .withMessage("El ID del partido debe ser un número entero."),
+    param("idequipo")
+      .isInt()
+      .withMessage("El ID del equipo debe ser un número entero."),
+    param("idjugador")
+      .isInt()
+      .withMessage("El ID del jugador debe ser un número entero."),
+  ],
+  validateRequest,
+  asyncHandler(deletePartidoJugadorController)
 );
 
 export default router;

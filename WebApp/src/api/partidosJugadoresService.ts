@@ -5,7 +5,6 @@ import {
   PartidoJugadorInput,
 } from "../types/partidosJugadores";
 
-// Manejo de errores estándar
 const handleAxiosError = (error: unknown): never => {
   if (error instanceof AxiosError && error.response?.data?.message) {
     console.error("❌ API Error:", error.response.data.message);
@@ -15,7 +14,6 @@ const handleAxiosError = (error: unknown): never => {
   throw new Error("Ocurrió un error inesperado.");
 };
 
-// ✅ Obtener jugadores por equipo y partido
 export const getJugadoresPorEquipo = async (
   idpartido: number,
   idequipo: number
@@ -31,7 +29,6 @@ export const getJugadoresPorEquipo = async (
   throw new Error("Error inesperado al obtener jugadores del equipo.");
 };
 
-// ✅ Guardar/actualizar participación de un jugador en un partido
 export const savePartidoJugador = async (
   idpartido: number,
   idequipo: number,
@@ -41,6 +38,20 @@ export const savePartidoJugador = async (
     await API.post(
       `/api/partidos/${idpartido}/equipos/${idequipo}/jugadores`,
       data
+    );
+  } catch (error) {
+    handleAxiosError(error);
+  }
+};
+
+export const deletePartidoJugador = async (
+  idpartido: number,
+  idequipo: number,
+  idjugador: number
+): Promise<void> => {
+  try {
+    await API.delete(
+      `/api/partidos/${idpartido}/equipos/${idequipo}/jugadores/${idjugador}`
     );
   } catch (error) {
     handleAxiosError(error);

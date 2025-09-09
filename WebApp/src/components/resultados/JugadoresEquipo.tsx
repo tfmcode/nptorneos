@@ -84,6 +84,8 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
       amarilla: campo === "amarilla" ? Number(valor) : jugador.amarilla,
       azul: campo === "azul" ? Number(valor) : jugador.azul,
       roja: campo === "roja" ? Number(valor) : jugador.roja,
+      fhcarga: new Date().toISOString(),
+      idusuario: 1, // Deberías obtenerlo del contexto de autenticación
     };
 
     await savePartidoJugador(idpartido, idequipo, input);
@@ -129,6 +131,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     }
 
     try {
+      setLoading(true);
       const input: PartidoJugadorInput = {
         idjugador: selectedJugadorId,
         jugo: false,
@@ -137,10 +140,18 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         amarilla: 0,
         azul: 0,
         roja: 0,
+        fhcarga: new Date().toISOString(),
+        idusuario: 1, // Deberías obtenerlo del contexto de autenticación
       };
 
       await savePartidoJugador(idpartido, idequipo, input);
+
+      // Esperar un momento antes de recargar
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Recargar los datos
       const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
+      console.log("Datos actualizados:", updatedData);
       setJugadoresPartido(updatedData);
 
       setSelectedJugadorId(0);
@@ -149,6 +160,8 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     } catch (err) {
       console.error("Error al agregar jugador:", err);
       setError("Error al agregar jugador al partido");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,6 +177,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     }
 
     try {
+      setLoading(true);
       // Crear el jugador
       const jugadorCreado = await createJugador({
         ...nuevoJugador,
@@ -180,10 +194,18 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
           amarilla: 0,
           azul: 0,
           roja: 0,
+          fhcarga: new Date().toISOString(),
+          idusuario: 1, // Deberías obtenerlo del contexto de autenticación
         };
 
         await savePartidoJugador(idpartido, idequipo, input);
+
+        // Esperar un momento antes de recargar
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // Recargar los datos
         const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
+        console.log("Jugador creado y datos actualizados:", updatedData);
         setJugadoresPartido(updatedData);
 
         // Limpiar formulario
@@ -211,6 +233,8 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         setError("Error al crear el jugador");
       }
       console.error("Error al crear jugador:", err);
+    } finally {
+      setLoading(false);
     }
   };
 

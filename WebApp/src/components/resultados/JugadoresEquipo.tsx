@@ -9,11 +9,14 @@ import {
   PartidoJugadorInput,
 } from "../../types/partidosJugadores";
 import JugadorAutocomplete from "../forms/JugadorAutocomplete";
+import { Jugador } from "../../types/jugadores";
+import { createJugador } from "../../api/jugadoresService";
 import {
   ChevronUpIcon,
   ChevronDownIcon,
   PlusIcon,
   TrashIcon,
+  UserPlusIcon,
 } from "@heroicons/react/24/outline";
 
 interface JugadoresEquipoProps {
@@ -33,7 +36,18 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddPlayer, setShowAddPlayer] = useState<boolean>(false);
+  const [showCreatePlayer, setShowCreatePlayer] = useState<boolean>(false);
   const [selectedJugadorId, setSelectedJugadorId] = useState<number>(0);
+
+  // Estados para crear nuevo jugador
+  const [nuevoJugador, setNuevoJugador] = useState({
+    nombres: "",
+    apellido: "",
+    docnro: "",
+    fhnacimiento: "",
+    telefono: "",
+    email: "",
+  });
 
   // Estados para sorting
   const [sortConfig, setSortConfig] = useState<{
@@ -45,7 +59,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     const fetchJugadores = async () => {
       try {
         setLoading(true);
-        // Cargar jugadores del partido
         const partidoData = await getJugadoresPorEquipo(idpartido, idequipo);
         setJugadoresPartido(partidoData);
       } catch {
@@ -83,7 +96,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   };
 
   const handleCheckboxChange = (jugador: PartidoJugadorExtendido) => {
-    // No permitir cambios si está en lista negra
     if (jugador.listanegra === 1) return;
     handleUpdate(jugador, "jugo", !jugador.jugo);
   };
@@ -93,19 +105,30 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     campo: keyof PartidoJugadorInput,
     valor: string
   ) => {
-    // No permitir cambios si está en lista negra
     if (jugador.listanegra === 1) return;
-
     const parsed =
       campo === "camiseta" ? valor : valor === "" ? 0 : Number(valor);
     handleUpdate(jugador, campo, parsed);
   };
 
   const handleAddJugador = async () => {
-    if (!selectedJugadorId) return;
+    if (!selectedJugadorId) {
+      setError("Debe seleccionar un jugador");
+      return;
+    }
+
+    // Verificar si el jugador ya está en el partido
+    const jugadorExistente = jugadoresPartido.find(
+      (j) => j.idjugador === selectedJugadorId
+    );
+
+    if (jugadorExistente) {
+      setError("Este jugador ya está en el partido");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
 
     try {
-      // Agregar el jugador al partido
       const input: PartidoJugadorInput = {
         idjugador: selectedJugadorId,
         jugo: false,
@@ -117,17 +140,82 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
       };
 
       await savePartidoJugador(idpartido, idequipo, input);
-
-      // Recargar la lista
       const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
       setJugadoresPartido(updatedData);
 
-      // Reset
       setSelectedJugadorId(0);
       setShowAddPlayer(false);
+      setError(null);
     } catch (err) {
       console.error("Error al agregar jugador:", err);
+      setError("Error al agregar jugador al partido");
     }
+  };
+
+  const handleCreateNewPlayer = async () => {
+    // Validación
+    if (
+      !nuevoJugador.nombres ||
+      !nuevoJugador.apellido ||
+      !nuevoJugador.docnro
+    ) {
+      setError("Nombre, apellido y documento son obligatorios");
+      return;
+    }
+
+    try {
+      // Crear el jugador
+      const jugadorCreado = await createJugador({
+        ...nuevoJugador,
+        codestado: 1,
+      });
+
+      if (jugadorCreado && jugadorCreado.id) {
+        // Agregar el jugador al partido automáticamente
+        const input: PartidoJugadorInput = {
+          idjugador: jugadorCreado.id,
+          jugo: false,
+          camiseta: "",
+          goles: 0,
+          amarilla: 0,
+          azul: 0,
+          roja: 0,
+        };
+
+        await savePartidoJugador(idpartido, idequipo, input);
+        const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
+        setJugadoresPartido(updatedData);
+
+        // Limpiar formulario
+        setNuevoJugador({
+          nombres: "",
+          apellido: "",
+          docnro: "",
+          fhnacimiento: "",
+          telefono: "",
+          email: "",
+        });
+        setShowCreatePlayer(false);
+        setError(null);
+      }
+    } catch (err: unknown) {
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "message" in err &&
+        typeof (err as { message?: string }).message === "string" &&
+        (err as { message: string }).message.includes("documento")
+      ) {
+        setError("El documento ya existe en el sistema");
+      } else {
+        setError("Error al crear el jugador");
+      }
+      console.error("Error al crear jugador:", err);
+    }
+  };
+
+  const handleJugadorSelect = (jugador: Jugador | { id?: number } | null) => {
+    setSelectedJugadorId(jugador?.id ?? 0);
   };
 
   const handleSort = (key: keyof PartidoJugadorExtendido) => {
@@ -140,16 +228,13 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
   const sortedJugadores = [...jugadoresPartido].sort((a, b) => {
     if (!sortConfig || !sortConfig.key) return 0;
-
     const { key, direction } = sortConfig;
     const aValue = a[key] ?? "";
     const bValue = b[key] ?? "";
-
     const compare = String(aValue).localeCompare(String(bValue), undefined, {
       numeric: true,
       sensitivity: "base",
     });
-
     return direction === "asc" ? compare : -compare;
   });
 
@@ -197,28 +282,45 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
   return (
     <div>
-      {/* Header con nombre del equipo y botón agregar */}
+      {/* Header con nombre del equipo y botones */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800">
           {nombreEquipo || `Equipo ${idequipo}`}
         </h3>
-        <button
-          onClick={() => setShowAddPlayer(!showAddPlayer)}
-          className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Agregar Jugador
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setShowAddPlayer(!showAddPlayer);
+              setShowCreatePlayer(false);
+            }}
+            className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Agregar Existente
+          </button>
+          <button
+            onClick={() => {
+              setShowCreatePlayer(!showCreatePlayer);
+              setShowAddPlayer(false);
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+          >
+            <UserPlusIcon className="h-4 w-4" />
+            Crear Nuevo
+          </button>
+        </div>
       </div>
 
-      {/* Formulario para agregar jugador */}
+      {/* Formulario para agregar jugador existente */}
       {showAddPlayer && (
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+          <h4 className="font-semibold mb-2">Agregar Jugador Existente</h4>
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <JugadorAutocomplete
                 value={selectedJugadorId}
-                onChange={(jugador) => setSelectedJugadorId(jugador.id ?? 0)}
+                onChange={handleJugadorSelect}
+                excludeIds={jugadoresPartido.map((j) => j.idjugador)}
               />
             </div>
             <button
@@ -232,6 +334,98 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
               onClick={() => {
                 setShowAddPlayer(false);
                 setSelectedJugadorId(0);
+                setError(null);
+              }}
+              className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Formulario para crear nuevo jugador */}
+      {showCreatePlayer && (
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h4 className="font-semibold mb-3">Crear Nuevo Jugador</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              placeholder="Nombres *"
+              value={nuevoJugador.nombres}
+              onChange={(e) =>
+                setNuevoJugador({ ...nuevoJugador, nombres: e.target.value })
+              }
+              className="px-3 py-2 border rounded text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Apellido *"
+              value={nuevoJugador.apellido}
+              onChange={(e) =>
+                setNuevoJugador({ ...nuevoJugador, apellido: e.target.value })
+              }
+              className="px-3 py-2 border rounded text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Documento *"
+              value={nuevoJugador.docnro}
+              onChange={(e) =>
+                setNuevoJugador({ ...nuevoJugador, docnro: e.target.value })
+              }
+              className="px-3 py-2 border rounded text-sm"
+            />
+            <input
+              type="date"
+              placeholder="Fecha Nacimiento"
+              value={nuevoJugador.fhnacimiento}
+              onChange={(e) =>
+                setNuevoJugador({
+                  ...nuevoJugador,
+                  fhnacimiento: e.target.value,
+                })
+              }
+              className="px-3 py-2 border rounded text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Teléfono"
+              value={nuevoJugador.telefono}
+              onChange={(e) =>
+                setNuevoJugador({ ...nuevoJugador, telefono: e.target.value })
+              }
+              className="px-3 py-2 border rounded text-sm"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={nuevoJugador.email}
+              onChange={(e) =>
+                setNuevoJugador({ ...nuevoJugador, email: e.target.value })
+              }
+              className="px-3 py-2 border rounded text-sm"
+            />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={handleCreateNewPlayer}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+            >
+              Crear y Agregar
+            </button>
+            <button
+              onClick={() => {
+                setShowCreatePlayer(false);
+                setNuevoJugador({
+                  nombres: "",
+                  apellido: "",
+                  docnro: "",
+                  fhnacimiento: "",
+                  telefono: "",
+                  email: "",
+                });
+                setError(null);
               }}
               className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600"
             >
@@ -248,12 +442,9 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
           <table className="w-full text-sm border border-gray-300">
             <thead className="bg-gray-100 text-left">
               <tr>
-                <th className="px-2 py-2">
-                  <div className="flex items-center">Jugó</div>
-                </th>
-                <th className="px-2 py-2">
-                  <div className="flex items-center">Foto</div>
-                </th>
+                <th className="px-2 py-2">Jugó</th>
+                <th className="px-2 py-2">C</th>
+                <th className="px-2 py-2">Foto</th>
                 <th className="px-2 py-2">
                   <div className="flex items-center">
                     Nombre
@@ -278,7 +469,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                     <SortButton column="tipo" />
                   </div>
                 </th>
-                <th className="px-2 py-2">Consentimiento</th>
                 <th className="px-2 py-2">
                   <div className="flex items-center">
                     Goles
@@ -318,6 +508,14 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                       />
                     </td>
                     <td className="px-2 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={isDisabled}
+                        className={`${isDisabled ? "cursor-not-allowed" : ""}`}
+                        title="Consentimiento"
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-center">
                       <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs">
                         📷
                       </div>
@@ -354,13 +552,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                       >
                         {j.tipo === 2 ? "INVITADO" : "OFICIAL"}
                       </span>
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        disabled={isDisabled}
-                        className={`${isDisabled ? "cursor-not-allowed" : ""}`}
-                      />
                     </td>
                     <td className="px-2 py-2">
                       <input

@@ -207,7 +207,7 @@ const Codificadores: React.FC = () => {
                 value: formData.descripcion ?? "",
               },
               {
-                name: "habilitado",
+                name: "codestado",
                 type: "select",
                 options: [
                   { label: "Sí", value: "1" },

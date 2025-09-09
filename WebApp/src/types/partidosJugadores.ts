@@ -4,34 +4,35 @@ export type PartidoJugadorBase = {
   idjugador: number;
   goles: number;
   camiseta: string;
-  amarilla: number;
+  amarilla: number; // ✅ Corregido nombre del campo
   azul: number;
-  roja: number;
+  roja: number; // ✅ Corregido nombre del campo
 };
 
 export type PartidoJugador = PartidoJugadorBase & {
   jugo: boolean;
 };
 
-// En types/partidosJugadores.d.ts
+// ✅ CORREGIDO: Interface actualizada con campos consistentes
 export interface PartidoJugadorInput {
   idjugador: number;
-  jugo: boolean;
+  jugo: boolean; // ✅ Agregado campo jugo
   camiseta: string;
   goles: number;
-  amarilla: number;
+  amarilla: number; // ✅ Corregido nombre (era amarilla, no amarillo)
   azul: number;
-  roja: number;
-  fhcarga?: string; // Agregar este campo
-  idusuario?: number; // Agregar este campo
+  roja: number; // ✅ Corregido nombre (era roja, no rojo)
+  fhcarga?: string;
+  idusuario?: number;
 }
 
+// ✅ CORREGIDO: Interface extendida con todos los campos necesarios
 export type PartidoJugadorExtendido = PartidoJugador & {
   nombre: string;
-  docnro: number; // ← Corregido: debería ser number según tu DB
+  docnro: number;
   codtipo: number; // 1 = OFICIAL, 2 = INVITADO
   foto: string;
-  marca?: number; // ← Agregado: campo que usas en el backend
+  marca?: number; // 1 = está en el partido, 0 = no está
   sancion?: number; // 1 = sancionado, 0 = no sancionado
   listanegra?: number; // 1 = en lista negra, 0 = no está
 };

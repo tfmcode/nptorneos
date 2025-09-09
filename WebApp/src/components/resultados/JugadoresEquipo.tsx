@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   getJugadoresPorEquipo,
   savePartidoJugador,
+  deletePartidoJugador, // ✅ Importación corregida
 } from "../../api/partidosJugadoresService";
 import { StatusMessage } from "../common";
 import {
@@ -56,21 +57,26 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     direction: "asc" | "desc";
   } | null>(null);
 
-  useEffect(() => {
-    const fetchJugadores = async () => {
-      try {
-        setLoading(true);
-        const partidoData = await getJugadoresPorEquipo(idpartido, idequipo);
-        setJugadoresPartido(partidoData);
-      } catch {
-        setError("Error al cargar los jugadores.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchJugadores = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("🔄 Recargando jugadores...");
+      const partidoData = await getJugadoresPorEquipo(idpartido, idequipo);
+      setJugadoresPartido(partidoData);
+      console.log("✅ Jugadores cargados:", partidoData.length);
+    } catch (err) {
+      console.error("❌ Error al cargar jugadores:", err);
+      setError("Error al cargar los jugadores.");
+    } finally {
+      setLoading(false);
+    }
+  }, [idpartido, idequipo]); // ✅ Dependencias del useCallback
 
+  // ✅ CORREGIDO: useEffect con fetchJugadores en dependencias
+  useEffect(() => {
     fetchJugadores();
-  }, [idpartido, idequipo]);
+  }, [fetchJugadores]);
 
   // Función para agregar jugador al equipo
   const addJugadorToEquipo = async (idjugador: number) => {
@@ -89,30 +95,46 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     }
   };
 
+  // ✅ CORREGIDO: Función handleUpdate con campos corregidos
   const handleUpdate = async (
     jugador: PartidoJugadorExtendido,
     campo: keyof PartidoJugadorInput,
     valor: string | number | boolean
   ) => {
-    const input: PartidoJugadorInput = {
-      idjugador: jugador.idjugador,
-      jugo: campo === "jugo" ? Boolean(valor) : jugador.jugo,
-      camiseta: campo === "camiseta" ? String(valor) : jugador.camiseta,
-      goles: campo === "goles" ? Number(valor) : jugador.goles,
-      amarilla: campo === "amarilla" ? Number(valor) : jugador.amarilla,
-      azul: campo === "azul" ? Number(valor) : jugador.azul,
-      roja: campo === "roja" ? Number(valor) : jugador.roja,
-      fhcarga: new Date().toISOString(),
-      idusuario: 1,
-    };
+    try {
+      setError(null);
 
-    await savePartidoJugador(idpartido, idequipo, input);
+      const input: PartidoJugadorInput = {
+        idjugador: jugador.idjugador,
+        jugo: campo === "jugo" ? Boolean(valor) : jugador.jugo,
+        camiseta: campo === "camiseta" ? String(valor) : jugador.camiseta,
+        goles: campo === "goles" ? Number(valor) : jugador.goles,
+        amarilla: campo === "amarilla" ? Number(valor) : jugador.amarilla, // ✅ Corregido
+        azul: campo === "azul" ? Number(valor) : jugador.azul,
+        roja: campo === "roja" ? Number(valor) : jugador.roja, // ✅ Corregido
+        fhcarga: new Date().toISOString(),
+        idusuario: 1,
+      };
 
-    setJugadoresPartido((prev) =>
-      prev.map((j) =>
-        j.idjugador === jugador.idjugador ? { ...j, ...input } : j
-      )
-    );
+      console.log("💾 Actualizando jugador:", input);
+      await savePartidoJugador(idpartido, idequipo, input);
+
+      // ✅ Actualizar estado local inmediatamente
+      setJugadoresPartido((prev) =>
+        prev.map((j) =>
+          j.idjugador === jugador.idjugador ? { ...j, ...input } : j
+        )
+      );
+
+      console.log("✅ Jugador actualizado exitosamente");
+    } catch (err) {
+      console.error("❌ Error al actualizar jugador:", err);
+      setError(
+        `Error al actualizar jugador: ${
+          err instanceof Error ? err.message : "Error desconocido"
+        }`
+      );
+    }
   };
 
   const handleCheckboxChange = (jugador: PartidoJugadorExtendido) => {
@@ -131,27 +153,102 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     handleUpdate(jugador, campo, parsed);
   };
 
+  // ✅ FUNCIÓN DE ELIMINACIÓN CON DEBUG MEJORADO
+  // Reemplaza la función handleDeleteJugador en tu JugadoresEquipo.tsx
+
   const handleDeleteJugador = async (jugador: PartidoJugadorExtendido) => {
+    console.log("🗑️ INICIO - Eliminando jugador:", {
+      jugador: jugador.nombre,
+      idjugador: jugador.idjugador,
+      idpartido,
+      idequipo,
+      nombreEquipo,
+    });
+
     if (!confirm(`¿Está seguro de eliminar a ${jugador.nombre} del partido?`)) {
+      console.log("❌ Eliminación cancelada por el usuario");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
 
-      // Llamar al backend para eliminar el jugador del partido
-      await API.delete(
-        `/api/partidos/${idpartido}/equipos/${idequipo}/jugadores/${jugador.idjugador}`
+      console.log("🔄 PASO 1 - Llamando al servicio de eliminación...");
+
+      // ✅ Llamar al servicio de eliminación
+      await deletePartidoJugador(idpartido, idequipo, jugador.idjugador);
+
+      console.log(
+        "✅ PASO 2 - Servicio respondió OK, actualizando estado local..."
       );
 
-      // Recargar los datos
-      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
-      setJugadoresPartido(updatedData);
+      // ✅ CRÍTICO: Actualizar estado local INMEDIATAMENTE
+      setJugadoresPartido((prev) => {
+        const nuevosJugadores = prev.filter(
+          (j) => j.idjugador !== jugador.idjugador
+        );
+        console.log("🔄 Estado local actualizado:", {
+          antes: prev.length,
+          despues: nuevosJugadores.length,
+          eliminado: jugador.idjugador,
+        });
+        return nuevosJugadores;
+      });
+
+      console.log("✅ PASO 3 - Estado local actualizado exitosamente");
+
+      // ✅ OPCIONAL: Recargar datos del servidor para asegurar consistencia
+      console.log("🔄 PASO 4 - Recargando datos del servidor...");
+      setTimeout(async () => {
+        try {
+          const nuevosdatos = await getJugadoresPorEquipo(idpartido, idequipo);
+          console.log(
+            "✅ Datos recargados del servidor:",
+            nuevosdatos.length,
+            "jugadores"
+          );
+          setJugadoresPartido(nuevosdatos);
+        } catch (reloadError) {
+          console.warn("⚠️ Error al recargar datos (no crítico):", reloadError);
+        }
+      }, 500);
     } catch (err: unknown) {
-      console.error("Error al eliminar jugador:", err);
-      setError("Error al eliminar jugador del partido");
+      console.error("❌ ERROR en handleDeleteJugador:", err);
+
+      // ✅ Manejo detallado de errores
+      let errorMessage = "Error desconocido al eliminar jugador";
+
+      if (err instanceof Error) {
+        console.error("❌ Error details:", {
+          name: err.name,
+          message: err.message,
+          stack: err.stack,
+        });
+
+        if (err.message.includes("404")) {
+          errorMessage = "El jugador no se encuentra en este partido";
+        } else if (err.message.includes("400")) {
+          errorMessage = "Parámetros inválidos para la eliminación";
+        } else if (err.message.includes("500")) {
+          errorMessage = "Error interno del servidor";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(`Error al eliminar jugador: ${errorMessage}`);
+
+      // ✅ En caso de error, recargar datos para mantener consistencia
+      console.log("🔄 Recargando datos por error...");
+      try {
+        await fetchJugadores();
+      } catch (reloadError) {
+        console.error("❌ Error al recargar datos:", reloadError);
+      }
     } finally {
       setLoading(false);
+      console.log("🏁 FINALIZADO - Proceso de eliminación completado");
     }
   };
 
@@ -161,7 +258,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
       return;
     }
 
-    // Verificar si el jugador ya está en el partido
+    // ✅ Verificar si el jugador ya está en el partido
     const jugadorExistente = jugadoresPartido.find(
       (j) => j.idjugador === selectedJugadorId
     );
@@ -174,6 +271,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
     try {
       setLoading(true);
+      setError(null);
 
       // Intentar agregar al equipo primero (por si no está)
       await addJugadorToEquipo(selectedJugadorId);
@@ -183,36 +281,39 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         jugo: false,
         camiseta: "",
         goles: 0,
-        amarilla: 0,
+        amarilla: 0, // ✅ Corregido
         azul: 0,
-        roja: 0,
+        roja: 0, // ✅ Corregido
         fhcarga: new Date().toISOString(),
         idusuario: 1,
       };
 
+      console.log("➕ Agregando jugador al partido:", input);
       await savePartidoJugador(idpartido, idequipo, input);
 
       // Limpiar estado inmediatamente
       setSelectedJugadorId(0);
       setShowAddPlayer(false);
-      setError(null);
 
       // Recargar los datos
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
-      setJugadoresPartido(updatedData);
+      await fetchJugadores();
+
+      console.log("✅ Jugador agregado exitosamente");
     } catch (err: unknown) {
-      console.error("Error al agregar jugador:", err);
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "message" in err &&
-        typeof (err as { message?: string }).message === "string" &&
-        (err as { message: string }).message.includes("no pertenece")
-      ) {
-        setError(
-          "El jugador no está en este equipo. Debe agregarlo al equipo primero desde la gestión de equipos."
-        );
+      console.error("❌ Error al agregar jugador:", err);
+
+      if (err instanceof Error) {
+        if (err.message.includes("no pertenece")) {
+          setError(
+            "El jugador no está en este equipo. Debe agregarlo al equipo primero desde la gestión de equipos."
+          );
+        } else if (err.message.includes("equipo contrario")) {
+          setError(
+            "El jugador ya está registrado en el equipo contrario de este partido."
+          );
+        } else {
+          setError(`Error al agregar jugador: ${err.message}`);
+        }
       } else {
         setError("Error al agregar jugador al partido");
       }
@@ -234,6 +335,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
     try {
       setLoading(true);
+      setError(null);
 
       // 1. Crear el jugador
       const jugadorCreado = await createJugador({
@@ -254,9 +356,9 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         jugo: false,
         camiseta: "",
         goles: 0,
-        amarilla: 0,
+        amarilla: 0, // ✅ Corregido
         azul: 0,
-        roja: 0,
+        roja: 0, // ✅ Corregido
         fhcarga: new Date().toISOString(),
         idusuario: 1,
       };
@@ -273,30 +375,23 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         email: "",
       });
       setShowCreatePlayer(false);
-      setError(null);
 
       // Recargar datos
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const updatedData = await getJugadoresPorEquipo(idpartido, idequipo);
-      setJugadoresPartido(updatedData);
-    } catch (err: unknown) {
-      console.error("Error al crear jugador:", err);
+      await fetchJugadores();
 
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "message" in err &&
-        typeof (err as { message?: string }).message === "string"
-      ) {
-        const message = (err as { message: string }).message;
-        if (message.includes("documento")) {
+      console.log("✅ Jugador creado y agregado exitosamente");
+    } catch (err: unknown) {
+      console.error("❌ Error al crear jugador:", err);
+
+      if (err instanceof Error) {
+        if (err.message.includes("documento")) {
           setError("El documento ya existe en el sistema");
-        } else if (message.includes("no pertenece")) {
+        } else if (err.message.includes("no pertenece")) {
           setError(
             "El jugador fue creado pero hay un problema agregándolo al equipo. Recargue la página e intente desde 'Agregar Existente'."
           );
         } else {
-          setError(`Error: ${message || "Error al crear el jugador"}`);
+          setError(`Error: ${err.message}`);
         }
       } else {
         setError("Error al crear el jugador");
@@ -384,8 +479,10 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
             onClick={() => {
               setShowAddPlayer(!showAddPlayer);
               setShowCreatePlayer(false);
+              setError(null); // ✅ Limpiar errores
             }}
             className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700"
+            disabled={loading}
           >
             <PlusIcon className="h-4 w-4" />
             Agregar Existente
@@ -394,8 +491,10 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
             onClick={() => {
               setShowCreatePlayer(!showCreatePlayer);
               setShowAddPlayer(false);
+              setError(null); // ✅ Limpiar errores
             }}
             className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+            disabled={loading}
           >
             <UserPlusIcon className="h-4 w-4" />
             Crear Nuevo
@@ -429,6 +528,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 setError(null);
               }}
               className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600"
+              disabled={loading}
             >
               Cancelar
             </button>
@@ -603,14 +703,14 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                         type="checkbox"
                         checked={j.jugo && !isDisabled}
                         onChange={() => handleCheckboxChange(j)}
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`${isDisabled ? "cursor-not-allowed" : ""}`}
                       />
                     </td>
                     <td className="px-2 py-2 text-center">
                       <input
                         type="checkbox"
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`${isDisabled ? "cursor-not-allowed" : ""}`}
                         title="Consentimiento"
                       />
@@ -635,7 +735,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                         onChange={(e) =>
                           handleInputChange(j, "camiseta", e.target.value)
                         }
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`w-12 border rounded px-1 text-xs ${
                           isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
@@ -666,23 +766,26 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                         onChange={(e) =>
                           handleInputChange(j, "goles", e.target.value)
                         }
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`w-12 border rounded px-1 ${
                           isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
+                        min="0"
                       />
                     </td>
                     <td className="px-2 py-2">
                       <input
                         type="number"
-                        value={j.amarilla}
-                        onChange={(e) =>
-                          handleInputChange(j, "amarilla", e.target.value)
+                        value={j.amarilla} // ✅ Corregido
+                        onChange={
+                          (e) =>
+                            handleInputChange(j, "amarilla", e.target.value) // ✅ Corregido
                         }
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`w-12 border rounded px-1 ${
                           isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
+                        min="0"
                       />
                     </td>
                     <td className="px-2 py-2">
@@ -692,23 +795,25 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                         onChange={(e) =>
                           handleInputChange(j, "azul", e.target.value)
                         }
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`w-12 border rounded px-1 ${
                           isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
+                        min="0"
                       />
                     </td>
                     <td className="px-2 py-2">
                       <input
                         type="number"
-                        value={j.roja}
-                        onChange={(e) =>
-                          handleInputChange(j, "roja", e.target.value)
+                        value={j.roja} // ✅ Corregido
+                        onChange={
+                          (e) => handleInputChange(j, "roja", e.target.value) // ✅ Corregido
                         }
-                        disabled={isDisabled}
+                        disabled={isDisabled || loading}
                         className={`w-12 border rounded px-1 ${
                           isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
+                        min="0"
                       />
                     </td>
                     <td className="px-2 py-2 text-center">

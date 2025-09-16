@@ -43,6 +43,9 @@ function DatosBasicos({
     }
   };
 
+  // Filtrar torneos activos (codestado = 1)
+  const torneosActivos = torneos.filter((torneo) => torneo.codestado === 1);
+
   return (
     <div>
       <DynamicForm
@@ -68,7 +71,7 @@ function DatosBasicos({
             value: formData.idtorneo ?? "",
             options: [
               { label: "Seleccionar Torneo", value: 0 },
-              ...torneos.map((torneo) => ({
+              ...torneosActivos.map((torneo) => ({
                 label: torneo.nombre,
                 value: torneo.id ?? 0,
               })),

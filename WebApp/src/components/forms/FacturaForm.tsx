@@ -2,9 +2,26 @@ import React, { useEffect, useState } from "react";
 import { getComprobantesPorModulo } from "../../api/comprobantesService";
 import MoneyInputField from "../common/MoneyInputField";
 
+interface FacturaFormData {
+  comprobante?: string;
+  proveedor?: string;
+  fechaorigen?: string;
+  fechavencimiento?: string;
+  formapago?: string;
+  pagoautomatico?: boolean;
+  nrocomprobante?: number;
+  tipo?: string;
+  importesubtotal?: number;
+  importeingrbru?: number;
+  alicuotaingrbru?: number;
+  importeiva?: number;
+  alicuotaiva?: number;
+  importetotal?: number;
+}
+
 interface FacturaFormProps {
-  formData: any;
-  onChange: (name: string, value: any) => void;
+  formData: FacturaFormData;
+  onChange: (name: string, value: string | number | boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   submitLabel?: string;
 }
@@ -15,13 +32,14 @@ const FacturaForm: React.FC<FacturaFormProps> = ({ formData, onChange, onSubmit,
   const nroparte = (nroValue % 100000000).toString().padStart(8, "0");
   const [comprobantes, setComprobantes] = useState<{ value: string; label: string }[]>([]);
 
+
   useEffect(() => {
     const modulo = 1; // Facturación
     getComprobantesPorModulo(modulo)
       .then((data) => {
-        const opciones = data.map((item: any) => ({
+        const opciones = data.map((item: { codigo: string; descripcion?: string }) => ({
           value: item.codigo,
-          label: `${item.codigo} - ${item.descripcion}`,
+          label: `${item.codigo} - ${item.descripcion ?? ""}`,
         }));
         setComprobantes(opciones);
       })

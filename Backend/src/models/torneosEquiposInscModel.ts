@@ -10,6 +10,8 @@ export interface ITorneosEquiposInsc {
   ivainscrip?: number;
   ivadeposito?: number;
   idpartido?: number;
+  torneo_nombre?: string;
+  equipo_nombre?: string;
 }
 
 export const getAllTorneosEquiposInsc = async (
@@ -24,46 +26,100 @@ export const getAllTorneosEquiposInsc = async (
   let params: any[];
 
   if (searchTerm) {
+    // Normalizar término de búsqueda
+    const normalizedSearch = searchTerm.trim().replace(/\s+/g, " ");
+
     totalQuery = `
-      SELECT COUNT(*) 
-      FROM wtorneos_equipos_insc wei
-      LEFT JOIN wtorneos t ON wei.idtorneo = t.id
-      LEFT JOIN wequipos e ON wei.idequipo = e.id
-      WHERE (
-        LOWER(t.nombre) LIKE LOWER($1) OR 
-        LOWER(e.nombre) LIKE LOWER($1)
-      );
+      WITH EquiposConTorneos AS (
+        SELECT DISTINCT e.id as idequipo, e.nombre as equipo_nombre
+        FROM wequipos e
+        WHERE e.codestado = 1 AND e.fhbaja IS NULL 
+        AND LOWER(e.nombre) LIKE LOWER($1)
+      )
+      SELECT COUNT(*) FROM EquiposConTorneos;
     `;
 
     inscripcionesQuery = `
-      SELECT 
-        wei.id, wei.idtorneo, wei.idequipo, wei.inscrip, wei.deposito,
-        wei.fhcarga, wei.ivainscrip, wei.ivadeposito, wei.idpartido,
-        t.nombre as torneo_nombre, e.nombre as equipo_nombre
-      FROM wtorneos_equipos_insc wei
-      LEFT JOIN wtorneos t ON wei.idtorneo = t.id
-      LEFT JOIN wequipos e ON wei.idequipo = e.id
-      WHERE (
-        LOWER(t.nombre) LIKE LOWER($1) OR 
-        LOWER(e.nombre) LIKE LOWER($1)
+      WITH EquiposConUltimoTorneo AS (
+        SELECT 
+          e.id as idequipo,
+          e.nombre as equipo_nombre,
+          COALESCE(wei_ultimo.id, 0) as id,
+          COALESCE(wei_ultimo.idtorneo, 0) as idtorneo,
+          COALESCE(wei_ultimo.inscrip, 0) as inscrip,
+          COALESCE(wei_ultimo.deposito, 0) as deposito,
+          COALESCE(wei_ultimo.fhcarga, e.fhcarga) as fhcarga,
+          COALESCE(wei_ultimo.ivainscrip, 0) as ivainscrip,
+          COALESCE(wei_ultimo.ivadeposito, 0) as ivadeposito,
+          COALESCE(wei_ultimo.idpartido, 0) as idpartido,
+          COALESCE(t.nombre, 'Sin torneos registrados') as torneo_nombre,
+          COALESCE(wei_ultimo.fhcarga, e.fhcarga, t.fhcarga) as fecha_orden
+        FROM wequipos e
+        LEFT JOIN LATERAL (
+          SELECT wei.*
+          FROM wtorneos_equipos_insc wei
+          WHERE wei.idequipo = e.id
+          ORDER BY wei.fhcarga DESC, wei.id DESC
+          LIMIT 1
+        ) wei_ultimo ON true
+        LEFT JOIN wtorneos t ON wei_ultimo.idtorneo = t.id 
+          AND t.fhbaja IS NULL AND t.codestado = 1
+        WHERE e.codestado = 1 AND e.fhbaja IS NULL 
+        AND LOWER(e.nombre) LIKE LOWER($1)
       )
-      ORDER BY wei.fhcarga DESC 
+      SELECT 
+        id, idtorneo, idequipo, inscrip, deposito,
+        fhcarga, ivainscrip, ivadeposito, idpartido,
+        torneo_nombre, equipo_nombre
+      FROM EquiposConUltimoTorneo 
+      ORDER BY fecha_orden DESC, equipo_nombre ASC
       LIMIT $2 OFFSET $3;
     `;
 
-    params = [`%${searchTerm}%`, limit, offset];
+    params = [`%${normalizedSearch}%`, limit, offset];
   } else {
-    totalQuery = `SELECT COUNT(*) FROM wtorneos_equipos_insc;`;
+    totalQuery = `
+      WITH EquiposConTorneos AS (
+        SELECT DISTINCT e.id as idequipo, e.nombre as equipo_nombre
+        FROM wequipos e
+        WHERE e.codestado = 1 AND e.fhbaja IS NULL
+      )
+      SELECT COUNT(*) FROM EquiposConTorneos;
+    `;
 
     inscripcionesQuery = `
+      WITH EquiposConUltimoTorneo AS (
+        SELECT 
+          e.id as idequipo,
+          e.nombre as equipo_nombre,
+          COALESCE(wei_ultimo.id, 0) as id,
+          COALESCE(wei_ultimo.idtorneo, 0) as idtorneo,
+          COALESCE(wei_ultimo.inscrip, 0) as inscrip,
+          COALESCE(wei_ultimo.deposito, 0) as deposito,
+          COALESCE(wei_ultimo.fhcarga, e.fhcarga) as fhcarga,
+          COALESCE(wei_ultimo.ivainscrip, 0) as ivainscrip,
+          COALESCE(wei_ultimo.ivadeposito, 0) as ivadeposito,
+          COALESCE(wei_ultimo.idpartido, 0) as idpartido,
+          COALESCE(t.nombre, 'Sin torneos registrados') as torneo_nombre,
+          COALESCE(wei_ultimo.fhcarga, e.fhcarga, t.fhcarga) as fecha_orden
+        FROM wequipos e
+        LEFT JOIN LATERAL (
+          SELECT wei.*
+          FROM wtorneos_equipos_insc wei
+          WHERE wei.idequipo = e.id
+          ORDER BY wei.fhcarga DESC, wei.id DESC
+          LIMIT 1
+        ) wei_ultimo ON true
+        LEFT JOIN wtorneos t ON wei_ultimo.idtorneo = t.id 
+          AND t.fhbaja IS NULL AND t.codestado = 1
+        WHERE e.codestado = 1 AND e.fhbaja IS NULL
+      )
       SELECT 
-        wei.id, wei.idtorneo, wei.idequipo, wei.inscrip, wei.deposito,
-        wei.fhcarga, wei.ivainscrip, wei.ivadeposito, wei.idpartido,
-        t.nombre as torneo_nombre, e.nombre as equipo_nombre
-      FROM wtorneos_equipos_insc wei
-      LEFT JOIN wtorneos t ON wei.idtorneo = t.id
-      LEFT JOIN wequipos e ON wei.idequipo = e.id
-      ORDER BY wei.fhcarga DESC 
+        id, idtorneo, idequipo, inscrip, deposito,
+        fhcarga, ivainscrip, ivadeposito, idpartido,
+        torneo_nombre, equipo_nombre
+      FROM EquiposConUltimoTorneo 
+      ORDER BY fecha_orden DESC, equipo_nombre ASC
       LIMIT $1 OFFSET $2;
     `;
 
@@ -72,7 +128,7 @@ export const getAllTorneosEquiposInsc = async (
 
   const totalResult = await pool.query(
     totalQuery,
-    searchTerm ? [`%${searchTerm}%`] : []
+    searchTerm ? [`%${searchTerm.trim().replace(/\s+/g, " ")}%`] : []
   );
   const { rows } = await pool.query(inscripcionesQuery, params);
 

@@ -17,3 +17,10 @@ export type TorneosEquiposInscInput = Omit<
   TorneosEquiposInsc,
   "id" | "fhcarga" | "torneo_nombre" | "equipo_nombre"
 >;
+
+export interface TorneosEquiposInscResponse {
+  inscripciones: TorneosEquiposInsc[];
+  total: number;
+  page?: number;
+  limit?: number;
+}

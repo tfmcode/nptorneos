@@ -18,7 +18,6 @@ export interface PartidoJugadorExtendido {
   codtipo: number; // ✅ Agregado para tipos de jugador
 }
 
-// ✅ CORREGIDO: Interface actualizada
 export interface PartidoJugadorInput {
   idjugador: number;
   jugo: boolean; // ✅ Agregado
@@ -31,7 +30,6 @@ export interface PartidoJugadorInput {
   idusuario?: number;
 }
 
-// ✅ SOLUCIÓN FINAL - Reemplaza solo la función getJugadoresDeEquipoEnPartido
 
 export const getJugadoresDeEquipoEnPartido = async (
   idpartido: number,
@@ -43,18 +41,18 @@ export const getJugadoresDeEquipoEnPartido = async (
 
     await client.query("BEGIN");
 
-    // ✅ CONSULTA SIMPLIFICADA: Solo jugadores que ESTÁN en el partido
-    console.log("🔍 Consultando SOLO jugadores que están en el partido...");
+    // ✅ CONSULTA CORREGIDA: Muestra TODOS los jugadores del equipo
+    console.log("🔍 Consultando TODOS los jugadores del equipo...");
     const result = await client.query(
       `
       SELECT 
         q.idjugador,
         CONCAT(j.apellido, ' ', j.nombres) AS nombre,
         j.docnro,
-        1 as marca, -- Siempre 1 porque están en el partido
+        CASE WHEN p.idjugador IS NOT NULL THEN 1 ELSE 0 END as marca, -- 1 si está en el partido, 0 si no
         q.codtipo,
         j.foto,
-        -- Datos del partido
+        -- Datos del partido (si existen)
         COALESCE(p.goles, 0) as goles,
         COALESCE(p.amarillas, 0) as amarillo,
         COALESCE(p.azules, 0) as azul, 
@@ -84,7 +82,9 @@ export const getJugadoresDeEquipoEnPartido = async (
         
       FROM wequipos_jugadores q
       INNER JOIN jugadores j ON q.idjugador = j.id  
-      INNER JOIN partidos_jugadores p ON q.idjugador = p.idjugador AND p.idpartido = $1
+      LEFT JOIN partidos_jugadores p ON q.idjugador = p.idjugador 
+        AND p.idpartido = $1 
+        AND p.idequipo = $2  -- ✅ Importante: filtrar por equipo también
       WHERE q.idequipo = $2
         AND q.fhbaja IS NULL
         AND j.fhbaja IS NULL 
@@ -98,7 +98,7 @@ export const getJugadoresDeEquipoEnPartido = async (
     console.log(
       "✅ Resultado final obtenido:",
       result.rows.length,
-      "jugadores EN EL PARTIDO"
+      "jugadores del equipo"
     );
 
     await client.query("ROLLBACK");
@@ -111,7 +111,6 @@ export const getJugadoresDeEquipoEnPartido = async (
     client.release();
   }
 };
-
 // ✅ CORREGIDO: Función upsertPartidoJugador con validaciones habilitadas
 export const upsertPartidoJugador = async (
   idpartido: number,

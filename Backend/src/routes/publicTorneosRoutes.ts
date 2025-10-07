@@ -31,8 +31,6 @@ router.get(
   })
 );
 
-// ✅ AGREGAR ESTE ENDPOINT en publicTorneosRoutes.ts
-
 router.get(
   "/:id/sanciones",
   [
@@ -92,6 +90,7 @@ router.get(
   })
 );
 
+// ✅ ENDPOINT CORREGIDO - Usa la nueva función que filtra zonas amistosas
 router.get(
   "/:id/posiciones",
   [
@@ -103,40 +102,13 @@ router.get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const zonasQuery = await pool.query(
-      `SELECT id, nombre FROM zonas WHERE idtorneo = $1 AND fhbaja IS NULL`,
+    // ✅ Usar la nueva función que ya filtra zonas amistosas
+    const { rows } = await pool.query(
+      `SELECT * FROM get_posiciones_por_torneo($1)`,
       [id]
     );
-    const zonas = zonasQuery.rows;
 
-    const posiciones: any[] = [];
-
-    for (const zona of zonas) {
-      const result = await pool.query(
-        `SELECT * FROM calcular_posiciones_por_zona($1)`,
-        [zona.id]
-      );
-
-      const posicionesZona = result.rows.map((row: any) => ({
-        zona_id: zona.id,
-        zona_nombre: zona.nombre,
-        equipo_id: row.idequipo,
-        equipo_nombre: row.equipo,
-        jugados: row.pj,
-        ganados: row.pg,
-        empatados: row.pe,
-        perdidos: row.pp,
-        gf: row.gf,
-        gc: row.gc,
-        dg: row.dif,
-        pb: row.pb,
-        puntos: row.pts,
-      }));
-
-      posiciones.push(...posicionesZona);
-    }
-
-    res.json(posiciones);
+    res.json(rows);
   })
 );
 

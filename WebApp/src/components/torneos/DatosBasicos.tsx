@@ -12,15 +12,12 @@ import { useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store";
 import { saveTorneoThunk } from "../../store/slices/torneoSlice";
 import { getTorneosCampeonato } from "../../api/torneosService";
+import { PopupNotificacion } from "../common/PopupNotificacion";
 
 interface DatosBasicosProps {
   formData: Torneo;
-  onChange: (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => void;
-  onTorneoCreated?: (torneo: Torneo) => void; // ✅ Nueva prop para notificar creación
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+  onTorneoCreated?: (torneo: Torneo) => void;
 }
 
 function DatosBasicos({
@@ -39,6 +36,21 @@ function DatosBasicos({
   );
 
   const [torneosPadre, setTorneosPadre] = useState<Torneo[]>([]);
+
+  // ✅ Estado para el popup de notificaciones
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "success" as "success" | "error" | "warning",
+    message: "",
+  });
+
+  const showPopup = (
+    type: "success" | "error" | "warning",
+    message: string
+  ) => {
+    setPopup({ open: true, type, message });
+    setTimeout(() => setPopup({ ...popup, open: false }), 4000);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -73,19 +85,62 @@ function DatosBasicos({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ Validaciones
+    const errores: string[] = [];
+
+    // Validar nombre del torneo
+    if (!formData.nombre?.trim()) {
+      errores.push("• Ingresar el nombre del torneo");
+    }
+
+    // Validar abreviatura del torneo (min 2, max 16 caracteres)
+    if (!formData.abrev?.trim()) {
+      errores.push("• Ingresar la abreviatura del torneo");
+    } else if (formData.abrev.trim().length < 2) {
+      errores.push("• La abreviatura debe tener al menos 2 caracteres");
+    } else if (formData.abrev.trim().length > 16) {
+      errores.push("• La abreviatura no puede exceder los 16 caracteres");
+    }
+
+    // Validar campeonato
+    if (!formData.idcampeonato || formData.idcampeonato === 0) {
+      errores.push("• Seleccionar un campeonato");
+    }
+
+    // Validar sede
+    if (!formData.idsede || formData.idsede === 0) {
+      errores.push("• Seleccionar una sede");
+    }
+
+    // Validar año
+    if (!formData.anio) {
+      errores.push("• Ingresar el año del torneo");
+    }
+
+    // ✅ Si hay errores, mostrar popup y no enviar
+    if (errores.length > 0) {
+      showPopup("warning", errores.join("<br />"));
+      return;
+    }
+
     try {
       const { id, ...torneoData } = formData;
       const resultado = await dispatch(
         saveTorneoThunk(id ? formData : torneoData)
       ).unwrap();
 
-      // ✅ Si es un torneo nuevo y se creó exitosamente, notificar al padre
+      // Mostrar mensaje de éxito
+      showPopup("success", "Torneo guardado correctamente");
+
+      // Si es un torneo nuevo y se creó exitosamente, notificar al padre
       if (!id && resultado && resultado.id && onTorneoCreated) {
-        console.log("🎯 Torneo creado con ID:", resultado.id); // Para debug
+        console.log("🎯 Torneo creado con ID:", resultado.id);
         onTorneoCreated(resultado);
       }
     } catch (err) {
       console.error("Error al guardar torneo:", err);
+      showPopup("error", "Error al guardar el torneo");
     }
   };
 
@@ -159,7 +214,7 @@ function DatosBasicos({
           {
             name: "anio",
             type: "number",
-            value: formData.anio ?? 1,
+            value: formData.anio ?? new Date().getFullYear(),
             label: "Año",
           },
           {
@@ -277,6 +332,14 @@ function DatosBasicos({
         onChange={onChange}
         onSubmit={handleSubmit}
         submitLabel="Guardar"
+      />
+
+      {/* ✅ Popup de notificaciones */}
+      <PopupNotificacion
+        open={popup.open}
+        type={popup.type}
+        message={popup.message}
+        onClose={() => setPopup({ ...popup, open: false })}
       />
     </div>
   );

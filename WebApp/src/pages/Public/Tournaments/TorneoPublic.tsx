@@ -49,16 +49,13 @@ const TorneoPublic: React.FC = () => {
   // Zona global (default + controlada por tabs arriba)
   const [activeZone, setActiveZone] = useState<string>("");
 
-  const isAmistoso = (txt?: string | null) =>
-    (txt ?? "").toLowerCase().includes("amistoso");
-
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
       try {
         setLoading(true);
 
-        // Corregir el Promise.all para incluir las 3 llamadas
+        // ✅ Obtener datos del torneo, posiciones y sanciones
         const [data, posicionesData, sancionesData] = await Promise.all([
           getPublicTorneoById(Number(id)),
           getPosicionesByTorneoId(Number(id)),
@@ -67,38 +64,27 @@ const TorneoPublic: React.FC = () => {
 
         setTorneo(data.torneo ?? null);
 
+        // ✅ Las zonas ya vienen filtradas desde el backend (sin amistosas)
         const allZonas: Zona[] = data.zonas ?? [];
-        const zonasPublic = allZonas.filter(
-          (z) => !isAmistoso(z.abrev ?? z.nombre)
-        );
-        setZonas(zonasPublic);
+        setZonas(allZonas);
 
-        const zonasPublicIds = new Set(
-          zonasPublic
-            .filter((z) => typeof z.id === "number")
-            .map((z) => z.id as number)
-        );
+        // ✅ Los partidos también vienen filtrados desde el backend
+        setPartidos(data.partidos ?? []);
 
-        // Establecer las sanciones obtenidas
+        // ✅ Las sanciones
         setSanciones(sancionesData || []);
 
-        const partidosPublic = (data.partidos ?? []).filter((p) =>
-          zonasPublicIds.has(Number(p.idzona))
-        );
-        setPartidos(partidosPublic);
-
-        // POSICIONES por zona (excluye amistosos)
+        // ✅ POSICIONES por zona - ya vienen filtradas desde el backend
         const posicionesByZona: Record<string, Posicion[]> = {};
         posicionesData.forEach((pos) => {
           const zonaNombre = pos.zona_nombre ?? "SIN ZONA";
-          if (isAmistoso(zonaNombre)) return;
           if (!posicionesByZona[zonaNombre]) posicionesByZona[zonaNombre] = [];
           posicionesByZona[zonaNombre].push(pos);
         });
 
-        // GOLEADORES (solo zonas públicas)
+        // ✅ GOLEADORES (solo zonas públicas que ya vienen filtradas)
         const goleadoresByZona: Record<string, Goleador[]> = {};
-        for (const zona of zonasPublic) {
+        for (const zona of allZonas) {
           if (typeof zona.id === "number") {
             const goleadores = await getGoleadoresByZonaId(zona.id);
             const key = zona.abrev ?? zona.nombre;
@@ -109,9 +95,9 @@ const TorneoPublic: React.FC = () => {
           }
         }
 
-        // TARJETAS (solo zonas públicas)
+        // ✅ TARJETAS (solo zonas públicas que ya vienen filtradas)
         const tarjetasByZona: Record<string, Card[]> = {};
-        for (const zona of zonasPublic) {
+        for (const zona of allZonas) {
           if (typeof zona.id === "number") {
             const sancionesTarjetas = await getSancionesPorZona(zona.id);
             const key = zona.abrev ?? zona.nombre;
@@ -130,7 +116,7 @@ const TorneoPublic: React.FC = () => {
         setScorers(goleadoresByZona);
         setCards(tarjetasByZona);
 
-        // ---- Zona por defecto GLOBAL (preferimos ZONA/GRUPO A; si no, la primera) ----
+        // ✅ Zona por defecto GLOBAL (preferimos ZONA/GRUPO A; si no, la primera)
         const posKeys = Object.keys(posicionesByZona).sort();
         const scKeys = Object.keys(goleadoresByZona).sort();
         const crKeys = Object.keys(tarjetasByZona).sort();
@@ -222,7 +208,7 @@ const TorneoPublic: React.FC = () => {
       <StatusMessage loading={loading} error={error} />
 
       {/* Selector global de ZONA */}
-      {allZonesTabs.length > 0 && (
+    {/*   {allZonesTabs.length > 0 && (
         <div className="flex flex-wrap justify-center gap-2 mb-6">
           {allZonesTabs.map((z) => (
             <button
@@ -239,7 +225,7 @@ const TorneoPublic: React.FC = () => {
           ))}
         </div>
       )}
-
+ */}
       {/* 1) POSICIONES */}
       {allZonesTabs.length > 0 && Object.keys(positions).length > 0 && (
         <div className="mb-10">

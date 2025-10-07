@@ -5,7 +5,7 @@ interface SearchFieldProps {
   placeholder?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSearch: () => void; // 🔥 Función que se ejecuta al hacer clic en el botón
+  onSearch: () => void;
 }
 
 const SearchField: React.FC<SearchFieldProps> = ({
@@ -14,19 +14,20 @@ const SearchField: React.FC<SearchFieldProps> = ({
   onChange,
   onSearch,
 }) => (
-  <div className="flex gap-2">
+  <div className="flex flex-col sm:flex-row gap-2 w-full">
     <input
       type="text"
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className="p-2 border rounded w-full"
+      className="p-2 border rounded w-full text-sm sm:text-base"
     />
     <button
       onClick={onSearch}
-      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+      className="flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
     >
-      <MagnifyingGlassCircleIcon className="h-5 w-5 mr-1" />
+      <MagnifyingGlassCircleIcon className="h-5 w-5 sm:mr-1" />
+      <span className="hidden sm:inline">Buscar</span>
     </button>
   </div>
 );

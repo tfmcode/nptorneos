@@ -19,32 +19,36 @@ import {
 export const getPlanillasByFiltros = async (
   filtros: PlanillasFiltros
 ): Promise<PlanillaPagoListado[]> => {
+  // ⚠️ CRÍTICO: Agrupar por idfecha porque wfechas_equipos tiene múltiples registros por partido
   let query = `
-    SELECT DISTINCT
-      wfe.id,
+    SELECT 
+      MIN(wfe.id) as id,
+      wfe.idfecha,
       wfe.fecha,
       s.nombre as sede,
       ss.nombre as subsede,
       t.nombre as torneo,
-      CONCAT(p.apellido, ' ', p.nombres) as profesor,
+      p.nombre as profesor,
       CASE 
-        WHEN wfe.fhcierrecaja IS NOT NULL THEN 'contabilizada'
-        WHEN wfe.fhcierre IS NOT NULL THEN 'cerrada'
+        WHEN MAX(wfe.fhcierrecaja) IS NOT NULL THEN 'contabilizada'
+        WHEN MAX(wfe.fhcierre) IS NOT NULL THEN 'cerrada'
         ELSE 'abierta'
       END as estado,
-      wfe.totcierre as total_caja
+      MAX(wfe.totcierre) as total_caja
     FROM wfechas_equipos wfe
     LEFT JOIN wsedes s ON wfe.idsede = s.id
     LEFT JOIN wsedes ss ON wfe.idsubsede = ss.id
     LEFT JOIN wtorneos t ON wfe.idtorneo = t.id
     LEFT JOIN proveedores p ON wfe.idprofesor_cierre = p.id
     WHERE wfe.fhbaja IS NULL
+      AND wfe.idfecha IS NOT NULL
+      AND wfe.idfecha > 0
   `;
 
   const params: any[] = [];
   let paramIndex = 1;
 
-  if (filtros.idtorneo) {
+  if (filtros.idtorneo && filtros.idtorneo > 0) {
     query += ` AND wfe.idtorneo = $${paramIndex}`;
     params.push(filtros.idtorneo);
     paramIndex++;
@@ -62,7 +66,7 @@ export const getPlanillasByFiltros = async (
     paramIndex++;
   }
 
-  if (filtros.idsede) {
+  if (filtros.idsede && filtros.idsede > 0) {
     query += ` AND wfe.idsede = $${paramIndex}`;
     params.push(filtros.idsede);
     paramIndex++;
@@ -78,9 +82,22 @@ export const getPlanillasByFiltros = async (
     }
   }
 
-  query += ` ORDER BY wfe.fecha DESC, wfe.id DESC`;
+  // ✅ AGRUPAR por idfecha para que cada partido aparezca una sola vez
+  query += ` 
+    GROUP BY wfe.idfecha, wfe.fecha, s.nombre, ss.nombre, t.nombre, p.nombre
+    ORDER BY wfe.fecha DESC, wfe.idfecha DESC
+  `;
+
+  console.log("📊 Query de planillas:", query);
+  console.log("📊 Parámetros:", params);
 
   const { rows } = await pool.query(query, params);
+
+  console.log(`✅ Se encontraron ${rows.length} planillas`);
+  if (rows.length > 0) {
+    console.log("📋 Primera planilla:", rows[0]);
+  }
+
   return rows;
 };
 
@@ -88,7 +105,19 @@ export const getPlanillaById = async (
   id: number
 ): Promise<PlanillaPago | null> => {
   const { rows } = await pool.query(
-    `SELECT * FROM wfechas_equipos WHERE id = $1 AND fhbaja IS NULL`,
+    `SELECT 
+      wfe.*,
+      s.nombre as sede_nombre,
+      ss.nombre as subsede_nombre,
+      t.nombre as torneo_nombre,
+      p.nombre as profesor_nombre
+    FROM wfechas_equipos wfe
+    LEFT JOIN wsedes s ON wfe.idsede = s.id
+    LEFT JOIN wsedes ss ON wfe.idsubsede = ss.id
+    LEFT JOIN wtorneos t ON wfe.idtorneo = t.id
+    LEFT JOIN proveedores p ON wfe.idprofesor_cierre = p.id
+    WHERE wfe.id = $1 AND wfe.fhbaja IS NULL
+    LIMIT 1`,
     [id]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -97,8 +126,22 @@ export const getPlanillaById = async (
 export const getPlanillaByIdFecha = async (
   idfecha: number
 ): Promise<PlanillaPago | null> => {
+  // Traer el primer registro de este idfecha con toda la info
   const { rows } = await pool.query(
-    `SELECT * FROM wfechas_equipos WHERE idfecha = $1 AND fhbaja IS NULL LIMIT 1`,
+    `SELECT 
+      wfe.*,
+      s.nombre as sede_nombre,
+      ss.nombre as subsede_nombre,
+      t.nombre as torneo_nombre,
+      p.nombre as profesor_nombre
+    FROM wfechas_equipos wfe
+    LEFT JOIN wsedes s ON wfe.idsede = s.id
+    LEFT JOIN wsedes ss ON wfe.idsubsede = ss.id
+    LEFT JOIN wtorneos t ON wfe.idtorneo = t.id
+    LEFT JOIN proveedores p ON wfe.idprofesor_cierre = p.id
+    WHERE wfe.idfecha = $1 AND wfe.fhbaja IS NULL 
+    ORDER BY wfe.id ASC
+    LIMIT 1`,
     [idfecha]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -212,11 +255,16 @@ export const contabilizarPlanilla = async (
 };
 
 export const deletePlanilla = async (id: number): Promise<boolean> => {
-  const result = await pool.query(
-    `UPDATE wfechas_equipos SET fhbaja = NOW() WHERE id = $1`,
-    [id]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `UPDATE wfechas_equipos SET fhbaja = NOW() WHERE id = $1 AND fhbaja IS NULL`,
+      [id]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar planilla:", error);
+    throw new Error("Error al eliminar la planilla.");
+  }
 };
 
 // ========================================
@@ -232,8 +280,10 @@ export const getEquiposByPlanilla = async (
       e.nombre as nombre_equipo
     FROM wfechas_equipos wfe
     LEFT JOIN wequipos e ON wfe.idequipo = e.id
-    WHERE wfe.idfecha = $1 AND wfe.idequipo IS NOT NULL
-    ORDER BY wfe.orden`,
+    WHERE wfe.idfecha = $1 
+      AND wfe.idequipo IS NOT NULL 
+      AND wfe.fhbaja IS NULL
+    ORDER BY wfe.orden ASC`,
     [idfecha]
   );
   return rows;
@@ -246,7 +296,7 @@ export const saveEquipoPlanilla = async (
 
   // Verificar si existe
   const existing = await pool.query(
-    `SELECT id FROM wfechas_equipos WHERE idfecha = $1 AND orden = $2 AND idequipo = $3`,
+    `SELECT id FROM wfechas_equipos WHERE idfecha = $1 AND orden = $2 AND idequipo = $3 AND fhbaja IS NULL`,
     [idfecha, orden, idequipo]
   );
 
@@ -277,11 +327,16 @@ export const deleteEquipoPlanilla = async (
   idfecha: number,
   orden: number
 ): Promise<boolean> => {
-  const result = await pool.query(
-    `DELETE FROM wfechas_equipos WHERE idfecha = $1 AND orden = $2 AND idequipo IS NOT NULL`,
-    [idfecha, orden]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `UPDATE wfechas_equipos SET fhbaja = NOW() WHERE idfecha = $1 AND orden = $2 AND idequipo IS NOT NULL AND fhbaja IS NULL`,
+      [idfecha, orden]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar equipo:", error);
+    throw new Error("Error al eliminar el equipo.");
+  }
 };
 
 // ========================================
@@ -294,11 +349,11 @@ export const getArbitrosByPlanilla = async (
   const { rows } = await pool.query(
     `SELECT 
       fa.*,
-      CONCAT(p.apellido, ' ', p.nombres) as nombre_arbitro
+      p.nombre as nombre_arbitro
     FROM fechas_arbitros fa
     LEFT JOIN proveedores p ON fa.idarbitro = p.id
     WHERE fa.idfecha = $1
-    ORDER BY fa.orden`,
+    ORDER BY fa.orden ASC`,
     [idfecha]
   );
   return rows;
@@ -311,14 +366,12 @@ export const saveArbitroPlanilla = async (
     arbitro;
   const total = (partidos || 0) * (valor_partido || 0);
 
-  // Verificar si existe
   const existing = await pool.query(
     `SELECT 1 FROM fechas_arbitros WHERE idfecha = $1 AND orden = $2`,
     [idfecha, orden]
   );
 
   if (existing.rows.length > 0) {
-    // Actualizar
     const { rows } = await pool.query(
       `UPDATE fechas_arbitros 
       SET idarbitro = $1, idprofesor = $2, partidos = $3, valor_partido = $4, total = $5
@@ -336,7 +389,6 @@ export const saveArbitroPlanilla = async (
     );
     return rows[0];
   } else {
-    // Insertar
     const { rows } = await pool.query(
       `INSERT INTO fechas_arbitros 
       (idfecha, orden, idarbitro, idprofesor, partidos, valor_partido, total, fhcarga)
@@ -360,11 +412,16 @@ export const deleteArbitroPlanilla = async (
   idfecha: number,
   orden: number
 ): Promise<boolean> => {
-  const result = await pool.query(
-    `DELETE FROM fechas_arbitros WHERE idfecha = $1 AND orden = $2`,
-    [idfecha, orden]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `DELETE FROM fechas_arbitros WHERE idfecha = $1 AND orden = $2`,
+      [idfecha, orden]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar árbitro:", error);
+    throw new Error("Error al eliminar el árbitro.");
+  }
 };
 
 // ========================================
@@ -375,7 +432,7 @@ export const getCanchasByPlanilla = async (
   idfecha: number
 ): Promise<PlanillaCancha[]> => {
   const { rows } = await pool.query(
-    `SELECT * FROM fechas_canchas WHERE idfecha = $1 ORDER BY orden`,
+    `SELECT * FROM fechas_canchas WHERE idfecha = $1 ORDER BY orden ASC`,
     [idfecha]
   );
   return rows;
@@ -417,11 +474,16 @@ export const deleteCanchaPlanilla = async (
   idfecha: number,
   orden: number
 ): Promise<boolean> => {
-  const result = await pool.query(
-    `DELETE FROM fechas_canchas WHERE idfecha = $1 AND orden = $2`,
-    [idfecha, orden]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `DELETE FROM fechas_canchas WHERE idfecha = $1 AND orden = $2`,
+      [idfecha, orden]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar cancha:", error);
+    throw new Error("Error al eliminar la cancha.");
+  }
 };
 
 // ========================================
@@ -434,11 +496,11 @@ export const getProfesoresByPlanilla = async (
   const { rows } = await pool.query(
     `SELECT 
       fp.*,
-      CONCAT(p.apellido, ' ', p.nombres) as nombre_profesor
+      p.nombre as nombre_profesor
     FROM fechas_profes fp
     LEFT JOIN proveedores p ON fp.idprofesor = p.id
     WHERE fp.idfecha = $1
-    ORDER BY fp.orden`,
+    ORDER BY fp.orden ASC`,
     [idfecha]
   );
   return rows;
@@ -480,11 +542,16 @@ export const deleteProfesorPlanilla = async (
   idfecha: number,
   orden: number
 ): Promise<boolean> => {
-  const result = await pool.query(
-    `DELETE FROM fechas_profes WHERE idfecha = $1 AND orden = $2`,
-    [idfecha, orden]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `DELETE FROM fechas_profes WHERE idfecha = $1 AND orden = $2`,
+      [idfecha, orden]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar profesor:", error);
+    throw new Error("Error al eliminar el profesor.");
+  }
 };
 
 // ========================================
@@ -497,11 +564,11 @@ export const getMedicosByPlanilla = async (
   const { rows } = await pool.query(
     `SELECT 
       fm.*,
-      CONCAT(p.apellido, ' ', p.nombres) as nombre_medico
+      p.nombre as nombre_medico
     FROM fechas_medico fm
     LEFT JOIN proveedores p ON fm.idmedico = p.id
     WHERE fm.idfecha = $1
-    ORDER BY fm.orden`,
+    ORDER BY fm.orden ASC`,
     [idfecha]
   );
   return rows;
@@ -543,11 +610,16 @@ export const deleteMedicoPlanilla = async (
   idfecha: number,
   orden: number
 ): Promise<boolean> => {
-  const result = await pool.query(
-    `DELETE FROM fechas_medico WHERE idfecha = $1 AND orden = $2`,
-    [idfecha, orden]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `DELETE FROM fechas_medico WHERE idfecha = $1 AND orden = $2`,
+      [idfecha, orden]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar médico:", error);
+    throw new Error("Error al eliminar el médico.");
+  }
 };
 
 // ========================================
@@ -564,7 +636,7 @@ export const getOtrosGastosByPlanilla = async (
     FROM fechas_otros fo
     LEFT JOIN codificadores c ON fo.codgasto = c.id
     WHERE fo.idfecha = $1
-    ORDER BY fo.orden`,
+    ORDER BY fo.orden ASC`,
     [idfecha]
   );
   return rows;
@@ -623,11 +695,16 @@ export const deleteOtroGastoPlanilla = async (
   idfecha: number,
   orden: number
 ): Promise<boolean> => {
-  const result = await pool.query(
-    `DELETE FROM fechas_otros WHERE idfecha = $1 AND orden = $2`,
-    [idfecha, orden]
-  );
-  return (result.rowCount ?? 0) > 0;
+  try {
+    const result = await pool.query(
+      `DELETE FROM fechas_otros WHERE idfecha = $1 AND orden = $2`,
+      [idfecha, orden]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("❌ Error al eliminar gasto:", error);
+    throw new Error("Error al eliminar el gasto.");
+  }
 };
 
 // ========================================

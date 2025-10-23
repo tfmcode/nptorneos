@@ -29,6 +29,7 @@ import comprobantesRoutes from "./routes/comprobantesRoutes";
 import publicInscripcionesRoute from "./routes/publicInscripcionesRoute";
 import partidosJugadoresRoute from "./routes/partidosJugadoresRoute";
 import cajamovimientosRoutes from "./routes/cajamovimientosRoutes";
+import planillasPagosRoutes from "./routes/planillasPagoRoutes";
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use("/api/facturas", facturasRoutes);
 app.use("/api/comprobantes", comprobantesRoutes);
 app.use("/api/public/inscripciones", publicInscripcionesRoute);
 app.use("/api/cajamovimientos", cajamovimientosRoutes);
+app.use("/api/planillas-pago", planillasPagosRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Ruta no encontrada." });

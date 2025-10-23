@@ -20,6 +20,7 @@ import Facturas from "./Facturas";
 import Inscripciones from "./Inscripciones";
 import Resultados from "./Resultados";
 import CajaMovimientos from "./CajaMovimientos";
+import PlanillaPagos from "./PlanillaPagos";
 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -141,6 +142,8 @@ const System: React.FC = () => {
         return <Resultados />;
       case "Pagos":
         return <CajaMovimientos />;
+      case "Caja":
+        return <PlanillaPagos />;
       default:
         return (
           <div className="text-center text-white">

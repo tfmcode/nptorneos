@@ -156,10 +156,15 @@ export const addEquipoController = async (req: Request, res: Response) => {
   }
 };
 
+// ✅ CORREGIDO: Ahora usa (idfecha, orden) en lugar de id
 export const updateEquipoController = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-    const equipoActualizado = await planillasModel.updateEquipo(id, req.body);
+    const { idfecha, orden } = req.params;
+    const equipoActualizado = await planillasModel.updateEquipo(
+      Number(idfecha),
+      Number(orden),
+      req.body
+    );
     return res.status(200).json({
       message: "Equipo actualizado exitosamente.",
       equipo: equipoActualizado,
@@ -172,10 +177,14 @@ export const updateEquipoController = async (req: Request, res: Response) => {
   }
 };
 
+// ✅ CORREGIDO: Ahora usa (idfecha, orden) en lugar de id
 export const deleteEquipoController = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-    const deleted = await planillasModel.deleteEquipo(id);
+    const { idfecha, orden } = req.params;
+    const deleted = await planillasModel.deleteEquipo(
+      Number(idfecha),
+      Number(orden)
+    );
 
     if (!deleted) {
       return res.status(404).json({ message: "Equipo no encontrado." });

@@ -21,9 +21,8 @@ import { fetchSedes } from "../../store/slices/sedeSlice";
 import { fetchZonasByTorneo } from "../../store/slices/zonaSlice";
 import { PlanillaPago, PlanillasFiltros } from "../../types/planillasPago";
 
-import PlanillaDetalle from "../../components/planillasPago/PlanillaDetalle";
-
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import PlanillaDetalleTabs from "../../components/planillasPago/PlanillaDetalleTabs";
 
 const PlanillaPagos: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -379,7 +378,7 @@ const PlanillaPagos: React.FC = () => {
           }
         >
           {planillaActual && (
-            <PlanillaDetalle
+            <PlanillaDetalleTabs
               planillaCompleta={planillaActual}
               onClose={() => {
                 setIsModalOpen(false);

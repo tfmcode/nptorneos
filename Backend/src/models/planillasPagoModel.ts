@@ -1,5 +1,5 @@
 // ========================================
-// PLANILLAS DE PAGO MODEL - CORREGIDO
+// PLANILLAS DE PAGO MODEL - CORREGIDO CON SEDES
 // ========================================
 
 import { pool } from "../config/db";
@@ -27,24 +27,25 @@ export const getPlanillasByFiltros = async (
         p.id as partido_id,
         p.fecha,
         p.idsede,
+        s.nombre as sede_nombre,
         z.idtorneo,
         p.nrofecha as codfecha,
         t.nombre as torneo_nombre,
         z.nombre as zona_nombre,
         CASE 
-          WHEN MAX(wf.fhcierrecaja) IS NOT NULL THEN 'contabilizada'
-          WHEN MAX(wf.fhcierre) IS NOT NULL THEN 'cerrada'
-          WHEN COUNT(wf.idfecha) > 0 THEN 'abierta'
+          WHEN MAX(wtf.fhcierrecaja) IS NOT NULL THEN 'contabilizada'
+          WHEN MAX(wtf.fhcierre) IS NOT NULL THEN 'cerrada'
           ELSE 'abierta'
         END as estado,
-        MAX(wf.fhcierre) as fhcierre,
-        MAX(wf.fhcierrecaja) as fhcierrecaja,
-        COALESCE(SUM(wf.totcierre), 0) as totcierre,
-        COALESCE(SUM(wf.totefectivo), 0) as totefectivo
+        MAX(wtf.fhcierre) as fhcierre,
+        MAX(wtf.fhcierrecaja) as fhcierrecaja,
+        COALESCE(MAX(wtf.totcierre), 0) as totcierre,
+        COALESCE(MAX(wtf.totefectivo), 0) as totefectivo
       FROM partidos p
       INNER JOIN zonas z ON p.idzona = z.id
       INNER JOIN wtorneos t ON z.idtorneo = t.id
-      LEFT JOIN wfechas_equipos wf ON p.idfecha = wf.idfecha
+      LEFT JOIN sedes s ON p.idsede = s.id
+      LEFT JOIN wtorneos_fechas wtf ON p.idfecha = wtf.id
       WHERE p.fhbaja IS NULL
     `;
 
@@ -81,18 +82,18 @@ export const getPlanillasByFiltros = async (
 
     // GROUP BY necesario por las agregaciones
     query += `
-      GROUP BY p.id, p.fecha, p.idsede, z.idtorneo, p.nrofecha, t.nombre, z.nombre
+      GROUP BY p.id, p.fecha, p.idsede, s.nombre, z.idtorneo, p.nrofecha, t.nombre, z.nombre
     `;
 
     // Filtro por estado (después del GROUP BY)
     if (filtros.estado) {
       query += ` HAVING `;
       if (filtros.estado === "abierta") {
-        query += `(MAX(wf.fhcierre) IS NULL AND MAX(wf.fhcierrecaja) IS NULL)`;
+        query += `(MAX(wtf.fhcierre) IS NULL AND MAX(wtf.fhcierrecaja) IS NULL)`;
       } else if (filtros.estado === "cerrada") {
-        query += `(MAX(wf.fhcierre) IS NOT NULL AND MAX(wf.fhcierrecaja) IS NULL)`;
+        query += `(MAX(wtf.fhcierre) IS NOT NULL AND MAX(wtf.fhcierrecaja) IS NULL)`;
       } else if (filtros.estado === "contabilizada") {
-        query += `MAX(wf.fhcierrecaja) IS NOT NULL`;
+        query += `MAX(wtf.fhcierrecaja) IS NOT NULL`;
       }
     }
 
@@ -101,14 +102,17 @@ export const getPlanillasByFiltros = async (
     const { rows } = await pool.query(query, params);
 
     return rows.map((row: any) => ({
-      id: row.partido_id, // ← Usar partido_id como clave única
+      id: row.partido_id,
       idfecha: row.partido_id,
       fecha: row.fecha,
       idsede: row.idsede,
+      sede_nombre: row.sede_nombre,
       idtorneo: row.idtorneo,
       codfecha: row.codfecha,
       torneo: row.torneo_nombre,
+      torneo_nombre: row.torneo_nombre,
       zona: row.zona_nombre,
+      zona_nombre: row.zona_nombre,
       estado: row.estado,
       fhcierre: row.fhcierre,
       fhcierrecaja: row.fhcierrecaja,
@@ -127,33 +131,45 @@ export const getPlanillaByIdFecha = async (
   idfecha: number
 ): Promise<PlanillaCompleta | null> => {
   try {
-    // 1. Obtener datos del partido + planilla
+    // 1. Obtener datos del partido + planilla + nombres de equipos
     const planillaQuery = `
       SELECT 
         p.id as partido_id,
         p.fecha,
         p.idsede,
+        s.nombre as sede_nombre,
         z.idtorneo,
         p.nrofecha as codfecha,
-        wf.idfecha as planilla_id,
-        wf.idprofesor,
-        wf.idprofesor_cierre,
-        wf.idturno,
-        wf.observ,
-        wf.observ_caja,
-        wf.fhcarga,
-        wf.fhbaja,
-        wf.fhcierre,
-        wf.fhcierrecaja,
-        wf.idusrcierrecaja,
-        wf.totcierre,
-        wf.totefectivo,
+        wtf.id as planilla_id,
+        wtf.idprofesor,
+        wtf.idprofesor_cierre,
+        wtf.idturno,
+        wtf.observ,
+        wtf.observ_caja,
+        wtf.fhcarga,
+        wtf.fhbaja,
+        wtf.fhcierre,
+        wtf.fhcierrecaja,
+        wtf.idusrcierrecaja,
+        wtf.totcierre,
+        wtf.totefectivo,
         t.nombre as torneo_nombre,
-        z.nombre as zona_nombre
+        z.nombre as zona_nombre,
+        p.idequipo1,
+        p.idequipo2,
+        p.goles1,
+        p.goles2,
+        p.codestado,
+        p.arbitro,
+        e1.nombre as nombre_equipo1,
+        e2.nombre as nombre_equipo2
       FROM partidos p
       INNER JOIN zonas z ON p.idzona = z.id
       INNER JOIN wtorneos t ON z.idtorneo = t.id
-      LEFT JOIN wfechas_equipos wf ON p.idfecha = wf.idfecha
+      LEFT JOIN sedes s ON p.idsede = s.id
+      LEFT JOIN wtorneos_fechas wtf ON p.idfecha = wtf.id
+      LEFT JOIN equipos e1 ON p.idequipo1 = e1.id
+      LEFT JOIN equipos e2 ON p.idequipo2 = e2.id
       WHERE p.id = $1
     `;
 
@@ -170,6 +186,7 @@ export const getPlanillaByIdFecha = async (
       idfecha: row.partido_id,
       fecha: row.fecha,
       idsede: row.idsede,
+      sede_nombre: row.sede_nombre,
       idtorneo: row.idtorneo,
       codfecha: row.codfecha,
       idprofesor: row.idprofesor,
@@ -185,11 +202,25 @@ export const getPlanillaByIdFecha = async (
       totcierre: parseFloat(row.totcierre || "0"),
       totefectivo: parseFloat(row.totefectivo || "0"),
       torneo: row.torneo_nombre,
+      torneo_nombre: row.torneo_nombre,
       zona: row.zona_nombre,
+      zona_nombre: row.zona_nombre,
+      partido_info: {
+        nombre1: row.nombre_equipo1,
+        nombre2: row.nombre_equipo2,
+        goles1: row.goles1,
+        goles2: row.goles2,
+        codestado: row.codestado,
+        arbitro: row.arbitro,
+      },
     };
 
     // 2. Obtener todos los detalles
-    const equipos = await getEquiposByPlanilla(idfecha);
+    const equipos = await getEquiposByPlanilla(
+      idfecha,
+      row.nombre_equipo1,
+      row.nombre_equipo2
+    );
     const arbitros = await getArbitrosByPlanilla(idfecha);
     const canchas = await getCanchasByPlanilla(idfecha);
     const profesores = await getProfesoresByPlanilla(idfecha);
@@ -230,7 +261,7 @@ export const createPlanilla = async (
 ): Promise<PlanillaPago> => {
   try {
     // Verificar si ya existe
-    const existeQuery = `SELECT idfecha FROM wfechas_equipos WHERE idfecha = $1`;
+    const existeQuery = `SELECT id FROM wtorneos_fechas WHERE id = $1`;
     const existe = await pool.query(existeQuery, [idfecha]);
 
     if (existe.rows.length > 0) {
@@ -241,9 +272,11 @@ export const createPlanilla = async (
     const partidoQuery = `
       SELECT 
         p.fecha, 
-        p.idsede, 
+        p.idsede,
+        p.idsubsede,
         p.nrofecha as codfecha,
-        z.idtorneo
+        z.idtorneo,
+        p.idprofesor
       FROM partidos p
       INNER JOIN zonas z ON p.idzona = z.id
       WHERE p.id = $1
@@ -258,9 +291,9 @@ export const createPlanilla = async (
 
     // Crear planilla
     const insertQuery = `
-      INSERT INTO wfechas_equipos 
-        (idfecha, fecha, idsede, idtorneo, codfecha, fhcarga)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO wtorneos_fechas 
+        (id, fecha, idsede, idsubsede, idtorneo, codfecha, idprofesor, fhcarga)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       RETURNING *
     `;
 
@@ -268,8 +301,10 @@ export const createPlanilla = async (
       idfecha,
       partido.fecha,
       partido.idsede,
+      partido.idsubsede || null,
       partido.idtorneo,
       partido.codfecha,
+      partido.idprofesor || null,
     ]);
 
     return rows[0];
@@ -283,16 +318,22 @@ export const createPlanilla = async (
 // EQUIPOS
 // ========================================
 export const getEquiposByPlanilla = async (
-  idfecha: number
+  idfecha: number,
+  nombreEquipo1?: string,
+  nombreEquipo2?: string
 ): Promise<PlanillaEquipo[]> => {
   try {
-    // 1. Obtener equipos del partido
+    // Obtener información del partido
     const partidoQuery = `
       SELECT 
-        idequipo1,
-        idequipo2
-      FROM partidos
-      WHERE id = $1
+        p.idequipo1,
+        p.idequipo2,
+        e1.nombre as nombre_equipo1,
+        e2.nombre as nombre_equipo2
+      FROM partidos p
+      LEFT JOIN equipos e1 ON p.idequipo1 = e1.id
+      LEFT JOIN equipos e2 ON p.idequipo2 = e2.id
+      WHERE p.id = $1
     `;
     const partidoResult = await pool.query(partidoQuery, [idfecha]);
 
@@ -301,21 +342,33 @@ export const getEquiposByPlanilla = async (
     }
 
     const { idequipo1, idequipo2 } = partidoResult.rows[0];
+    const nombre1 = nombreEquipo1 || partidoResult.rows[0].nombre_equipo1;
+    const nombre2 = nombreEquipo2 || partidoResult.rows[0].nombre_equipo2;
 
-    // 2. Obtener registros de pago si existen
-    const equiposQuery = `
-      SELECT 
-        we.*
-      FROM wfechas_equipos we
-      WHERE we.idfecha = $1
-      ORDER BY we.orden
-    `;
-    const equiposResult = await pool.query(equiposQuery, [idfecha]);
+    // Verificar si existe la planilla en wtorneos_fechas
+    const planillaQuery = `SELECT id FROM wtorneos_fechas WHERE id = $1`;
+    const planillaResult = await pool.query(planillaQuery, [idfecha]);
 
-    // 3. Si hay registros, devolverlos
+    // Si no existe planilla, retornar array vacío
+    if (planillaResult.rows.length === 0) {
+      return [];
+    }
+
+    // Buscar registros de pago en las diferentes tablas posibles
+    // Primero intentar en fechas_equipos (si existe)
+    let equiposResult;
+    try {
+      equiposResult = await pool.query(
+        `SELECT * FROM fechas_equipos WHERE idfecha = $1 ORDER BY orden`,
+        [idfecha]
+      );
+    } catch {
+      // La tabla no existe, continuar sin datos
+      equiposResult = { rows: [] };
+    }
+
     if (equiposResult.rows.length > 0) {
-      return equiposResult.rows.map((row: any) => ({
-        id: row.id,
+      return equiposResult.rows.map((row: any, index: number) => ({
         idfecha: row.idfecha,
         orden: row.orden,
         idequipo: row.idequipo,
@@ -323,29 +376,29 @@ export const getEquiposByPlanilla = async (
         importe: parseFloat(row.importe || "0"),
         iddeposito: row.iddeposito,
         fhcarga: row.fhcarga,
+        nombre_equipo: index === 0 ? nombre1 : nombre2,
       }));
     }
 
-    // 4. Si no hay registros, crear entradas por defecto
-    const equiposDefault: PlanillaEquipo[] = [];
-
-    equiposDefault.push({
-      idfecha,
-      orden: 1,
-      idequipo: idequipo1,
-      tipopago: 3, // Fecha
-      importe: 0,
-      nombre_equipo: "Equipo Local",
-    });
-
-    equiposDefault.push({
-      idfecha,
-      orden: 2,
-      idequipo: idequipo2,
-      tipopago: 3, // Fecha
-      importe: 0,
-      nombre_equipo: "Equipo Visitante",
-    });
+    // Si no hay registros, crear estructura por defecto
+    const equiposDefault: PlanillaEquipo[] = [
+      {
+        idfecha,
+        orden: 1,
+        idequipo: idequipo1,
+        tipopago: 1, // Efectivo por defecto
+        importe: 0,
+        nombre_equipo: nombre1 || "Equipo Local",
+      },
+      {
+        idfecha,
+        orden: 2,
+        idequipo: idequipo2,
+        tipopago: 1, // Efectivo por defecto
+        importe: 0,
+        nombre_equipo: nombre2 || "Equipo Visitante",
+      },
+    ];
 
     return equiposDefault;
   } catch (error) {
@@ -358,13 +411,17 @@ export const addEquipo = async (
   equipo: Omit<PlanillaEquipo, "id">
 ): Promise<PlanillaEquipo> => {
   try {
-    // Calcular total
-    const total = equipo.importe;
-
+    // Verificar si la tabla fechas_equipos existe, si no, crearla o usar wtorneos_fechas
     const query = `
-      INSERT INTO wfechas_equipos 
+      INSERT INTO fechas_equipos 
         (idfecha, orden, idequipo, tipopago, importe, iddeposito, fhcarga)
       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      ON CONFLICT (idfecha, orden) 
+      DO UPDATE SET 
+        idequipo = EXCLUDED.idequipo,
+        tipopago = EXCLUDED.tipopago,
+        importe = EXCLUDED.importe,
+        iddeposito = EXCLUDED.iddeposito
       RETURNING *
     `;
 
@@ -373,7 +430,7 @@ export const addEquipo = async (
       equipo.orden,
       equipo.idequipo,
       equipo.tipopago,
-      total,
+      equipo.importe,
       equipo.iddeposito,
     ]);
 
@@ -388,56 +445,56 @@ export const addEquipo = async (
 };
 
 export const updateEquipo = async (
-  id: number,
+  idfecha: number,
+  orden: number,
   equipo: Partial<PlanillaEquipo>
 ): Promise<PlanillaEquipo> => {
   try {
-    // Si cambia el importe, recalcular
-    if (equipo.importe !== undefined) {
-      const query = `
-        UPDATE wfechas_equipos 
-        SET importe = $1
-        WHERE id = $2
-        RETURNING *
-      `;
-      const { rows } = await pool.query(query, [equipo.importe, id]);
-
-      // Actualizar totales
-      await recalcularTotalesPlanilla(Number(rows[0].idfecha));
-
-      return rows[0];
-    }
-
-    // Actualización genérica
     const updates: string[] = [];
     const values: any[] = [];
     let index = 1;
 
-    for (const key in equipo) {
-      if (
-        equipo[key as keyof PlanillaEquipo] !== undefined &&
-        key !== "id" &&
-        key !== "idfecha"
-      ) {
-        updates.push(`${key} = $${index}`);
-        values.push(equipo[key as keyof PlanillaEquipo]);
-        index++;
-      }
+    if (equipo.tipopago !== undefined) {
+      updates.push(`tipopago = $${index}`);
+      values.push(equipo.tipopago);
+      index++;
+    }
+
+    if (equipo.importe !== undefined) {
+      updates.push(`importe = $${index}`);
+      values.push(equipo.importe);
+      index++;
+    }
+
+    if (equipo.iddeposito !== undefined) {
+      updates.push(`iddeposito = $${index}`);
+      values.push(equipo.iddeposito);
+      index++;
     }
 
     if (updates.length === 0) {
       throw new Error("No hay datos para actualizar.");
     }
 
-    values.push(id);
+    values.push(idfecha);
+    values.push(orden);
+
     const query = `
-      UPDATE wfechas_equipos 
+      UPDATE fechas_equipos 
       SET ${updates.join(", ")}
-      WHERE id = $${index}
+      WHERE idfecha = $${index} AND orden = $${index + 1}
       RETURNING *
     `;
 
     const { rows } = await pool.query(query, values);
+
+    if (rows.length === 0) {
+      throw new Error("Equipo no encontrado");
+    }
+
+    // Actualizar totales
+    await recalcularTotalesPlanilla(idfecha);
+
     return rows[0];
   } catch (error) {
     console.error("Error en updateEquipo:", error);
@@ -445,21 +502,13 @@ export const updateEquipo = async (
   }
 };
 
-export const deleteEquipo = async (id: number): Promise<boolean> => {
+export const deleteEquipo = async (
+  idfecha: number,
+  orden: number
+): Promise<boolean> => {
   try {
-    // Obtener idfecha antes de borrar
-    const getQuery = `SELECT idfecha FROM wfechas_equipos WHERE id = $1`;
-    const getResult = await pool.query(getQuery, [id]);
-
-    if (getResult.rows.length === 0) {
-      throw new Error("Equipo no encontrado");
-    }
-
-    const idfecha = getResult.rows[0].idfecha;
-
-    // Borrar
-    const deleteQuery = `DELETE FROM wfechas_equipos WHERE id = $1`;
-    const result = await pool.query(deleteQuery, [id]);
+    const deleteQuery = `DELETE FROM fechas_equipos WHERE idfecha = $1 AND orden = $2`;
+    const result = await pool.query(deleteQuery, [idfecha, orden]);
 
     // Actualizar totales
     await recalcularTotalesPlanilla(idfecha);
@@ -487,8 +536,10 @@ export const getArbitrosByPlanilla = async (
         wa.partidos,
         wa.valor_partido,
         wa.total,
-        wa.fhcarga
+        wa.fhcarga,
+        a.nombre as nombre_arbitro
       FROM fechas_arbitros wa
+      LEFT JOIN arbitros a ON wa.idarbitro = a.id
       WHERE wa.idfecha = $1
       ORDER BY wa.orden
     `;
@@ -500,10 +551,11 @@ export const getArbitrosByPlanilla = async (
       orden: row.orden,
       idarbitro: row.idarbitro,
       idprofesor: row.idprofesor,
-      partidos: row.partidos,
+      partidos: parseFloat(row.partidos || "0"),
       valor_partido: parseFloat(row.valor_partido || "0"),
       total: parseFloat(row.total || "0"),
       fhcarga: row.fhcarga,
+      nombre_arbitro: row.nombre_arbitro,
     }));
   } catch (error) {
     console.error("Error en getArbitrosByPlanilla:", error);
@@ -515,13 +567,19 @@ export const addArbitro = async (
   arbitro: Omit<PlanillaArbitro, "total" | "fhcarga">
 ): Promise<PlanillaArbitro> => {
   try {
-    // Calcular total
     const total = Number(arbitro.partidos) * Number(arbitro.valor_partido);
 
     const query = `
       INSERT INTO fechas_arbitros 
         (idfecha, orden, idarbitro, idprofesor, partidos, valor_partido, total, fhcarga)
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      ON CONFLICT (idfecha, orden)
+      DO UPDATE SET
+        idarbitro = EXCLUDED.idarbitro,
+        idprofesor = EXCLUDED.idprofesor,
+        partidos = EXCLUDED.partidos,
+        valor_partido = EXCLUDED.valor_partido,
+        total = EXCLUDED.total
       RETURNING *
     `;
 
@@ -529,13 +587,12 @@ export const addArbitro = async (
       arbitro.idfecha,
       arbitro.orden,
       arbitro.idarbitro,
-      arbitro.idprofesor,
+      arbitro.idprofesor || null,
       arbitro.partidos,
       arbitro.valor_partido,
       total,
     ]);
 
-    // Actualizar total de la planilla
     await recalcularTotalesPlanilla(Number(arbitro.idfecha));
 
     return rows[0];
@@ -551,7 +608,6 @@ export const updateArbitro = async (
   arbitro: Partial<PlanillaArbitro>
 ): Promise<PlanillaArbitro> => {
   try {
-    // Obtener datos actuales
     const getCurrentQuery = `
       SELECT partidos, valor_partido 
       FROM fechas_arbitros 
@@ -564,20 +620,22 @@ export const updateArbitro = async (
     }
 
     const current = currentResult.rows[0];
-
-    // Calcular nuevo total
     const partidos = arbitro.partidos ?? current.partidos;
     const valor_partido = arbitro.valor_partido ?? current.valor_partido;
+    const idarbitro = arbitro.idarbitro ?? current.idarbitro;
+    const idprofesor = arbitro.idprofesor ?? current.idprofesor;
     const total = Number(partidos) * Number(valor_partido);
 
     const updateQuery = `
       UPDATE fechas_arbitros 
-      SET partidos = $1, valor_partido = $2, total = $3
-      WHERE idfecha = $4 AND orden = $5
+      SET idarbitro = $1, idprofesor = $2, partidos = $3, valor_partido = $4, total = $5
+      WHERE idfecha = $6 AND orden = $7
       RETURNING *
     `;
 
     const { rows } = await pool.query(updateQuery, [
+      idarbitro,
+      idprofesor,
       partidos,
       valor_partido,
       total,
@@ -585,8 +643,7 @@ export const updateArbitro = async (
       orden,
     ]);
 
-    // Actualizar totales
-    await recalcularTotalesPlanilla(Number(idfecha));
+    await recalcularTotalesPlanilla(idfecha);
 
     return rows[0];
   } catch (error) {
@@ -600,15 +657,9 @@ export const deleteArbitro = async (
   orden: number
 ): Promise<boolean> => {
   try {
-    const query = `
-      DELETE FROM fechas_arbitros 
-      WHERE idfecha = $1 AND orden = $2
-    `;
+    const query = `DELETE FROM fechas_arbitros WHERE idfecha = $1 AND orden = $2`;
     const result = await pool.query(query, [idfecha, orden]);
-
-    // Actualizar totales
     await recalcularTotalesPlanilla(idfecha);
-
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
     console.error("Error en deleteArbitro:", error);
@@ -623,13 +674,7 @@ export const getCanchasByPlanilla = async (
   idfecha: number
 ): Promise<PlanillaCancha[]> => {
   try {
-    const query = `
-      SELECT * 
-      FROM fechas_canchas 
-      WHERE idfecha = $1
-      ORDER BY orden
-    `;
-
+    const query = `SELECT * FROM fechas_canchas WHERE idfecha = $1 ORDER BY orden`;
     const { rows } = await pool.query(query, [idfecha]);
 
     return rows.map((row: any) => ({
@@ -668,7 +713,6 @@ export const addCancha = async (
     ]);
 
     await recalcularTotalesPlanilla(Number(cancha.idfecha));
-
     return rows[0];
   } catch (error) {
     console.error("Error en addCancha:", error);
@@ -713,8 +757,7 @@ export const updateCancha = async (
       orden,
     ]);
 
-    await recalcularTotalesPlanilla(Number(idfecha));
-
+    await recalcularTotalesPlanilla(idfecha);
     return rows[0];
   } catch (error) {
     console.error("Error en updateCancha:", error);
@@ -727,14 +770,9 @@ export const deleteCancha = async (
   orden: number
 ): Promise<boolean> => {
   try {
-    const query = `
-      DELETE FROM fechas_canchas 
-      WHERE idfecha = $1 AND orden = $2
-    `;
+    const query = `DELETE FROM fechas_canchas WHERE idfecha = $1 AND orden = $2`;
     const result = await pool.query(query, [idfecha, orden]);
-
     await recalcularTotalesPlanilla(idfecha);
-
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
     console.error("Error en deleteCancha:", error);
@@ -750,12 +788,14 @@ export const getProfesoresByPlanilla = async (
 ): Promise<PlanillaProfesor[]> => {
   try {
     const query = `
-      SELECT * 
-      FROM fechas_profes 
-      WHERE idfecha = $1
-      ORDER BY orden
+      SELECT 
+        fp.*,
+        p.nombre as nombre_profesor
+      FROM fechas_profes fp
+      LEFT JOIN profesores p ON fp.idprofesor = p.id
+      WHERE fp.idfecha = $1
+      ORDER BY fp.orden
     `;
-
     const { rows } = await pool.query(query, [idfecha]);
 
     return rows.map((row: any) => ({
@@ -766,6 +806,7 @@ export const getProfesoresByPlanilla = async (
       valor_hora: parseFloat(row.valor_hora || "0"),
       total: parseFloat(row.total || "0"),
       fhcarga: row.fhcarga,
+      nombre_profesor: row.nombre_profesor,
     }));
   } catch (error) {
     console.error("Error en getProfesoresByPlanilla:", error);
@@ -796,7 +837,6 @@ export const addProfesor = async (
     ]);
 
     await recalcularTotalesPlanilla(Number(profesor.idfecha));
-
     return rows[0];
   } catch (error) {
     console.error("Error en addProfesor:", error);
@@ -811,7 +851,7 @@ export const updateProfesor = async (
 ): Promise<PlanillaProfesor> => {
   try {
     const getCurrentQuery = `
-      SELECT horas, valor_hora 
+      SELECT horas, valor_hora, idprofesor
       FROM fechas_profes 
       WHERE idfecha = $1 AND orden = $2
     `;
@@ -824,16 +864,18 @@ export const updateProfesor = async (
     const current = currentResult.rows[0];
     const horas = profesor.horas ?? current.horas;
     const valor_hora = profesor.valor_hora ?? current.valor_hora;
+    const idprofesor = profesor.idprofesor ?? current.idprofesor;
     const total = Number(horas) * Number(valor_hora);
 
     const updateQuery = `
       UPDATE fechas_profes 
-      SET horas = $1, valor_hora = $2, total = $3
-      WHERE idfecha = $4 AND orden = $5
+      SET idprofesor = $1, horas = $2, valor_hora = $3, total = $4
+      WHERE idfecha = $5 AND orden = $6
       RETURNING *
     `;
 
     const { rows } = await pool.query(updateQuery, [
+      idprofesor,
       horas,
       valor_hora,
       total,
@@ -842,7 +884,6 @@ export const updateProfesor = async (
     ]);
 
     await recalcularTotalesPlanilla(idfecha);
-
     return rows[0];
   } catch (error) {
     console.error("Error en updateProfesor:", error);
@@ -855,14 +896,9 @@ export const deleteProfesor = async (
   orden: number
 ): Promise<boolean> => {
   try {
-    const query = `
-      DELETE FROM fechas_profes 
-      WHERE idfecha = $1 AND orden = $2
-    `;
+    const query = `DELETE FROM fechas_profes WHERE idfecha = $1 AND orden = $2`;
     const result = await pool.query(query, [idfecha, orden]);
-
     await recalcularTotalesPlanilla(idfecha);
-
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
     console.error("Error en deleteProfesor:", error);
@@ -878,12 +914,14 @@ export const getMedicoByPlanilla = async (
 ): Promise<PlanillaMedico[]> => {
   try {
     const query = `
-      SELECT * 
-      FROM fechas_medico 
-      WHERE idfecha = $1
-      ORDER BY orden
+      SELECT 
+        fm.*,
+        m.nombre as nombre_medico
+      FROM fechas_medico fm
+      LEFT JOIN medicos m ON fm.idmedico = m.id
+      WHERE fm.idfecha = $1
+      ORDER BY fm.orden
     `;
-
     const { rows } = await pool.query(query, [idfecha]);
 
     return rows.map((row: any) => ({
@@ -894,6 +932,7 @@ export const getMedicoByPlanilla = async (
       valor_hora: parseFloat(row.valor_hora || "0"),
       total: parseFloat(row.total || "0"),
       fhcarga: row.fhcarga,
+      nombre_medico: row.nombre_medico,
     }));
   } catch (error) {
     console.error("Error en getMedicoByPlanilla:", error);
@@ -924,7 +963,6 @@ export const addMedico = async (
     ]);
 
     await recalcularTotalesPlanilla(Number(medico.idfecha));
-
     return rows[0];
   } catch (error) {
     console.error("Error en addMedico:", error);
@@ -939,7 +977,7 @@ export const updateMedico = async (
 ): Promise<PlanillaMedico> => {
   try {
     const getCurrentQuery = `
-      SELECT horas, valor_hora 
+      SELECT horas, valor_hora, idmedico
       FROM fechas_medico 
       WHERE idfecha = $1 AND orden = $2
     `;
@@ -952,16 +990,18 @@ export const updateMedico = async (
     const current = currentResult.rows[0];
     const horas = medico.horas ?? current.horas;
     const valor_hora = medico.valor_hora ?? current.valor_hora;
+    const idmedico = medico.idmedico ?? current.idmedico;
     const total = Number(horas) * Number(valor_hora);
 
     const updateQuery = `
       UPDATE fechas_medico 
-      SET horas = $1, valor_hora = $2, total = $3
-      WHERE idfecha = $4 AND orden = $5
+      SET idmedico = $1, horas = $2, valor_hora = $3, total = $4
+      WHERE idfecha = $5 AND orden = $6
       RETURNING *
     `;
 
     const { rows } = await pool.query(updateQuery, [
+      idmedico,
       horas,
       valor_hora,
       total,
@@ -970,7 +1010,6 @@ export const updateMedico = async (
     ]);
 
     await recalcularTotalesPlanilla(idfecha);
-
     return rows[0];
   } catch (error) {
     console.error("Error en updateMedico:", error);
@@ -983,14 +1022,9 @@ export const deleteMedico = async (
   orden: number
 ): Promise<boolean> => {
   try {
-    const query = `
-      DELETE FROM fechas_medico 
-      WHERE idfecha = $1 AND orden = $2
-    `;
+    const query = `DELETE FROM fechas_medico WHERE idfecha = $1 AND orden = $2`;
     const result = await pool.query(query, [idfecha, orden]);
-
     await recalcularTotalesPlanilla(idfecha);
-
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
     console.error("Error en deleteMedico:", error);
@@ -1006,12 +1040,14 @@ export const getOtrosGastosByPlanilla = async (
 ): Promise<PlanillaOtroGasto[]> => {
   try {
     const query = `
-      SELECT * 
-      FROM fechas_otros 
-      WHERE idfecha = $1
-      ORDER BY orden
+      SELECT 
+        fo.*,
+        g.descripcion as descripcion_gasto
+      FROM fechas_otros fo
+      LEFT JOIN gastos g ON fo.codgasto = g.id
+      WHERE fo.idfecha = $1
+      ORDER BY fo.orden
     `;
-
     const { rows } = await pool.query(query, [idfecha]);
 
     return rows.map((row: any) => ({
@@ -1023,6 +1059,7 @@ export const getOtrosGastosByPlanilla = async (
       valor_unidad: parseFloat(row.valor_unidad || "0"),
       total: parseFloat(row.total || "0"),
       fhcarga: row.fhcarga,
+      descripcion_gasto: row.descripcion_gasto,
     }));
   } catch (error) {
     console.error("Error en getOtrosGastosByPlanilla:", error);
@@ -1047,14 +1084,13 @@ export const addOtroGasto = async (
       gasto.idfecha,
       gasto.orden,
       gasto.codgasto,
-      gasto.idprofesor,
+      gasto.idprofesor || null,
       gasto.cantidad,
       gasto.valor_unidad,
       total,
     ]);
 
     await recalcularTotalesPlanilla(Number(gasto.idfecha));
-
     return rows[0];
   } catch (error) {
     console.error("Error en addOtroGasto:", error);
@@ -1069,7 +1105,7 @@ export const updateOtroGasto = async (
 ): Promise<PlanillaOtroGasto> => {
   try {
     const getCurrentQuery = `
-      SELECT cantidad, valor_unidad 
+      SELECT cantidad, valor_unidad, codgasto, idprofesor
       FROM fechas_otros 
       WHERE idfecha = $1 AND orden = $2
     `;
@@ -1082,16 +1118,20 @@ export const updateOtroGasto = async (
     const current = currentResult.rows[0];
     const cantidad = gasto.cantidad ?? current.cantidad;
     const valor_unidad = gasto.valor_unidad ?? current.valor_unidad;
+    const codgasto = gasto.codgasto ?? current.codgasto;
+    const idprofesor = gasto.idprofesor ?? current.idprofesor;
     const total = Number(cantidad) * Number(valor_unidad);
 
     const updateQuery = `
       UPDATE fechas_otros 
-      SET cantidad = $1, valor_unidad = $2, total = $3
-      WHERE idfecha = $4 AND orden = $5
+      SET codgasto = $1, idprofesor = $2, cantidad = $3, valor_unidad = $4, total = $5
+      WHERE idfecha = $6 AND orden = $7
       RETURNING *
     `;
 
     const { rows } = await pool.query(updateQuery, [
+      codgasto,
+      idprofesor,
       cantidad,
       valor_unidad,
       total,
@@ -1100,7 +1140,6 @@ export const updateOtroGasto = async (
     ]);
 
     await recalcularTotalesPlanilla(idfecha);
-
     return rows[0];
   } catch (error) {
     console.error("Error en updateOtroGasto:", error);
@@ -1113,14 +1152,9 @@ export const deleteOtroGasto = async (
   orden: number
 ): Promise<boolean> => {
   try {
-    const query = `
-      DELETE FROM fechas_otros 
-      WHERE idfecha = $1 AND orden = $2
-    `;
+    const query = `DELETE FROM fechas_otros WHERE idfecha = $1 AND orden = $2`;
     const result = await pool.query(query, [idfecha, orden]);
-
     await recalcularTotalesPlanilla(idfecha);
-
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
     console.error("Error en deleteOtroGasto:", error);
@@ -1214,11 +1248,11 @@ const recalcularTotalesPlanilla = async (idfecha: number): Promise<void> => {
       otros_gastos
     );
 
-    // Actualizar en wfechas_equipos
+    // Actualizar en wtorneos_fechas
     const updateQuery = `
-      UPDATE wfechas_equipos 
+      UPDATE wtorneos_fechas 
       SET totcierre = $1, totefectivo = $2
-      WHERE idfecha = $3
+      WHERE id = $3
     `;
 
     await pool.query(updateQuery, [
@@ -1228,7 +1262,7 @@ const recalcularTotalesPlanilla = async (idfecha: number): Promise<void> => {
     ]);
   } catch (error) {
     console.error("Error en recalcularTotalesPlanilla:", error);
-    throw error;
+    // No lanzar el error para no bloquear otras operaciones
   }
 };
 
@@ -1241,11 +1275,10 @@ export const cerrarPlanilla = async (
 ): Promise<void> => {
   try {
     const query = `
-      UPDATE wfechas_equipos 
+      UPDATE wtorneos_fechas 
       SET fhcierre = NOW(), idprofesor_cierre = $1
-      WHERE idfecha = $2
+      WHERE id = $2
     `;
-
     await pool.query(query, [idprofesor, idfecha]);
   } catch (error) {
     console.error("Error en cerrarPlanilla:", error);
@@ -1262,11 +1295,10 @@ export const cerrarCaja = async (
 ): Promise<void> => {
   try {
     const query = `
-      UPDATE wfechas_equipos 
+      UPDATE wtorneos_fechas 
       SET fhcierrecaja = NOW(), idusrcierrecaja = $1
-      WHERE idfecha = $2
+      WHERE id = $2
     `;
-
     await pool.query(query, [idusuario, idfecha]);
   } catch (error) {
     console.error("Error en cerrarCaja:", error);

@@ -13,8 +13,8 @@ export interface PlanillaPago {
   observ_caja?: string;
   fhcarga?: string;
   fhbaja?: string;
-  fhcierre?: string;
-  fhcierrecaja?: string;
+  fhcierre?: string; // ← Ahora retornado por getPlanillasByFiltros
+  fhcierrecaja?: string; // ← Ahora retornado por getPlanillasByFiltros
   idusrcierrecaja?: number;
   totcierre?: number;
   totefectivo?: number;
@@ -25,7 +25,11 @@ export interface PlanillaPago {
   sede_nombre?: string;
   subsede_nombre?: string;
   torneo_nombre?: string;
+  torneo?: string; // ← Alias para torneo_nombre
+  zona?: string; // ← Nuevo campo agregado
+  zona_nombre?: string; // ← Alias para zona
   profesor_nombre?: string;
+  estado?: string; // ← Campo calculado
   [key: string]: unknown;
 }
 

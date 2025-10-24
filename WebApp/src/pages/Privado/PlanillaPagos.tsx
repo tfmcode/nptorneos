@@ -11,7 +11,6 @@ import {
   PopupNotificacion,
 } from "../../components/common";
 
-// 👉 Importá del slice correcto (singular) y con los nombres reales exportados:
 import {
   getPlanillasByFiltros,
   getPlanillaCompleta,
@@ -21,7 +20,6 @@ import { fetchTorneos } from "../../store/slices/torneoSlice";
 import { fetchSedes } from "../../store/slices/sedeSlice";
 import { PlanillaPago, PlanillasFiltros } from "../../types/planillasPago";
 
-// 👉 Ruta en SINGULAR para el detalle:
 import PlanillaDetalle from "../../components/planillasPago/PlanillaDetalle";
 
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
@@ -29,8 +27,6 @@ import { DocumentTextIcon } from "@heroicons/react/24/outline";
 const PlanillaPagos: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
-  // ⚠️ Si tu key del reducer en el rootReducer es "planillasPago" (singular),
-  // cambiá acá a state.planillasPago. Lo dejo en plural porque así venías usándolo.
   const { planillas, planillaActual, loading, error } = useSelector(
     (state: RootState) => state.planillasPagos
   );
@@ -217,7 +213,7 @@ const PlanillaPagos: React.FC = () => {
                   <th className="px-4 py-2 text-left">Fecha</th>
                   <th className="px-4 py-2 text-left">Sede</th>
                   <th className="px-4 py-2 text-left">Torneo</th>
-                  <th className="px-4 py-2 text-left">Profesor</th>
+                  <th className="px-4 py-2 text-left">Zona</th>
                   <th className="px-4 py-2 text-center">Estado</th>
                   <th className="px-4 py-2 text-right">Total Caja</th>
                   <th className="px-4 py-2 text-center">Acciones</th>
@@ -226,7 +222,7 @@ const PlanillaPagos: React.FC = () => {
               <tbody>
                 {planillas.map((planilla: PlanillaPago) => (
                   <tr
-                    key={planilla.id}
+                    key={`planilla-${planilla.idfecha}`}
                     className="border-t hover:bg-gray-50 cursor-pointer"
                     onClick={() => handleVerDetalle(planilla)}
                   >
@@ -237,9 +233,7 @@ const PlanillaPagos: React.FC = () => {
                     <td className="px-4 py-2">
                       {planilla.torneo_nombre || "-"}
                     </td>
-                    <td className="px-4 py-2">
-                      {planilla.profesor_nombre || "-"}
-                    </td>
+                    <td className="px-4 py-2">{planilla.zona || "-"}</td>
                     <td className="px-4 py-2 text-center">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-medium ${getEstadoColor(

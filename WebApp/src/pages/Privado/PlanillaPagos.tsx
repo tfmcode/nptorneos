@@ -15,7 +15,6 @@ import {
 import {
   getPlanillasByFiltros,
   getPlanillaCompleta,
-  deletePlanilla,
 } from "../../store/slices/planillasPagosSlice";
 
 import { fetchTorneos } from "../../store/slices/torneoSlice";
@@ -25,7 +24,7 @@ import { PlanillaPago, PlanillasFiltros } from "../../types/planillasPago";
 // 👉 Ruta en SINGULAR para el detalle:
 import PlanillaDetalle from "../../components/planillasPago/PlanillaDetalle";
 
-import { TrashIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { DocumentTextIcon } from "@heroicons/react/24/outline";
 
 const PlanillaPagos: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -76,35 +75,6 @@ const PlanillaPagos: React.FC = () => {
       await dispatch(getPlanillaCompleta(planilla.idfecha));
       setSelectedPlanilla(planilla);
       setIsModalOpen(true);
-    }
-  };
-
-  const handleEliminar = async (planilla: PlanillaPago) => {
-    if (!planilla.id) return;
-
-    if (
-      !confirm(
-        `¿Está seguro de eliminar la planilla del ${planilla.fecha}? Esta acción no se puede deshacer.`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      // createAsyncThunk soporta .unwrap(), lo dejo para manejo claro de errores
-      await dispatch(deletePlanilla(planilla.id)).unwrap();
-      setPopup({
-        open: true,
-        type: "success",
-        message: "Planilla eliminada exitosamente",
-      });
-      handleFiltrar();
-    } catch (err) {
-      setPopup({
-        open: true,
-        type: "error",
-        message: `Error al eliminar planilla: ${String(err)}`,
-      });
     }
   };
 
@@ -294,18 +264,6 @@ const PlanillaPagos: React.FC = () => {
                         >
                           <DocumentTextIcon className="h-5 w-5" />
                         </button>
-                        {!planilla.fhcierre && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEliminar(planilla);
-                            }}
-                            className="text-red-600 hover:text-red-800"
-                            title="Eliminar"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

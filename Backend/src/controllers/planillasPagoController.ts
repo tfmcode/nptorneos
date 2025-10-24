@@ -41,7 +41,7 @@ export const getPlanillaCompletaController = async (
       return res.status(400).json({ message: "ID de fecha inválido." });
     }
 
-    const planillaCompleta = await planillasModel.getPlanillaCompleta(idfecha);
+    const planillaCompleta = await planillasModel.getPlanillaByIdFecha(idfecha);
 
     if (!planillaCompleta) {
       return res.status(404).json({ message: "Planilla no encontrada." });
@@ -62,22 +62,12 @@ export const getPlanillaCompletaController = async (
 
 export const createPlanillaController = async (req: Request, res: Response) => {
   try {
-    const {
-      idfecha,
-      fecha,
-      idsede,
-      idsubsede,
-      idtorneo,
-      codfecha,
-      idprofesor,
-      idturno,
-      observ,
-    } = req.body;
+    const { idfecha } = req.body;
 
-    // Validaciones
-    if (!idfecha || !fecha || !idsede || !idtorneo) {
+    // Validación
+    if (!idfecha) {
       return res.status(400).json({
-        message: "Campos obligatorios: idfecha, fecha, idsede, idtorneo",
+        message: "Campo obligatorio: idfecha",
       });
     }
 
@@ -89,17 +79,7 @@ export const createPlanillaController = async (req: Request, res: Response) => {
       });
     }
 
-    const nuevaPlanilla = await planillasModel.createPlanilla({
-      idfecha,
-      fecha,
-      idsede,
-      idsubsede,
-      idtorneo,
-      codfecha,
-      idprofesor,
-      idturno,
-      observ,
-    });
+    const nuevaPlanilla = await planillasModel.createPlanilla(idfecha);
 
     return res.status(201).json({
       message: "Planilla creada exitosamente.",
@@ -112,52 +92,24 @@ export const createPlanillaController = async (req: Request, res: Response) => {
 };
 
 // ========================================
-// ACTUALIZAR PLANILLA
-// ========================================
-
-export const updatePlanillaController = async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-    const datosActualizados = req.body;
-
-    const planillaActualizada = await planillasModel.updatePlanilla(
-      id,
-      datosActualizados
-    );
-
-    if (!planillaActualizada) {
-      return res.status(404).json({ message: "Planilla no encontrada." });
-    }
-
-    return res.status(200).json({
-      message: "Planilla actualizada exitosamente.",
-      planilla: planillaActualizada,
-    });
-  } catch (error) {
-    console.error("❌ Error al actualizar planilla:", error);
-    return res
-      .status(500)
-      .json({ message: "Error al actualizar planilla.", error });
-  }
-};
-
-// ========================================
 // CERRAR PLANILLA
 // ========================================
 
 export const cerrarPlanillaController = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
+    const idfecha = Number(req.params.idfecha);
+    const { idprofesor } = req.body;
 
-    const planillaCerrada = await planillasModel.cerrarPlanilla(id);
-
-    if (!planillaCerrada) {
-      return res.status(404).json({ message: "Planilla no encontrada." });
+    if (!idprofesor) {
+      return res.status(400).json({
+        message: "Se requiere idprofesor para cerrar la planilla.",
+      });
     }
+
+    await planillasModel.cerrarPlanilla(idfecha, idprofesor);
 
     return res.status(200).json({
       message: "Planilla cerrada exitosamente.",
-      planilla: planillaCerrada,
     });
   } catch (error) {
     console.error("❌ Error al cerrar planilla:", error);
@@ -168,61 +120,22 @@ export const cerrarPlanillaController = async (req: Request, res: Response) => {
 };
 
 // ========================================
-// CONTABILIZAR PLANILLA
+// CERRAR CAJA (CONTABILIZAR)
 // ========================================
 
-export const contabilizarPlanillaController = async (
-  req: Request,
-  res: Response
-) => {
+export const cerrarCajaController = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
+    const idfecha = Number(req.params.idfecha);
     const idusuario = req.body.idusuario || 1; // Debería venir del middleware de auth
 
-    const planillaContabilizada = await planillasModel.contabilizarPlanilla(
-      id,
-      idusuario
-    );
-
-    if (!planillaContabilizada) {
-      return res.status(404).json({
-        message: "Planilla no encontrada o no está cerrada.",
-      });
-    }
+    await planillasModel.cerrarCaja(idfecha, idusuario);
 
     return res.status(200).json({
-      message: "Planilla contabilizada exitosamente.",
-      planilla: planillaContabilizada,
+      message: "Caja cerrada (contabilizada) exitosamente.",
     });
   } catch (error) {
-    console.error("❌ Error al contabilizar planilla:", error);
-    return res
-      .status(500)
-      .json({ message: "Error al contabilizar planilla.", error });
-  }
-};
-
-// ========================================
-// ELIMINAR PLANILLA
-// ========================================
-
-export const deletePlanillaController = async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-    const deleted = await planillasModel.deletePlanilla(id);
-
-    if (!deleted) {
-      return res.status(404).json({ message: "Planilla no encontrada." });
-    }
-
-    return res.status(200).json({
-      message: "Planilla eliminada exitosamente.",
-    });
-  } catch (error) {
-    console.error("❌ Error al eliminar planilla:", error);
-    return res
-      .status(500)
-      .json({ message: "Error al eliminar planilla.", error });
+    console.error("❌ Error al cerrar caja:", error);
+    return res.status(500).json({ message: "Error al cerrar caja.", error });
   }
 };
 
@@ -230,26 +143,39 @@ export const deletePlanillaController = async (req: Request, res: Response) => {
 // EQUIPOS
 // ========================================
 
-export const saveEquipoController = async (req: Request, res: Response) => {
+export const addEquipoController = async (req: Request, res: Response) => {
   try {
-    const equipoGuardado = await planillasModel.saveEquipoPlanilla(req.body);
-    return res.status(200).json({
-      message: "Equipo guardado exitosamente.",
+    const equipoGuardado = await planillasModel.addEquipo(req.body);
+    return res.status(201).json({
+      message: "Equipo agregado exitosamente.",
       equipo: equipoGuardado,
     });
   } catch (error) {
-    console.error("❌ Error al guardar equipo:", error);
-    return res.status(500).json({ message: "Error al guardar equipo.", error });
+    console.error("❌ Error al agregar equipo:", error);
+    return res.status(500).json({ message: "Error al agregar equipo.", error });
+  }
+};
+
+export const updateEquipoController = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const equipoActualizado = await planillasModel.updateEquipo(id, req.body);
+    return res.status(200).json({
+      message: "Equipo actualizado exitosamente.",
+      equipo: equipoActualizado,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar equipo:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar equipo.", error });
   }
 };
 
 export const deleteEquipoController = async (req: Request, res: Response) => {
   try {
-    const { idfecha, orden } = req.params;
-    const deleted = await planillasModel.deleteEquipoPlanilla(
-      Number(idfecha),
-      Number(orden)
-    );
+    const id = Number(req.params.id);
+    const deleted = await planillasModel.deleteEquipo(id);
 
     if (!deleted) {
       return res.status(404).json({ message: "Equipo no encontrado." });
@@ -268,25 +194,45 @@ export const deleteEquipoController = async (req: Request, res: Response) => {
 // ÁRBITROS
 // ========================================
 
-export const saveArbitroController = async (req: Request, res: Response) => {
+export const addArbitroController = async (req: Request, res: Response) => {
   try {
-    const arbitroGuardado = await planillasModel.saveArbitroPlanilla(req.body);
-    return res.status(200).json({
-      message: "Árbitro guardado exitosamente.",
+    const arbitroGuardado = await planillasModel.addArbitro(req.body);
+    return res.status(201).json({
+      message: "Árbitro agregado exitosamente.",
       arbitro: arbitroGuardado,
     });
   } catch (error) {
-    console.error("❌ Error al guardar árbitro:", error);
+    console.error("❌ Error al agregar árbitro:", error);
     return res
       .status(500)
-      .json({ message: "Error al guardar árbitro.", error });
+      .json({ message: "Error al agregar árbitro.", error });
+  }
+};
+
+export const updateArbitroController = async (req: Request, res: Response) => {
+  try {
+    const { idfecha, orden } = req.params;
+    const arbitroActualizado = await planillasModel.updateArbitro(
+      Number(idfecha),
+      Number(orden),
+      req.body
+    );
+    return res.status(200).json({
+      message: "Árbitro actualizado exitosamente.",
+      arbitro: arbitroActualizado,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar árbitro:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar árbitro.", error });
   }
 };
 
 export const deleteArbitroController = async (req: Request, res: Response) => {
   try {
     const { idfecha, orden } = req.params;
-    const deleted = await planillasModel.deleteArbitroPlanilla(
+    const deleted = await planillasModel.deleteArbitro(
       Number(idfecha),
       Number(orden)
     );
@@ -308,23 +254,43 @@ export const deleteArbitroController = async (req: Request, res: Response) => {
 // CANCHAS
 // ========================================
 
-export const saveCanchaController = async (req: Request, res: Response) => {
+export const addCanchaController = async (req: Request, res: Response) => {
   try {
-    const canchaGuardada = await planillasModel.saveCanchaPlanilla(req.body);
-    return res.status(200).json({
-      message: "Cancha guardada exitosamente.",
+    const canchaGuardada = await planillasModel.addCancha(req.body);
+    return res.status(201).json({
+      message: "Cancha agregada exitosamente.",
       cancha: canchaGuardada,
     });
   } catch (error) {
-    console.error("❌ Error al guardar cancha:", error);
-    return res.status(500).json({ message: "Error al guardar cancha.", error });
+    console.error("❌ Error al agregar cancha:", error);
+    return res.status(500).json({ message: "Error al agregar cancha.", error });
+  }
+};
+
+export const updateCanchaController = async (req: Request, res: Response) => {
+  try {
+    const { idfecha, orden } = req.params;
+    const canchaActualizada = await planillasModel.updateCancha(
+      Number(idfecha),
+      Number(orden),
+      req.body
+    );
+    return res.status(200).json({
+      message: "Cancha actualizada exitosamente.",
+      cancha: canchaActualizada,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar cancha:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar cancha.", error });
   }
 };
 
 export const deleteCanchaController = async (req: Request, res: Response) => {
   try {
     const { idfecha, orden } = req.params;
-    const deleted = await planillasModel.deleteCanchaPlanilla(
+    const deleted = await planillasModel.deleteCancha(
       Number(idfecha),
       Number(orden)
     );
@@ -346,27 +312,45 @@ export const deleteCanchaController = async (req: Request, res: Response) => {
 // PROFESORES
 // ========================================
 
-export const saveProfesorController = async (req: Request, res: Response) => {
+export const addProfesorController = async (req: Request, res: Response) => {
   try {
-    const profesorGuardado = await planillasModel.saveProfesorPlanilla(
-      req.body
-    );
-    return res.status(200).json({
-      message: "Profesor guardado exitosamente.",
+    const profesorGuardado = await planillasModel.addProfesor(req.body);
+    return res.status(201).json({
+      message: "Profesor agregado exitosamente.",
       profesor: profesorGuardado,
     });
   } catch (error) {
-    console.error("❌ Error al guardar profesor:", error);
+    console.error("❌ Error al agregar profesor:", error);
     return res
       .status(500)
-      .json({ message: "Error al guardar profesor.", error });
+      .json({ message: "Error al agregar profesor.", error });
+  }
+};
+
+export const updateProfesorController = async (req: Request, res: Response) => {
+  try {
+    const { idfecha, orden } = req.params;
+    const profesorActualizado = await planillasModel.updateProfesor(
+      Number(idfecha),
+      Number(orden),
+      req.body
+    );
+    return res.status(200).json({
+      message: "Profesor actualizado exitosamente.",
+      profesor: profesorActualizado,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar profesor:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar profesor.", error });
   }
 };
 
 export const deleteProfesorController = async (req: Request, res: Response) => {
   try {
     const { idfecha, orden } = req.params;
-    const deleted = await planillasModel.deleteProfesorPlanilla(
+    const deleted = await planillasModel.deleteProfesor(
       Number(idfecha),
       Number(orden)
     );
@@ -390,23 +374,43 @@ export const deleteProfesorController = async (req: Request, res: Response) => {
 // SERVICIO MÉDICO
 // ========================================
 
-export const saveMedicoController = async (req: Request, res: Response) => {
+export const addMedicoController = async (req: Request, res: Response) => {
   try {
-    const medicoGuardado = await planillasModel.saveMedicoPlanilla(req.body);
-    return res.status(200).json({
-      message: "Médico guardado exitosamente.",
+    const medicoGuardado = await planillasModel.addMedico(req.body);
+    return res.status(201).json({
+      message: "Médico agregado exitosamente.",
       medico: medicoGuardado,
     });
   } catch (error) {
-    console.error("❌ Error al guardar médico:", error);
-    return res.status(500).json({ message: "Error al guardar médico.", error });
+    console.error("❌ Error al agregar médico:", error);
+    return res.status(500).json({ message: "Error al agregar médico.", error });
+  }
+};
+
+export const updateMedicoController = async (req: Request, res: Response) => {
+  try {
+    const { idfecha, orden } = req.params;
+    const medicoActualizado = await planillasModel.updateMedico(
+      Number(idfecha),
+      Number(orden),
+      req.body
+    );
+    return res.status(200).json({
+      message: "Médico actualizado exitosamente.",
+      medico: medicoActualizado,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar médico:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar médico.", error });
   }
 };
 
 export const deleteMedicoController = async (req: Request, res: Response) => {
   try {
     const { idfecha, orden } = req.params;
-    const deleted = await planillasModel.deleteMedicoPlanilla(
+    const deleted = await planillasModel.deleteMedico(
       Number(idfecha),
       Number(orden)
     );
@@ -428,16 +432,39 @@ export const deleteMedicoController = async (req: Request, res: Response) => {
 // OTROS GASTOS
 // ========================================
 
-export const saveOtroGastoController = async (req: Request, res: Response) => {
+export const addOtroGastoController = async (req: Request, res: Response) => {
   try {
-    const gastoGuardado = await planillasModel.saveOtroGastoPlanilla(req.body);
-    return res.status(200).json({
-      message: "Gasto guardado exitosamente.",
+    const gastoGuardado = await planillasModel.addOtroGasto(req.body);
+    return res.status(201).json({
+      message: "Gasto agregado exitosamente.",
       gasto: gastoGuardado,
     });
   } catch (error) {
-    console.error("❌ Error al guardar gasto:", error);
-    return res.status(500).json({ message: "Error al guardar gasto.", error });
+    console.error("❌ Error al agregar gasto:", error);
+    return res.status(500).json({ message: "Error al agregar gasto.", error });
+  }
+};
+
+export const updateOtroGastoController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { idfecha, orden } = req.params;
+    const gastoActualizado = await planillasModel.updateOtroGasto(
+      Number(idfecha),
+      Number(orden),
+      req.body
+    );
+    return res.status(200).json({
+      message: "Gasto actualizado exitosamente.",
+      gasto: gastoActualizado,
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar gasto:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar gasto.", error });
   }
 };
 
@@ -447,7 +474,7 @@ export const deleteOtroGastoController = async (
 ) => {
   try {
     const { idfecha, orden } = req.params;
-    const deleted = await planillasModel.deleteOtroGastoPlanilla(
+    const deleted = await planillasModel.deleteOtroGasto(
       Number(idfecha),
       Number(orden)
     );

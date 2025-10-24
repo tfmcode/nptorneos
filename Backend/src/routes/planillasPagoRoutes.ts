@@ -7,21 +7,25 @@ import {
   getPlanillasController,
   getPlanillaCompletaController,
   createPlanillaController,
-  updatePlanillaController,
   cerrarPlanillaController,
-  contabilizarPlanillaController,
-  deletePlanillaController,
-  saveEquipoController,
+  cerrarCajaController,
+  addEquipoController,
+  updateEquipoController,
   deleteEquipoController,
-  saveArbitroController,
+  addArbitroController,
+  updateArbitroController,
   deleteArbitroController,
-  saveCanchaController,
+  addCanchaController,
+  updateCanchaController,
   deleteCanchaController,
-  saveProfesorController,
+  addProfesorController,
+  updateProfesorController,
   deleteProfesorController,
-  saveMedicoController,
+  addMedicoController,
+  updateMedicoController,
   deleteMedicoController,
-  saveOtroGastoController,
+  addOtroGastoController,
+  updateOtroGastoController,
   deleteOtroGastoController,
 } from "../controllers/planillasPagoController";
 
@@ -66,94 +70,42 @@ router.post(
     body("idfecha")
       .isInt()
       .withMessage("El ID de fecha es obligatorio y debe ser un número"),
-    body("fecha")
-      .notEmpty()
-      .withMessage("La fecha es obligatoria")
-      .isISO8601()
-      .withMessage("Formato de fecha inválido"),
-    body("idsede")
-      .isInt()
-      .withMessage("El ID de sede es obligatorio y debe ser un número"),
-    body("idtorneo")
-      .isInt()
-      .withMessage("El ID de torneo es obligatorio y debe ser un número"),
-    body("idsubsede").optional().isInt().withMessage("ID de subsede inválido"),
-    body("codfecha").optional().isInt().withMessage("Código de fecha inválido"),
-    body("idprofesor")
-      .optional()
-      .isInt()
-      .withMessage("ID de profesor inválido"),
-    body("idturno").optional().isInt().withMessage("ID de turno inválido"),
-    body("observ").optional().isString().withMessage("Observaciones inválidas"),
   ],
   validateRequest,
   asyncHandler(createPlanillaController)
 );
 
-// PUT /api/planillas-pago/:id - Actualizar planilla
-router.put(
-  "/:id",
+// POST /api/planillas-pago/:idfecha/cerrar - Cerrar planilla
+router.post(
+  "/:idfecha/cerrar",
   authMiddleware,
   [
-    param("id").isInt().withMessage("ID de planilla inválido"),
-    body("fecha")
-      .optional()
-      .isISO8601()
-      .withMessage("Formato de fecha inválido"),
-    body("idsede").optional().isInt().withMessage("ID de sede inválido"),
-    body("idsubsede").optional().isInt().withMessage("ID de subsede inválido"),
-    body("idtorneo").optional().isInt().withMessage("ID de torneo inválido"),
-    body("codfecha").optional().isInt().withMessage("Código de fecha inválido"),
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
     body("idprofesor")
-      .optional()
       .isInt()
-      .withMessage("ID de profesor inválido"),
-    body("idturno").optional().isInt().withMessage("ID de turno inválido"),
-    body("observ").optional().isString(),
-    body("observ_caja").optional().isString(),
-    body("totcierre").optional().isNumeric(),
-    body("totefectivo").optional().isNumeric(),
-    body("idprofesor_cierre").optional().isInt(),
+      .withMessage("ID de profesor es obligatorio para cerrar la planilla"),
   ],
-  validateRequest,
-  asyncHandler(updatePlanillaController)
-);
-
-// POST /api/planillas-pago/:id/cerrar - Cerrar planilla
-router.post(
-  "/:id/cerrar",
-  authMiddleware,
-  [param("id").isInt().withMessage("ID de planilla inválido")],
   validateRequest,
   asyncHandler(cerrarPlanillaController)
 );
 
-// POST /api/planillas-pago/:id/contabilizar - Contabilizar planilla
+// POST /api/planillas-pago/:idfecha/cerrar-caja - Cerrar caja (contabilizar)
 router.post(
-  "/:id/contabilizar",
+  "/:idfecha/cerrar-caja",
   authMiddleware,
   [
-    param("id").isInt().withMessage("ID de planilla inválido"),
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
     body("idusuario").isInt().withMessage("ID de usuario inválido"),
   ],
   validateRequest,
-  asyncHandler(contabilizarPlanillaController)
-);
-
-// DELETE /api/planillas-pago/:id - Eliminar planilla
-router.delete(
-  "/:id",
-  authMiddleware,
-  [param("id").isInt().withMessage("ID de planilla inválido")],
-  validateRequest,
-  asyncHandler(deletePlanillaController)
+  asyncHandler(cerrarCajaController)
 );
 
 // ========================================
 // RUTAS DE EQUIPOS
 // ========================================
 
-// POST /api/planillas-pago/equipos - Guardar equipo
+// POST /api/planillas-pago/equipos - Agregar equipo
 router.post(
   "/equipos",
   authMiddleware,
@@ -166,17 +118,28 @@ router.post(
     body("iddeposito").optional().isInt(),
   ],
   validateRequest,
-  asyncHandler(saveEquipoController)
+  asyncHandler(addEquipoController)
 );
 
-// DELETE /api/planillas-pago/equipos/:idfecha/:orden
-router.delete(
-  "/equipos/:idfecha/:orden",
+// PUT /api/planillas-pago/equipos/:id - Actualizar equipo
+router.put(
+  "/equipos/:id",
   authMiddleware,
   [
-    param("idfecha").isInt().withMessage("ID de fecha inválido"),
-    param("orden").isInt().withMessage("Orden inválido"),
+    param("id").isInt().withMessage("ID de equipo inválido"),
+    body("tipopago").optional().isInt().withMessage("Tipo de pago inválido"),
+    body("importe").optional().isNumeric().withMessage("Importe inválido"),
+    body("iddeposito").optional().isInt(),
   ],
+  validateRequest,
+  asyncHandler(updateEquipoController)
+);
+
+// DELETE /api/planillas-pago/equipos/:id - Eliminar equipo
+router.delete(
+  "/equipos/:id",
+  authMiddleware,
+  [param("id").isInt().withMessage("ID de equipo inválido")],
   validateRequest,
   asyncHandler(deleteEquipoController)
 );
@@ -185,6 +148,7 @@ router.delete(
 // RUTAS DE ÁRBITROS
 // ========================================
 
+// POST /api/planillas-pago/arbitros - Agregar árbitro
 router.post(
   "/arbitros",
   authMiddleware,
@@ -197,9 +161,32 @@ router.post(
     body("idprofesor").optional().isInt(),
   ],
   validateRequest,
-  asyncHandler(saveArbitroController)
+  asyncHandler(addArbitroController)
 );
 
+// PUT /api/planillas-pago/arbitros/:idfecha/:orden - Actualizar árbitro
+router.put(
+  "/arbitros/:idfecha/:orden",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
+    body("idarbitro").optional().isInt().withMessage("ID de árbitro inválido"),
+    body("partidos")
+      .optional()
+      .isNumeric()
+      .withMessage("Cantidad de partidos inválida"),
+    body("valor_partido")
+      .optional()
+      .isNumeric()
+      .withMessage("Valor por partido inválido"),
+    body("idprofesor").optional().isInt(),
+  ],
+  validateRequest,
+  asyncHandler(updateArbitroController)
+);
+
+// DELETE /api/planillas-pago/arbitros/:idfecha/:orden - Eliminar árbitro
 router.delete(
   "/arbitros/:idfecha/:orden",
   authMiddleware,
@@ -215,6 +202,7 @@ router.delete(
 // RUTAS DE CANCHAS
 // ========================================
 
+// POST /api/planillas-pago/canchas - Agregar cancha
 router.post(
   "/canchas",
   authMiddleware,
@@ -225,9 +213,30 @@ router.post(
     body("valor_hora").isNumeric().withMessage("Valor por hora inválido"),
   ],
   validateRequest,
-  asyncHandler(saveCanchaController)
+  asyncHandler(addCanchaController)
 );
 
+// PUT /api/planillas-pago/canchas/:idfecha/:orden - Actualizar cancha
+router.put(
+  "/canchas/:idfecha/:orden",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
+    body("horas")
+      .optional()
+      .isNumeric()
+      .withMessage("Cantidad de horas inválida"),
+    body("valor_hora")
+      .optional()
+      .isNumeric()
+      .withMessage("Valor por hora inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updateCanchaController)
+);
+
+// DELETE /api/planillas-pago/canchas/:idfecha/:orden - Eliminar cancha
 router.delete(
   "/canchas/:idfecha/:orden",
   authMiddleware,
@@ -243,6 +252,7 @@ router.delete(
 // RUTAS DE PROFESORES
 // ========================================
 
+// POST /api/planillas-pago/profesores - Agregar profesor
 router.post(
   "/profesores",
   authMiddleware,
@@ -254,9 +264,34 @@ router.post(
     body("valor_hora").isNumeric().withMessage("Valor por hora inválido"),
   ],
   validateRequest,
-  asyncHandler(saveProfesorController)
+  asyncHandler(addProfesorController)
 );
 
+// PUT /api/planillas-pago/profesores/:idfecha/:orden - Actualizar profesor
+router.put(
+  "/profesores/:idfecha/:orden",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
+    body("idprofesor")
+      .optional()
+      .isInt()
+      .withMessage("ID de profesor inválido"),
+    body("horas")
+      .optional()
+      .isNumeric()
+      .withMessage("Cantidad de horas inválida"),
+    body("valor_hora")
+      .optional()
+      .isNumeric()
+      .withMessage("Valor por hora inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updateProfesorController)
+);
+
+// DELETE /api/planillas-pago/profesores/:idfecha/:orden - Eliminar profesor
 router.delete(
   "/profesores/:idfecha/:orden",
   authMiddleware,
@@ -272,6 +307,7 @@ router.delete(
 // RUTAS DE SERVICIO MÉDICO
 // ========================================
 
+// POST /api/planillas-pago/medico - Agregar médico
 router.post(
   "/medico",
   authMiddleware,
@@ -283,9 +319,31 @@ router.post(
     body("valor_hora").isNumeric().withMessage("Valor por hora inválido"),
   ],
   validateRequest,
-  asyncHandler(saveMedicoController)
+  asyncHandler(addMedicoController)
 );
 
+// PUT /api/planillas-pago/medico/:idfecha/:orden - Actualizar médico
+router.put(
+  "/medico/:idfecha/:orden",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
+    body("idmedico").optional().isInt().withMessage("ID de médico inválido"),
+    body("horas")
+      .optional()
+      .isNumeric()
+      .withMessage("Cantidad de horas inválida"),
+    body("valor_hora")
+      .optional()
+      .isNumeric()
+      .withMessage("Valor por hora inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updateMedicoController)
+);
+
+// DELETE /api/planillas-pago/medico/:idfecha/:orden - Eliminar médico
 router.delete(
   "/medico/:idfecha/:orden",
   authMiddleware,
@@ -301,6 +359,7 @@ router.delete(
 // RUTAS DE OTROS GASTOS
 // ========================================
 
+// POST /api/planillas-pago/otros-gastos - Agregar gasto
 router.post(
   "/otros-gastos",
   authMiddleware,
@@ -313,9 +372,29 @@ router.post(
     body("idprofesor").optional().isInt(),
   ],
   validateRequest,
-  asyncHandler(saveOtroGastoController)
+  asyncHandler(addOtroGastoController)
 );
 
+// PUT /api/planillas-pago/otros-gastos/:idfecha/:orden - Actualizar gasto
+router.put(
+  "/otros-gastos/:idfecha/:orden",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
+    body("codgasto").optional().isInt().withMessage("Código de gasto inválido"),
+    body("cantidad").optional().isNumeric().withMessage("Cantidad inválida"),
+    body("valor_unidad")
+      .optional()
+      .isNumeric()
+      .withMessage("Valor unitario inválido"),
+    body("idprofesor").optional().isInt(),
+  ],
+  validateRequest,
+  asyncHandler(updateOtroGastoController)
+);
+
+// DELETE /api/planillas-pago/otros-gastos/:idfecha/:orden - Eliminar gasto
 router.delete(
   "/otros-gastos/:idfecha/:orden",
   authMiddleware,

@@ -4,14 +4,19 @@ import { AxiosError } from "axios";
 import API from "./httpClient";
 import {
   PlanillaPago,
-  PlanillaPagoInput,
   PlanillaCompleta,
   PlanillasFiltros,
+  PlanillaEquipo,
   PlanillaEquipoInput,
+  PlanillaArbitro,
   PlanillaArbitroInput,
+  PlanillaCancha,
   PlanillaCanchaInput,
+  PlanillaProfesor,
   PlanillaProfesorInput,
+  PlanillaMedico,
   PlanillaMedicoInput,
+  PlanillaOtroGasto,
   PlanillaOtroGastoInput,
 } from "../types/planillasPago";
 
@@ -23,6 +28,10 @@ const handleAxiosError = (error: unknown): never => {
   console.error("❌ Unexpected Error:", error);
   throw new Error("Ocurrió un error inesperado.");
 };
+
+// ========================================
+// PLANILLAS - CRUD PRINCIPAL
+// ========================================
 
 export const getPlanillasByFiltros = async (
   filtros: PlanillasFiltros
@@ -38,9 +47,8 @@ export const getPlanillasByFiltros = async (
     const response = await API.get(`/api/planillas-pago?${params.toString()}`);
     return response.data;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
-  return []; // ← AGREGAR ESTO
 };
 
 export const getPlanillaCompleta = async (
@@ -50,99 +58,108 @@ export const getPlanillaCompleta = async (
     const response = await API.get(`/api/planillas-pago/${idfecha}`);
     return response.data;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
-  return null; // ← AGREGAR ESTO
 };
 
 export const createPlanilla = async (
-  data: PlanillaPagoInput
+  idfecha: number
 ): Promise<PlanillaPago | null> => {
   try {
-    const response = await API.post("/api/planillas-pago", data);
+    const response = await API.post("/api/planillas-pago", { idfecha });
     return response.data.planilla;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
-  return null; // ← AGREGAR ESTO
-};
-
-export const updatePlanilla = async (
-  id: number,
-  data: Partial<PlanillaPago>
-): Promise<PlanillaPago | null> => {
-  try {
-    const response = await API.put(`/api/planillas-pago/${id}`, data);
-    return response.data.planilla;
-  } catch (error) {
-    handleAxiosError(error);
-  }
-  return null; // ← AGREGAR ESTO
 };
 
 export const cerrarPlanilla = async (
-  id: number
-): Promise<PlanillaPago | null> => {
+  idfecha: number,
+  idprofesor: number
+): Promise<void> => {
   try {
-    const response = await API.post(`/api/planillas-pago/${id}/cerrar`);
-    return response.data.planilla;
+    await API.post(`/api/planillas-pago/${idfecha}/cerrar`, { idprofesor });
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
-  return null; // ← AGREGAR ESTO
 };
 
-export const contabilizarPlanilla = async (
-  id: number,
+export const cerrarCaja = async (
+  idfecha: number,
   idusuario: number
-): Promise<PlanillaPago | null> => {
+): Promise<void> => {
   try {
-    const response = await API.post(`/api/planillas-pago/${id}/contabilizar`, {
+    await API.post(`/api/planillas-pago/${idfecha}/cerrar-caja`, {
       idusuario,
     });
-    return response.data.planilla;
   } catch (error) {
-    handleAxiosError(error);
-  }
-  return null; // ← AGREGAR ESTO
-};
-
-export const deletePlanilla = async (id: number): Promise<void> => {
-  try {
-    await API.delete(`/api/planillas-pago/${id}`);
-  } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const saveEquipoPlanilla = async (
+// ========================================
+// EQUIPOS
+// ========================================
+
+export const addEquipoPlanilla = async (
   data: PlanillaEquipoInput
-): Promise<void> => {
+): Promise<PlanillaEquipo | null> => {
   try {
-    await API.post("/api/planillas-pago/equipos", data);
+    const response = await API.post("/api/planillas-pago/equipos", data);
+    return response.data.equipo;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const deleteEquipoPlanilla = async (
-  idfecha: number,
-  orden: number
-): Promise<void> => {
+export const updateEquipoPlanilla = async (
+  id: number,
+  data: Partial<PlanillaEquipo>
+): Promise<PlanillaEquipo | null> => {
   try {
-    await API.delete(`/api/planillas-pago/equipos/${idfecha}/${orden}`);
+    const response = await API.put(`/api/planillas-pago/equipos/${id}`, data);
+    return response.data.equipo;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const saveArbitroPlanilla = async (
+export const deleteEquipoPlanilla = async (id: number): Promise<void> => {
+  try {
+    await API.delete(`/api/planillas-pago/equipos/${id}`);
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+// ========================================
+// ÁRBITROS
+// ========================================
+
+export const addArbitroPlanilla = async (
   data: PlanillaArbitroInput
-): Promise<void> => {
+): Promise<PlanillaArbitro | null> => {
   try {
-    await API.post("/api/planillas-pago/arbitros", data);
+    const response = await API.post("/api/planillas-pago/arbitros", data);
+    return response.data.arbitro;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
+  }
+};
+
+export const updateArbitroPlanilla = async (
+  idfecha: number,
+  orden: number,
+  data: Partial<PlanillaArbitro>
+): Promise<PlanillaArbitro | null> => {
+  try {
+    const response = await API.put(
+      `/api/planillas-pago/arbitros/${idfecha}/${orden}`,
+      data
+    );
+    return response.data.arbitro;
+  } catch (error) {
+    return handleAxiosError(error);
   }
 };
 
@@ -153,17 +170,38 @@ export const deleteArbitroPlanilla = async (
   try {
     await API.delete(`/api/planillas-pago/arbitros/${idfecha}/${orden}`);
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const saveCanchaPlanilla = async (
+// ========================================
+// CANCHAS
+// ========================================
+
+export const addCanchaPlanilla = async (
   data: PlanillaCanchaInput
-): Promise<void> => {
+): Promise<PlanillaCancha | null> => {
   try {
-    await API.post("/api/planillas-pago/canchas", data);
+    const response = await API.post("/api/planillas-pago/canchas", data);
+    return response.data.cancha;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
+  }
+};
+
+export const updateCanchaPlanilla = async (
+  idfecha: number,
+  orden: number,
+  data: Partial<PlanillaCancha>
+): Promise<PlanillaCancha | null> => {
+  try {
+    const response = await API.put(
+      `/api/planillas-pago/canchas/${idfecha}/${orden}`,
+      data
+    );
+    return response.data.cancha;
+  } catch (error) {
+    return handleAxiosError(error);
   }
 };
 
@@ -174,17 +212,38 @@ export const deleteCanchaPlanilla = async (
   try {
     await API.delete(`/api/planillas-pago/canchas/${idfecha}/${orden}`);
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const saveProfesorPlanilla = async (
+// ========================================
+// PROFESORES
+// ========================================
+
+export const addProfesorPlanilla = async (
   data: PlanillaProfesorInput
-): Promise<void> => {
+): Promise<PlanillaProfesor | null> => {
   try {
-    await API.post("/api/planillas-pago/profesores", data);
+    const response = await API.post("/api/planillas-pago/profesores", data);
+    return response.data.profesor;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
+  }
+};
+
+export const updateProfesorPlanilla = async (
+  idfecha: number,
+  orden: number,
+  data: Partial<PlanillaProfesor>
+): Promise<PlanillaProfesor | null> => {
+  try {
+    const response = await API.put(
+      `/api/planillas-pago/profesores/${idfecha}/${orden}`,
+      data
+    );
+    return response.data.profesor;
+  } catch (error) {
+    return handleAxiosError(error);
   }
 };
 
@@ -195,17 +254,38 @@ export const deleteProfesorPlanilla = async (
   try {
     await API.delete(`/api/planillas-pago/profesores/${idfecha}/${orden}`);
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const saveMedicoPlanilla = async (
+// ========================================
+// MÉDICOS
+// ========================================
+
+export const addMedicoPlanilla = async (
   data: PlanillaMedicoInput
-): Promise<void> => {
+): Promise<PlanillaMedico | null> => {
   try {
-    await API.post("/api/planillas-pago/medico", data);
+    const response = await API.post("/api/planillas-pago/medico", data);
+    return response.data.medico;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
+  }
+};
+
+export const updateMedicoPlanilla = async (
+  idfecha: number,
+  orden: number,
+  data: Partial<PlanillaMedico>
+): Promise<PlanillaMedico | null> => {
+  try {
+    const response = await API.put(
+      `/api/planillas-pago/medico/${idfecha}/${orden}`,
+      data
+    );
+    return response.data.medico;
+  } catch (error) {
+    return handleAxiosError(error);
   }
 };
 
@@ -216,17 +296,38 @@ export const deleteMedicoPlanilla = async (
   try {
     await API.delete(`/api/planillas-pago/medico/${idfecha}/${orden}`);
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };
 
-export const saveOtroGastoPlanilla = async (
+// ========================================
+// OTROS GASTOS
+// ========================================
+
+export const addOtroGastoPlanilla = async (
   data: PlanillaOtroGastoInput
-): Promise<void> => {
+): Promise<PlanillaOtroGasto | null> => {
   try {
-    await API.post("/api/planillas-pago/otros-gastos", data);
+    const response = await API.post("/api/planillas-pago/otros-gastos", data);
+    return response.data.gasto;
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
+  }
+};
+
+export const updateOtroGastoPlanilla = async (
+  idfecha: number,
+  orden: number,
+  data: Partial<PlanillaOtroGasto>
+): Promise<PlanillaOtroGasto | null> => {
+  try {
+    const response = await API.put(
+      `/api/planillas-pago/otros-gastos/${idfecha}/${orden}`,
+      data
+    );
+    return response.data.gasto;
+  } catch (error) {
+    return handleAxiosError(error);
   }
 };
 
@@ -237,6 +338,6 @@ export const deleteOtroGastoPlanilla = async (
   try {
     await API.delete(`/api/planillas-pago/otros-gastos/${idfecha}/${orden}`);
   } catch (error) {
-    handleAxiosError(error);
+    return handleAxiosError(error);
   }
 };

@@ -13,8 +13,8 @@ export interface PlanillaPago {
   observ_caja?: string;
   fhcarga?: string;
   fhbaja?: string;
-  fhcierre?: string; // ← Ahora retornado por getPlanillasByFiltros
-  fhcierrecaja?: string; // ← Ahora retornado por getPlanillasByFiltros
+  fhcierre?: string;
+  fhcierrecaja?: string;
   idusrcierrecaja?: number;
   totcierre?: number;
   totefectivo?: number;
@@ -25,11 +25,20 @@ export interface PlanillaPago {
   sede_nombre?: string;
   subsede_nombre?: string;
   torneo_nombre?: string;
-  torneo?: string; // ← Alias para torneo_nombre
-  zona?: string; // ← Nuevo campo agregado
-  zona_nombre?: string; // ← Alias para zona
+  torneo?: string;
+  zona?: string;
+  zona_nombre?: string;
   profesor_nombre?: string;
-  estado?: string; // ← Campo calculado
+  estado?: string;
+  // ✅ NUEVO: Información del partido
+  partido_info?: {
+    nombre1?: string;
+    nombre2?: string;
+    goles1?: number;
+    goles2?: number;
+    codestado?: number;
+    arbitro?: string;
+  };
   [key: string]: unknown;
 }
 

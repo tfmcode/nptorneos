@@ -18,6 +18,7 @@ import {
 
 import { fetchTorneos } from "../../store/slices/torneoSlice";
 import { fetchSedes } from "../../store/slices/sedeSlice";
+import { fetchZonasByTorneo } from "../../store/slices/zonaSlice";
 import { PlanillaPago, PlanillasFiltros } from "../../types/planillasPago";
 
 import PlanillaDetalle from "../../components/planillasPago/PlanillaDetalle";
@@ -32,6 +33,7 @@ const PlanillaPagos: React.FC = () => {
   );
   const { torneos } = useSelector((state: RootState) => state.torneos);
   const { sedes } = useSelector((state: RootState) => state.sedes);
+  const { zonas } = useSelector((state: RootState) => state.zonas);
 
   const [filtros, setFiltros] = useState<PlanillasFiltros>({
     idtorneo: 0,
@@ -40,6 +42,8 @@ const PlanillaPagos: React.FC = () => {
     idsede: 0,
     estado: undefined,
   });
+
+  const [idZonaFiltro, setIdZonaFiltro] = useState<number>(0);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlanilla, setSelectedPlanilla] = useState<PlanillaPago | null>(
@@ -61,6 +65,14 @@ const PlanillaPagos: React.FC = () => {
     dispatch(fetchTorneos({ page: 1, limit: 1000, searchTerm: "" }));
     dispatch(fetchSedes());
   }, [dispatch]);
+
+  // Cargar zonas cuando cambia el torneo
+  useEffect(() => {
+    if (filtros.idtorneo) {
+      dispatch(fetchZonasByTorneo(filtros.idtorneo));
+      setIdZonaFiltro(0);
+    }
+  }, [filtros.idtorneo, dispatch]);
 
   const handleFiltrar = () => {
     dispatch(getPlanillasByFiltros(filtros));
@@ -94,6 +106,15 @@ const PlanillaPagos: React.FC = () => {
   // Filtrar torneos activos
   const torneosActivos = torneos.filter((t) => t.codestado === 1);
 
+  // Filtrar planillas por zona en el frontend
+  const planillasFiltradas = idZonaFiltro
+    ? planillas.filter((p) => {
+        // Comparar el nombre de zona o buscar por ID si está disponible
+        const zonaSeleccionada = zonas.find((z) => z.id === idZonaFiltro);
+        return zonaSeleccionada && p.zona === zonaSeleccionada.nombre;
+      })
+    : planillas;
+
   return (
     <div className="flex justify-center items-center">
       <PopupNotificacion
@@ -111,7 +132,7 @@ const PlanillaPagos: React.FC = () => {
 
         {/* Filtros */}
         <div className="mb-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Torneo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -119,15 +140,36 @@ const PlanillaPagos: React.FC = () => {
               </label>
               <select
                 value={filtros.idtorneo || 0}
-                onChange={(e) =>
-                  setFiltros({ ...filtros, idtorneo: Number(e.target.value) })
-                }
+                onChange={(e) => {
+                  setFiltros({ ...filtros, idtorneo: Number(e.target.value) });
+                  setIdZonaFiltro(0);
+                }}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               >
                 <option value={0}>Todos los torneos</option>
                 {torneosActivos.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Zona - NUEVO FILTRO */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Zona
+              </label>
+              <select
+                value={idZonaFiltro}
+                onChange={(e) => setIdZonaFiltro(Number(e.target.value))}
+                disabled={!filtros.idtorneo}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:bg-gray-100"
+              >
+                <option value={0}>Todas las zonas</option>
+                {zonas.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.nombre}
                   </option>
                 ))}
               </select>
@@ -192,7 +234,22 @@ const PlanillaPagos: React.FC = () => {
           />
 
           {/* Botón Filtrar */}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setFiltros({
+                  idtorneo: 0,
+                  fecha_desde: "",
+                  fecha_hasta: "",
+                  idsede: 0,
+                  estado: undefined,
+                });
+                setIdZonaFiltro(0);
+              }}
+              className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition"
+            >
+              Limpiar
+            </button>
             <button
               onClick={handleFiltrar}
               className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
@@ -204,11 +261,11 @@ const PlanillaPagos: React.FC = () => {
 
         <StatusMessage loading={loading} error={error} />
 
-        {/* Tabla de Planillas */}
-        {!loading && planillas.length > 0 && (
-          <div className="overflow-x-auto border border-gray-300 rounded-lg">
+        {/* Tabla de Planillas con SCROLL */}
+        {!loading && planillasFiltradas.length > 0 && (
+          <div className="overflow-auto max-h-[600px] border border-gray-300 rounded-lg">
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 sticky top-0">
+              <thead className="bg-gray-100 sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-2 text-left">Fecha</th>
                   <th className="px-4 py-2 text-left">Sede</th>
@@ -220,7 +277,7 @@ const PlanillaPagos: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {planillas.map((planilla: PlanillaPago) => (
+                {planillasFiltradas.map((planilla: PlanillaPago) => (
                   <tr
                     key={`planilla-${planilla.idfecha}`}
                     className="border-t hover:bg-gray-50 cursor-pointer"
@@ -231,9 +288,11 @@ const PlanillaPagos: React.FC = () => {
                     </td>
                     <td className="px-4 py-2">{planilla.sede_nombre || "-"}</td>
                     <td className="px-4 py-2">
-                      {planilla.torneo_nombre || "-"}
+                      {planilla.torneo_nombre || planilla.torneo || "-"}
                     </td>
-                    <td className="px-4 py-2">{planilla.zona || "-"}</td>
+                    <td className="px-4 py-2">
+                      {planilla.zona_nombre || planilla.zona || "-"}
+                    </td>
                     <td className="px-4 py-2 text-center">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
@@ -267,9 +326,40 @@ const PlanillaPagos: React.FC = () => {
           </div>
         )}
 
-        {!loading && planillas.length === 0 && (
+        {!loading && planillasFiltradas.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             No se encontraron planillas con los filtros seleccionados
+          </div>
+        )}
+
+        {/* Estadísticas */}
+        {planillasFiltradas.length > 0 && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <strong>Total planillas:</strong> {planillasFiltradas.length}
+              </div>
+              <div>
+                <strong>Abiertas:</strong>{" "}
+                {
+                  planillasFiltradas.filter(
+                    (p) => !p.fhcierre && !p.fhcierrecaja
+                  ).length
+                }
+              </div>
+              <div>
+                <strong>Cerradas:</strong>{" "}
+                {
+                  planillasFiltradas.filter(
+                    (p) => p.fhcierre && !p.fhcierrecaja
+                  ).length
+                }
+              </div>
+              <div>
+                <strong>Contabilizadas:</strong>{" "}
+                {planillasFiltradas.filter((p) => p.fhcierrecaja).length}
+              </div>
+            </div>
           </div>
         )}
 

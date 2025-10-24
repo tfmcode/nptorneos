@@ -1,4 +1,4 @@
-// Ubicación: WebApp/src/api/planillasPagoService.ts
+// Ubicación: WebApp/src/api/planillasPagosService.ts
 
 import { AxiosError } from "axios";
 import API from "./httpClient";
@@ -45,7 +45,15 @@ export const getPlanillasByFiltros = async (
     if (filtros.estado) params.append("estado", filtros.estado);
 
     const response = await API.get(`/api/planillas-pago?${params.toString()}`);
-    return response.data;
+
+    // Enriquecer los datos con información del partido si está disponible
+    const planillas = response.data;
+
+    // Si cada planilla tiene un idfecha que corresponde a un idpartido,
+    // podríamos hacer requests adicionales para obtener más info
+    // Por ahora retornamos lo que viene del backend
+
+    return planillas;
   } catch (error) {
     return handleAxiosError(error);
   }
@@ -56,7 +64,44 @@ export const getPlanillaCompleta = async (
 ): Promise<PlanillaCompleta | null> => {
   try {
     const response = await API.get(`/api/planillas-pago/${idfecha}`);
-    return response.data;
+
+    // El backend debería retornar la info completa del partido
+    // incluyendo nombres reales de equipos, no genéricos
+    const planillaCompleta = response.data;
+
+    // Si el backend no está retornando los nombres correctos,
+    // podríamos hacer un fetch adicional del partido:
+    try {
+      const partidoResponse = await API.get(`/api/partidos/${idfecha}`);
+      const partido = partidoResponse.data;
+
+      // Enriquecer los equipos con nombres reales del partido
+      if (planillaCompleta.equipos && planillaCompleta.equipos.length > 0) {
+        planillaCompleta.equipos = planillaCompleta.equipos.map(
+          (equipo: PlanillaEquipo, index: number) => {
+            if (index === 0 && partido.nombre1) {
+              return { ...equipo, nombre_equipo: partido.nombre1 };
+            } else if (index === 1 && partido.nombre2) {
+              return { ...equipo, nombre_equipo: partido.nombre2 };
+            }
+            return equipo;
+          }
+        );
+      }
+
+      // Agregar información del partido a la planilla
+      planillaCompleta.planilla.partido_info = {
+        nombre1: partido.nombre1,
+        nombre2: partido.nombre2,
+        goles1: partido.goles1,
+        goles2: partido.goles2,
+        codestado: partido.codestado,
+      };
+    } catch (partidoError) {
+      console.warn("No se pudo obtener info del partido:", partidoError);
+    }
+
+    return planillaCompleta;
   } catch (error) {
     return handleAxiosError(error);
   }

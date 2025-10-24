@@ -13,11 +13,16 @@ const currency = (n: number | undefined | null) =>
     ? n.toLocaleString("es-AR", { style: "currency", currency: "ARS" })
     : "-";
 
-const badge = (text: string, color: "green" | "yellow" | "gray" = "gray") => {
+const badge = (
+  text: string,
+  color: "green" | "yellow" | "gray" | "blue" | "red" = "gray"
+) => {
   const map: Record<string, string> = {
     green: "bg-green-100 text-green-800",
     yellow: "bg-yellow-100 text-yellow-800",
     gray: "bg-gray-100 text-gray-800",
+    blue: "bg-blue-100 text-blue-800",
+    red: "bg-red-100 text-red-800",
   };
   return (
     <span
@@ -26,6 +31,34 @@ const badge = (text: string, color: "green" | "yellow" | "gray" = "gray") => {
       {text}
     </span>
   );
+};
+
+const getEstadoPartidoTexto = (codestado: number): string => {
+  const estados: Record<number, string> = {
+    10: "No Comenzado",
+    20: "Iniciado",
+    21: "Primer Tiempo",
+    22: "Segundo Tiempo",
+    23: "Primer Suplementario",
+    24: "Segundo Suplementario",
+    25: "Penales",
+    30: "Entretiempo",
+    40: "Finalizado",
+    50: "Suspendido",
+    60: "Demorado",
+    70: "No Computa",
+  };
+  return estados[codestado] || "Desconocido";
+};
+
+const getEstadoPartidoColor = (
+  codestado: number
+): "green" | "yellow" | "gray" | "blue" | "red" => {
+  if (codestado === 40) return "green"; // Finalizado
+  if (codestado >= 20 && codestado < 40) return "blue"; // En curso
+  if (codestado === 50) return "red"; // Suspendido
+  if (codestado === 10) return "gray"; // No comenzado
+  return "yellow";
 };
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
@@ -83,10 +116,13 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
     ? "yellow"
     : "gray";
 
+  // ✅ CORRECCIÓN: Acceder directamente a partido_info (ya está en el tipo)
+  const partidoInfo = planilla.partido_info;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sticky top-0 bg-white z-10 pb-4 border-b">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
             Detalle de Planilla
@@ -99,7 +135,15 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
                 : "-"}
             </strong>{" "}
             · Sede: <strong>{planilla.sede_nombre ?? "-"}</strong> · Torneo:{" "}
-            <strong>{planilla.torneo_nombre ?? "-"}</strong>
+            <strong>
+              {(planilla.torneo_nombre || planilla.torneo) ?? "-"}
+            </strong>
+            {planilla.zona && (
+              <>
+                {" "}
+                · Zona: <strong>{planilla.zona}</strong>
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -113,9 +157,48 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
         </div>
       </div>
 
+      {/* Información del Partido */}
+      {partidoInfo && (
+        <Section title="📊 Información del Partido">
+          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between">
+              <div className="text-center flex-1">
+                <div className="text-lg font-bold text-gray-800">
+                  {partidoInfo.nombre1 || "Equipo Local"}
+                </div>
+                <div className="text-3xl font-bold text-blue-600 mt-2">
+                  {partidoInfo.goles1 ?? 0}
+                </div>
+              </div>
+
+              <div className="px-4">
+                <div className="text-2xl font-bold text-gray-400">VS</div>
+                {partidoInfo.codestado !== undefined && (
+                  <div className="mt-2">
+                    {badge(
+                      getEstadoPartidoTexto(partidoInfo.codestado),
+                      getEstadoPartidoColor(partidoInfo.codestado)
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center flex-1">
+                <div className="text-lg font-bold text-gray-800">
+                  {partidoInfo.nombre2 || "Equipo Visitante"}
+                </div>
+                <div className="text-3xl font-bold text-indigo-600 mt-2">
+                  {partidoInfo.goles2 ?? 0}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+      )}
+
       {/* Observaciones */}
       {(planilla.observ || planilla.observ_caja) && (
-        <Section title="Observaciones">
+        <Section title="📝 Observaciones">
           <div className="p-3 text-sm text-gray-700 space-y-1">
             {planilla.observ && (
               <p>
@@ -135,28 +218,50 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
 
       {/* Ingresos - Equipos */}
       {equipos?.length > 0 && (
-        <Section title="Ingresos · Equipos">
+        <Section title="💰 Ingresos · Equipos">
           <Table
             headers={["Orden", "Equipo", "Tipo pago", "Depósito", "Importe"]}
           >
-            {equipos.map((e) => (
-              <tr key={`eq-${e.idfecha}-${e.orden}`} className="border-t">
-                <td className="px-3 py-2">{e.orden}</td>
-                <td className="px-3 py-2">{e.nombre_equipo ?? e.idequipo}</td>
-                <td className="px-3 py-2">{e.tipopago}</td>
-                <td className="px-3 py-2">{e.iddeposito ?? "-"}</td>
-                <td className="px-3 py-2 text-right font-medium">
-                  {currency(e.importe)}
-                </td>
-              </tr>
-            ))}
+            {equipos.map((e, index) => {
+              // Usar nombres del partido si están disponibles
+              let nombreEquipo = e.nombre_equipo;
+              if (partidoInfo) {
+                if (index === 0 && partidoInfo.nombre1) {
+                  nombreEquipo = partidoInfo.nombre1;
+                } else if (index === 1 && partidoInfo.nombre2) {
+                  nombreEquipo = partidoInfo.nombre2;
+                }
+              }
+
+              return (
+                <tr key={`eq-${e.idfecha}-${e.orden}`} className="border-t">
+                  <td className="px-3 py-2">{e.orden}</td>
+                  <td className="px-3 py-2 font-medium">
+                    {nombreEquipo || e.idequipo}
+                  </td>
+                  <td className="px-3 py-2">
+                    {e.tipopago === 1
+                      ? "Efectivo"
+                      : e.tipopago === 2
+                      ? "Transferencia"
+                      : e.tipopago === 3
+                      ? "Débito automático"
+                      : "Otro"}
+                  </td>
+                  <td className="px-3 py-2">{e.iddeposito ?? "-"}</td>
+                  <td className="px-3 py-2 text-right font-medium">
+                    {currency(e.importe)}
+                  </td>
+                </tr>
+              );
+            })}
           </Table>
         </Section>
       )}
 
       {/* Egresos - Árbitros */}
       {arbitros?.length > 0 && (
-        <Section title="Egresos · Árbitros">
+        <Section title="👨‍⚖️ Egresos · Árbitros">
           <Table
             headers={["Orden", "Árbitro", "Partidos", "Valor partido", "Total"]}
           >
@@ -179,7 +284,7 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
 
       {/* Egresos - Canchas */}
       {canchas?.length > 0 && (
-        <Section title="Egresos · Canchas">
+        <Section title="🏟️ Egresos · Canchas">
           <Table headers={["Orden", "Horas", "Valor hora", "Total"]}>
             {canchas.map((c) => (
               <tr key={`ca-${c.idfecha}-${c.orden}`} className="border-t">
@@ -199,7 +304,7 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
 
       {/* Egresos - Profesores */}
       {profesores?.length > 0 && (
-        <Section title="Egresos · Profesores">
+        <Section title="👨‍🏫 Egresos · Profesores">
           <Table
             headers={["Orden", "Profesor", "Horas", "Valor hora", "Total"]}
           >
@@ -224,7 +329,7 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
 
       {/* Egresos - Médico */}
       {medico?.length > 0 && (
-        <Section title="Egresos · Médico">
+        <Section title="⚕️ Egresos · Médico">
           <Table headers={["Orden", "Médico", "Horas", "Valor hora", "Total"]}>
             {medico.map((m) => (
               <tr key={`me-${m.idfecha}-${m.orden}`} className="border-t">
@@ -245,7 +350,7 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
 
       {/* Egresos - Otros gastos */}
       {otros_gastos?.length > 0 && (
-        <Section title="Egresos · Otros gastos">
+        <Section title="📦 Egresos · Otros gastos">
           <Table
             headers={["Orden", "Gasto", "Cantidad", "Valor unidad", "Total"]}
           >
@@ -269,7 +374,7 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
       )}
 
       {/* Totales */}
-      <Section title="Totales">
+      <Section title="💵 Totales">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           <div className="p-3 border-r border-gray-200">
             <h4 className="text-xs font-semibold text-gray-600 mb-2">
@@ -288,9 +393,9 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
                   {currency(totales?.ingreso_depositos)}
                 </span>
               </li>
-              <li className="flex justify-between">
-                <span>Total ingresos</span>
-                <span className="font-semibold">
+              <li className="flex justify-between border-t pt-1 mt-1">
+                <span className="font-semibold">Total ingresos</span>
+                <span className="font-semibold text-green-600">
                   {currency(totales?.total_ingresos)}
                 </span>
               </li>
@@ -331,9 +436,9 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
                   {currency(totales?.egreso_otros)}
                 </span>
               </li>
-              <li className="flex justify-between">
-                <span>Total egresos</span>
-                <span className="font-semibold">
+              <li className="flex justify-between border-t pt-1 mt-1">
+                <span className="font-semibold">Total egresos</span>
+                <span className="font-semibold text-red-600">
                   {currency(totales?.total_egresos)}
                 </span>
               </li>
@@ -371,7 +476,7 @@ const PlanillaDetalle: React.FC<Props> = ({ planillaCompleta, onClose }) => {
       </Section>
 
       {/* Footer actions */}
-      <div className="flex justify-end">
+      <div className="flex justify-end sticky bottom-0 bg-white pt-4 border-t">
         <button
           onClick={onClose}
           className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700"

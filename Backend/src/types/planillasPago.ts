@@ -8,6 +8,7 @@ export interface PlanillaPago {
   idfecha: number; // Referencia a partidos.id
   fecha: string;
   idsede: number;
+  sede_nombre?: string;
   idsubsede?: number;
   idtorneo: number;
   codfecha?: number;
@@ -28,6 +29,19 @@ export interface PlanillaPago {
   total_egresos?: number;
   total_caja?: number;
   diferencia_caja?: number;
+  torneo?: string;
+  torneo_nombre?: string;
+  zona?: string;
+  zona_nombre?: string;
+  estado?: "abierta" | "cerrada" | "contabilizada";
+  partido_info?: {
+    nombre1?: string;
+    nombre2?: string;
+    goles1?: number;
+    goles2?: number;
+    codestado?: number;
+    arbitro?: string;
+  };
   [key: string]: unknown;
 }
 
@@ -116,6 +130,26 @@ export interface PlanillaOtroGasto {
 }
 
 // ========================================
+// TOTALES DE PLANILLA
+// ========================================
+
+export interface TotalesPlanilla {
+  ingreso_inscripciones: number;
+  ingreso_depositos: number;
+  ingreso_fecha: number;
+  total_ingresos: number;
+  egreso_arbitros: number;
+  egreso_canchas: number;
+  egreso_profesores: number;
+  egreso_medico: number;
+  egreso_otros: number;
+  total_egresos: number;
+  total_caja: number;
+  total_efectivo: number;
+  diferencia_caja: number;
+}
+
+// ========================================
 // INPUTS (para crear/actualizar)
 // ========================================
 
@@ -193,21 +227,7 @@ export interface PlanillaCompleta {
   profesores: PlanillaProfesor[];
   medico: PlanillaMedico[];
   otros_gastos: PlanillaOtroGasto[];
-  totales: {
-    ingreso_inscripciones: number;
-    ingreso_depositos: number;
-    ingreso_fecha: number;
-    total_ingresos: number;
-    egreso_arbitros: number;
-    egreso_canchas: number;
-    egreso_profesores: number;
-    egreso_medico: number;
-    egreso_otros: number;
-    total_egresos: number;
-    total_caja: number;
-    total_efectivo: number;
-    diferencia_caja: number;
-  };
+  totales: TotalesPlanilla;
 }
 
 // ========================================

@@ -1,4 +1,3 @@
-// Ubicación: WebApp/src/pages/Privado/PlanillaPagos.tsx
 
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";

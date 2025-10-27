@@ -14,7 +14,7 @@ export const getEquiposByPlanilla = async (
   nombreEquipo2?: string
 ): Promise<PlanillaEquipo[]> => {
   try {
-    // Obtener información del partido
+    // ✅ CORREGIDO: Usar p.idfecha en lugar de p.id
     const partidoQuery = `
       SELECT 
         p.idequipo1,
@@ -24,7 +24,7 @@ export const getEquiposByPlanilla = async (
       FROM partidos p
       LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
       LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
-      WHERE p.id = $1
+      WHERE p.idfecha = $1
     `;
     const partidoResult = await pool.query(partidoQuery, [idfecha]);
 

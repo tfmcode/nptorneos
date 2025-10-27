@@ -1,5 +1,5 @@
 // ========================================
-// PLANILLAS DE PAGO MODEL - REFACTORIZADO Y MODULARIZADO
+// PLANILLAS DE PAGO MODEL - REFACTORIZADO Y CORREGIDO
 // ========================================
 
 import { pool } from "../config/db";
@@ -61,7 +61,8 @@ export const getPlanillasByFiltros = async (
 ): Promise<PlanillaPago[]> => {
   try {
     let query = `
-      SELECT DISTINCT ON (p.id)
+      SELECT DISTINCT ON (p.idfecha)
+        p.idfecha as partido_idfecha,
         p.id as partido_id,
         p.fecha,
         p.idsede,
@@ -119,7 +120,7 @@ export const getPlanillasByFiltros = async (
     }
 
     query += `
-      GROUP BY p.id, p.fecha, p.idsede, s.nombre, z.idtorneo, p.nrofecha, t.nombre, z.nombre
+      GROUP BY p.idfecha, p.id, p.fecha, p.idsede, s.nombre, z.idtorneo, p.nrofecha, t.nombre, z.nombre
     `;
 
     // Filtro por estado
@@ -134,13 +135,13 @@ export const getPlanillasByFiltros = async (
       }
     }
 
-    query += ` ORDER BY p.id, p.fecha DESC, p.nrofecha DESC`;
+    query += ` ORDER BY p.idfecha, p.fecha DESC, p.nrofecha DESC`;
 
     const { rows } = await pool.query(query, params);
 
     return rows.map((row: any) => ({
-      id: row.partido_id,
-      idfecha: row.partido_id,
+      id: row.partido_idfecha, // ✅ Usar idfecha como ID principal
+      idfecha: row.partido_idfecha,
       fecha: row.fecha,
       idsede: row.idsede,
       sede_nombre: row.sede_nombre,
@@ -168,16 +169,16 @@ export const getPlanillaByIdFecha = async (
   idfecha: number
 ): Promise<PlanillaCompleta | null> => {
   try {
-    // 1. Obtener datos del partido + planilla
+    // ✅ CORREGIDO: Usar p.idfecha en lugar de p.id
     const planillaQuery = `
       SELECT 
-        p.id as partido_id,
+        wtf.id as planilla_id,
+        p.idfecha,
         p.fecha,
         p.idsede,
         s.nombre as sede_nombre,
         z.idtorneo,
         p.nrofecha as codfecha,
-        wtf.id as planilla_id,
         wtf.idprofesor,
         wtf.idprofesor_cierre,
         wtf.idturno,
@@ -207,7 +208,7 @@ export const getPlanillaByIdFecha = async (
       LEFT JOIN wtorneos_fechas wtf ON p.idfecha = wtf.id
       LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
       LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
-      WHERE p.id = $1
+      WHERE p.idfecha = $1
     `;
 
     const planillaResult = await pool.query(planillaQuery, [idfecha]);
@@ -219,8 +220,8 @@ export const getPlanillaByIdFecha = async (
     const row = planillaResult.rows[0];
 
     const planilla: PlanillaPago = {
-      id: row.planilla_id || row.partido_id,
-      idfecha: row.partido_id,
+      id: row.planilla_id || row.idfecha,
+      idfecha: row.idfecha,
       fecha: row.fecha,
       idsede: row.idsede,
       sede_nombre: row.sede_nombre,
@@ -307,7 +308,7 @@ export const createPlanilla = async (
       throw new Error("Ya existe una planilla para este partido");
     }
 
-    // Obtener datos del partido
+    // Obtener datos del partido usando idfecha
     const partidoQuery = `
       SELECT 
         p.fecha, 
@@ -318,7 +319,7 @@ export const createPlanilla = async (
         p.idprofesor
       FROM partidos p
       INNER JOIN zonas z ON p.idzona = z.id
-      WHERE p.id = $1
+      WHERE p.idfecha = $1
     `;
     const partidoResult = await pool.query(partidoQuery, [idfecha]);
 
@@ -360,7 +361,6 @@ export const recalcularTotalesPlanilla = async (
   idfecha: number
 ): Promise<void> => {
   try {
-    // Obtener todos los datos usando servicios modulares
     const equipos = await equiposService.getEquiposByPlanilla(idfecha);
     const arbitros = await arbitrosService.getArbitrosByPlanilla(idfecha);
     const canchas = await canchasService.getCanchasByPlanilla(idfecha);
@@ -370,7 +370,6 @@ export const recalcularTotalesPlanilla = async (
       idfecha
     );
 
-    // Calcular totales
     const totales = calcularTotales(
       equipos,
       arbitros,
@@ -380,7 +379,6 @@ export const recalcularTotalesPlanilla = async (
       otros_gastos
     );
 
-    // Actualizar en wtorneos_fechas
     const updateQuery = `
       UPDATE wtorneos_fechas 
       SET totcierre = $1, totefectivo = $2
@@ -394,7 +392,6 @@ export const recalcularTotalesPlanilla = async (
     ]);
   } catch (error) {
     console.error("Error en recalcularTotalesPlanilla:", error);
-    // No lanzar el error para no bloquear otras operaciones
   }
 };
 

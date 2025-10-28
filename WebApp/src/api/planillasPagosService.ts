@@ -45,15 +45,7 @@ export const getPlanillasByFiltros = async (
     if (filtros.estado) params.append("estado", filtros.estado);
 
     const response = await API.get(`/api/planillas-pago?${params.toString()}`);
-
-    // Enriquecer los datos con información del partido si está disponible
-    const planillas = response.data;
-
-    // Si cada planilla tiene un idfecha que corresponde a un idpartido,
-    // podríamos hacer requests adicionales para obtener más info
-    // Por ahora retornamos lo que viene del backend
-
-    return planillas;
+    return response.data;
   } catch (error) {
     return handleAxiosError(error);
   }
@@ -64,18 +56,13 @@ export const getPlanillaCompleta = async (
 ): Promise<PlanillaCompleta | null> => {
   try {
     const response = await API.get(`/api/planillas-pago/${idfecha}`);
-
-    // El backend debería retornar la info completa del partido
-    // incluyendo nombres reales de equipos, no genéricos
     const planillaCompleta = response.data;
 
-    // Si el backend no está retornando los nombres correctos,
-    // podríamos hacer un fetch adicional del partido:
+    // Enriquecer con información del partido si está disponible
     try {
       const partidoResponse = await API.get(`/api/partidos/${idfecha}`);
       const partido = partidoResponse.data;
 
-      // Enriquecer los equipos con nombres reales del partido
       if (planillaCompleta.equipos && planillaCompleta.equipos.length > 0) {
         planillaCompleta.equipos = planillaCompleta.equipos.map(
           (equipo: PlanillaEquipo, index: number) => {
@@ -89,7 +76,6 @@ export const getPlanillaCompleta = async (
         );
       }
 
-      // Agregar información del partido a la planilla
       planillaCompleta.planilla.partido_info = {
         nombre1: partido.nombre1,
         nombre2: partido.nombre2,
@@ -143,7 +129,7 @@ export const cerrarCaja = async (
 };
 
 // ========================================
-// EQUIPOS
+// EQUIPOS (CORREGIDO)
 // ========================================
 
 export const addEquipoPlanilla = async (
@@ -157,21 +143,30 @@ export const addEquipoPlanilla = async (
   }
 };
 
+// ✅ CORREGIDO: Usa idfecha y orden en la URL
 export const updateEquipoPlanilla = async (
-  id: number,
+  idfecha: number,
+  orden: number,
   data: Partial<PlanillaEquipo>
 ): Promise<PlanillaEquipo | null> => {
   try {
-    const response = await API.put(`/api/planillas-pago/equipos/${id}`, data);
+    const response = await API.put(
+      `/api/planillas-pago/equipos/${idfecha}/${orden}`,
+      data
+    );
     return response.data.equipo;
   } catch (error) {
     return handleAxiosError(error);
   }
 };
 
-export const deleteEquipoPlanilla = async (id: number): Promise<void> => {
+// ✅ CORREGIDO: Usa idfecha y orden en la URL
+export const deleteEquipoPlanilla = async (
+  idfecha: number,
+  orden: number
+): Promise<void> => {
   try {
-    await API.delete(`/api/planillas-pago/equipos/${id}`);
+    await API.delete(`/api/planillas-pago/equipos/${idfecha}/${orden}`);
   } catch (error) {
     return handleAxiosError(error);
   }

@@ -102,7 +102,7 @@ router.post(
 );
 
 // ========================================
-// RUTAS DE EQUIPOS
+// RUTAS DE EQUIPOS (CORREGIDAS)
 // ========================================
 
 // POST /api/planillas-pago/equipos - Agregar equipo
@@ -121,12 +121,13 @@ router.post(
   asyncHandler(addEquipoController)
 );
 
-// PUT /api/planillas-pago/equipos/:id - Actualizar equipo
+// ✅ CORREGIDO: PUT /api/planillas-pago/equipos/:idfecha/:orden
 router.put(
-  "/equipos/:id",
+  "/equipos/:idfecha/:orden",
   authMiddleware,
   [
-    param("id").isInt().withMessage("ID de equipo inválido"),
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
     body("tipopago").optional().isInt().withMessage("Tipo de pago inválido"),
     body("importe").optional().isNumeric().withMessage("Importe inválido"),
     body("iddeposito").optional().isInt(),
@@ -135,11 +136,14 @@ router.put(
   asyncHandler(updateEquipoController)
 );
 
-// DELETE /api/planillas-pago/equipos/:id - Eliminar equipo
+// ✅ CORREGIDO: DELETE /api/planillas-pago/equipos/:idfecha/:orden
 router.delete(
-  "/equipos/:id",
+  "/equipos/:idfecha/:orden",
   authMiddleware,
-  [param("id").isInt().withMessage("ID de equipo inválido")],
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    param("orden").isInt().withMessage("Orden inválido"),
+  ],
   validateRequest,
   asyncHandler(deleteEquipoController)
 );
@@ -148,7 +152,6 @@ router.delete(
 // RUTAS DE ÁRBITROS
 // ========================================
 
-// POST /api/planillas-pago/arbitros - Agregar árbitro
 router.post(
   "/arbitros",
   authMiddleware,
@@ -164,7 +167,6 @@ router.post(
   asyncHandler(addArbitroController)
 );
 
-// PUT /api/planillas-pago/arbitros/:idfecha/:orden - Actualizar árbitro
 router.put(
   "/arbitros/:idfecha/:orden",
   authMiddleware,
@@ -186,7 +188,6 @@ router.put(
   asyncHandler(updateArbitroController)
 );
 
-// DELETE /api/planillas-pago/arbitros/:idfecha/:orden - Eliminar árbitro
 router.delete(
   "/arbitros/:idfecha/:orden",
   authMiddleware,
@@ -202,7 +203,6 @@ router.delete(
 // RUTAS DE CANCHAS
 // ========================================
 
-// POST /api/planillas-pago/canchas - Agregar cancha
 router.post(
   "/canchas",
   authMiddleware,
@@ -216,7 +216,6 @@ router.post(
   asyncHandler(addCanchaController)
 );
 
-// PUT /api/planillas-pago/canchas/:idfecha/:orden - Actualizar cancha
 router.put(
   "/canchas/:idfecha/:orden",
   authMiddleware,
@@ -236,7 +235,6 @@ router.put(
   asyncHandler(updateCanchaController)
 );
 
-// DELETE /api/planillas-pago/canchas/:idfecha/:orden - Eliminar cancha
 router.delete(
   "/canchas/:idfecha/:orden",
   authMiddleware,
@@ -252,7 +250,6 @@ router.delete(
 // RUTAS DE PROFESORES
 // ========================================
 
-// POST /api/planillas-pago/profesores - Agregar profesor
 router.post(
   "/profesores",
   authMiddleware,
@@ -267,7 +264,6 @@ router.post(
   asyncHandler(addProfesorController)
 );
 
-// PUT /api/planillas-pago/profesores/:idfecha/:orden - Actualizar profesor
 router.put(
   "/profesores/:idfecha/:orden",
   authMiddleware,
@@ -291,7 +287,6 @@ router.put(
   asyncHandler(updateProfesorController)
 );
 
-// DELETE /api/planillas-pago/profesores/:idfecha/:orden - Eliminar profesor
 router.delete(
   "/profesores/:idfecha/:orden",
   authMiddleware,
@@ -307,7 +302,6 @@ router.delete(
 // RUTAS DE SERVICIO MÉDICO
 // ========================================
 
-// POST /api/planillas-pago/medico - Agregar médico
 router.post(
   "/medico",
   authMiddleware,
@@ -322,7 +316,6 @@ router.post(
   asyncHandler(addMedicoController)
 );
 
-// PUT /api/planillas-pago/medico/:idfecha/:orden - Actualizar médico
 router.put(
   "/medico/:idfecha/:orden",
   authMiddleware,
@@ -343,7 +336,6 @@ router.put(
   asyncHandler(updateMedicoController)
 );
 
-// DELETE /api/planillas-pago/medico/:idfecha/:orden - Eliminar médico
 router.delete(
   "/medico/:idfecha/:orden",
   authMiddleware,
@@ -359,7 +351,6 @@ router.delete(
 // RUTAS DE OTROS GASTOS
 // ========================================
 
-// POST /api/planillas-pago/otros-gastos - Agregar gasto
 router.post(
   "/otros-gastos",
   authMiddleware,
@@ -375,7 +366,6 @@ router.post(
   asyncHandler(addOtroGastoController)
 );
 
-// PUT /api/planillas-pago/otros-gastos/:idfecha/:orden - Actualizar gasto
 router.put(
   "/otros-gastos/:idfecha/:orden",
   authMiddleware,
@@ -394,7 +384,6 @@ router.put(
   asyncHandler(updateOtroGastoController)
 );
 
-// DELETE /api/planillas-pago/otros-gastos/:idfecha/:orden - Eliminar gasto
 router.delete(
   "/otros-gastos/:idfecha/:orden",
   authMiddleware,

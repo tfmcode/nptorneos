@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from "react";
 import {
+  PlanillaEquipo,
+  PlanillaArbitro,
+  PlanillaCancha,
+  PlanillaProfesor,
+  PlanillaMedico,
+  PlanillaOtroGasto,
+} from "../types/planillasPago";
+
+import {
   addEquipoPlanilla,
   updateEquipoPlanilla,
   deleteEquipoPlanilla,
@@ -22,6 +31,15 @@ import {
   deleteOtroGastoPlanilla,
 } from "../api/planillasPagosService";
 
+// Tipo genérico que acepta todas las entidades de planilla
+type PlanillaEntity =
+  | PlanillaEquipo
+  | PlanillaArbitro
+  | PlanillaCancha
+  | PlanillaProfesor
+  | PlanillaMedico
+  | PlanillaOtroGasto;
+
 type EntityType =
   | "equipo"
   | "arbitro"
@@ -30,7 +48,7 @@ type EntityType =
   | "medico"
   | "otro_gasto";
 
-interface UsePlanillaEditionProps<T> {
+interface UsePlanillaEditionProps<T extends PlanillaEntity> {
   entityType: EntityType;
   initialData: T[];
   idfecha: number;
@@ -38,26 +56,30 @@ interface UsePlanillaEditionProps<T> {
   onError?: (error: string) => void;
 }
 
-// Tipo base que todos los items deben tener
-interface BaseItem {
-  id?: number;
-  idfecha: number;
-  orden: number;
+interface UsePlanillaEditionReturn<T extends PlanillaEntity> {
+  data: T[];
+  isEditing: boolean;
+  handleAdd: () => void;
+  handleUpdate: (index: number, field: keyof T, value: unknown) => void;
+  handleDelete: (index: number) => void;
+  handleSave: () => Promise<void>;
 }
 
-export function usePlanillaEdition<T extends BaseItem>(
-  props: UsePlanillaEditionProps<T>
-) {
-  const { entityType, initialData, idfecha, onSuccess, onError } = props;
-
+export function usePlanillaEdition<T extends PlanillaEntity>({
+  entityType,
+  initialData,
+  idfecha,
+  onSuccess,
+  onError,
+}: UsePlanillaEditionProps<T>): UsePlanillaEditionReturn<T> {
   const [data, setData] = useState<T[]>(initialData);
+  const [deletedItems, setDeletedItems] = useState<T[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
 
   // Actualizar data cuando cambia initialData
   useEffect(() => {
     setData(initialData);
-    setHasChanges(false);
+    setDeletedItems([]); // Limpiar items eliminados cuando se recarga
   }, [initialData]);
 
   // Obtener el siguiente orden disponible
@@ -67,210 +89,229 @@ export function usePlanillaEdition<T extends BaseItem>(
     return maxOrden + 1;
   };
 
-  // Crear plantilla según tipo de entidad
-  const createTemplate = (orden: number): T => {
-    const base = { idfecha, orden };
+  // Crear una nueva entidad vacía según el tipo
+  const createEmptyEntity = (): T => {
+    const baseEntity = {
+      idfecha,
+      orden: getNextOrden(),
+    };
 
     switch (entityType) {
       case "equipo":
         return {
-          ...base,
+          ...baseEntity,
           idequipo: 0,
           tipopago: 1,
           importe: 0,
-        } as unknown as T;
+        } as T;
+
       case "arbitro":
         return {
-          ...base,
+          ...baseEntity,
           idarbitro: 0,
           partidos: 0,
           valor_partido: 0,
           total: 0,
-        } as unknown as T;
+        } as T;
+
       case "cancha":
-        return { ...base, horas: 0, valor_hora: 0, total: 0 } as unknown as T;
+        return {
+          ...baseEntity,
+          horas: 0,
+          valor_hora: 0,
+          total: 0,
+        } as T;
+
       case "profesor":
         return {
-          ...base,
+          ...baseEntity,
           idprofesor: 0,
           horas: 0,
           valor_hora: 0,
           total: 0,
-        } as unknown as T;
+        } as T;
+
       case "medico":
         return {
-          ...base,
+          ...baseEntity,
           idmedico: 0,
           horas: 0,
           valor_hora: 0,
           total: 0,
-        } as unknown as T;
+        } as T;
+
       case "otro_gasto":
         return {
-          ...base,
+          ...baseEntity,
           codgasto: 0,
           cantidad: 0,
           valor_unidad: 0,
           total: 0,
-        } as unknown as T;
+        } as T;
+
       default:
-        return base as unknown as T;
+        return baseEntity as T;
     }
   };
 
-  // Agregar nuevo registro
+  // Agregar nueva entidad
   const handleAdd = () => {
-    const nuevoOrden = getNextOrden();
-    const newItem = createTemplate(nuevoOrden);
-    setData([...data, newItem]);
-    setHasChanges(true);
+    const newEntity = createEmptyEntity();
+    setData([...data, newEntity]);
   };
 
-  // Actualizar registro
+  // Actualizar campo de una entidad
   const handleUpdate = (index: number, field: keyof T, value: unknown) => {
-    const updated = [...data];
-    updated[index] = { ...updated[index], [field]: value };
-    setData(updated);
-    setHasChanges(true);
+    const newData = [...data];
+    newData[index] = {
+      ...newData[index],
+      [field]: value,
+    };
+    setData(newData);
   };
 
-  // Eliminar registro
+  // Eliminar entidad
   const handleDelete = (index: number) => {
-    setData(data.filter((_, i) => i !== index));
-    setHasChanges(true);
-  };
+    const itemToDelete = data[index];
 
-  // Guardar cambios en el backend
-  const handleSave = async () => {
-    if (!hasChanges) {
-      onError?.("No hay cambios para guardar");
-      return;
+    // Si el item ya existe en la BD (tiene id o fhcarga), guardarlo para eliminarlo después
+    if (itemToDelete.id !== undefined || itemToDelete.fhcarga !== undefined) {
+      setDeletedItems([...deletedItems, itemToDelete]);
     }
 
+    // Remover del array local
+    const newData = data.filter((_, i) => i !== index);
+    setData(newData);
+  };
+
+  // Guardar todos los cambios
+  const handleSave = async () => {
     setIsEditing(true);
 
     try {
-      // Procesar cada registro según su tipo
-      for (const item of data) {
-        const payload = { ...item };
-
+      // Determinar qué funciones usar según el tipo de entidad
+      const {
+        addFn,
+        updateFn,
+        deleteFn,
+      }: {
+        addFn: (data: T) => Promise<T | null>;
+        updateFn: (
+          idfecha: number,
+          orden: number,
+          data: Partial<T>
+        ) => Promise<T | null>;
+        deleteFn: (idfecha: number, orden: number) => Promise<void>;
+      } = (() => {
         switch (entityType) {
           case "equipo":
-            if (!item.id) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await addEquipoPlanilla(payload as any);
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await updateEquipoPlanilla(item.id, payload as any);
-            }
-            break;
-
+            return {
+              addFn: addEquipoPlanilla as (data: T) => Promise<T | null>,
+              updateFn: updateEquipoPlanilla as (
+                idfecha: number,
+                orden: number,
+                data: Partial<T>
+              ) => Promise<T | null>,
+              deleteFn: deleteEquipoPlanilla as (
+                idfecha: number,
+                orden: number
+              ) => Promise<void>,
+            };
           case "arbitro":
-            if (!item.id) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await addArbitroPlanilla(payload as any);
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await updateArbitroPlanilla(idfecha, item.orden, payload as any);
-            }
-            break;
-
+            return {
+              addFn: addArbitroPlanilla as (data: T) => Promise<T | null>,
+              updateFn: updateArbitroPlanilla as (
+                idfecha: number,
+                orden: number,
+                data: Partial<T>
+              ) => Promise<T | null>,
+              deleteFn: deleteArbitroPlanilla as (
+                idfecha: number,
+                orden: number
+              ) => Promise<void>,
+            };
           case "cancha":
-            if (!item.id) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await addCanchaPlanilla(payload as any);
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await updateCanchaPlanilla(idfecha, item.orden, payload as any);
-            }
-            break;
-
+            return {
+              addFn: addCanchaPlanilla as (data: T) => Promise<T | null>,
+              updateFn: updateCanchaPlanilla as (
+                idfecha: number,
+                orden: number,
+                data: Partial<T>
+              ) => Promise<T | null>,
+              deleteFn: deleteCanchaPlanilla as (
+                idfecha: number,
+                orden: number
+              ) => Promise<void>,
+            };
           case "profesor":
-            if (!item.id) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await addProfesorPlanilla(payload as any);
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await updateProfesorPlanilla(idfecha, item.orden, payload as any);
-            }
-            break;
-
+            return {
+              addFn: addProfesorPlanilla as (data: T) => Promise<T | null>,
+              updateFn: updateProfesorPlanilla as (
+                idfecha: number,
+                orden: number,
+                data: Partial<T>
+              ) => Promise<T | null>,
+              deleteFn: deleteProfesorPlanilla as (
+                idfecha: number,
+                orden: number
+              ) => Promise<void>,
+            };
           case "medico":
-            if (!item.id) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await addMedicoPlanilla(payload as any);
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await updateMedicoPlanilla(idfecha, item.orden, payload as any);
-            }
-            break;
-
+            return {
+              addFn: addMedicoPlanilla as (data: T) => Promise<T | null>,
+              updateFn: updateMedicoPlanilla as (
+                idfecha: number,
+                orden: number,
+                data: Partial<T>
+              ) => Promise<T | null>,
+              deleteFn: deleteMedicoPlanilla as (
+                idfecha: number,
+                orden: number
+              ) => Promise<void>,
+            };
           case "otro_gasto":
-            if (!item.id) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await addOtroGastoPlanilla(payload as any);
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await updateOtroGastoPlanilla(
-                idfecha,
-                item.orden,
-                payload as any
-              );
-            }
-            break;
+            return {
+              addFn: addOtroGastoPlanilla as (data: T) => Promise<T | null>,
+              updateFn: updateOtroGastoPlanilla as (
+                idfecha: number,
+                orden: number,
+                data: Partial<T>
+              ) => Promise<T | null>,
+              deleteFn: deleteOtroGastoPlanilla as (
+                idfecha: number,
+                orden: number
+              ) => Promise<void>,
+            };
+          default:
+            throw new Error("Tipo de entidad no soportado");
+        }
+      })();
+
+      // 1. Primero procesar eliminaciones
+      for (const item of deletedItems) {
+        await deleteFn(item.idfecha, item.orden);
+      }
+
+      // 2. Luego procesar adiciones y actualizaciones
+      for (const item of data) {
+        // Si el item tiene ID o fhcarga, es una actualización
+        if (item.id !== undefined || item.fhcarga !== undefined) {
+          await updateFn(item.idfecha, item.orden, item);
+        } else {
+          // Si no tiene ID ni fhcarga, es una nueva entidad
+          await addFn(item);
         }
       }
 
-      setHasChanges(false);
+      // Limpiar el array de items eliminados después de guardar
+      setDeletedItems([]);
+
+      // Notificar éxito
       onSuccess?.();
     } catch (error) {
-      const errorMsg =
+      const errorMessage =
         error instanceof Error ? error.message : "Error al guardar cambios";
-      onError?.(errorMsg);
-    } finally {
-      setIsEditing(false);
-    }
-  };
-
-  // Eliminar registro del backend
-  const handleDeleteFromBackend = async (index: number) => {
-    const item = data[index];
-    if (!item.id) {
-      // Si no tiene ID, solo lo eliminamos localmente
-      handleDelete(index);
-      return;
-    }
-
-    setIsEditing(true);
-
-    try {
-      switch (entityType) {
-        case "equipo":
-          await deleteEquipoPlanilla(item.id);
-          break;
-        case "arbitro":
-          await deleteArbitroPlanilla(idfecha, item.orden);
-          break;
-        case "cancha":
-          await deleteCanchaPlanilla(idfecha, item.orden);
-          break;
-        case "profesor":
-          await deleteProfesorPlanilla(idfecha, item.orden);
-          break;
-        case "medico":
-          await deleteMedicoPlanilla(idfecha, item.orden);
-          break;
-        case "otro_gasto":
-          await deleteOtroGastoPlanilla(idfecha, item.orden);
-          break;
-      }
-
-      handleDelete(index);
-      onSuccess?.();
-    } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Error al eliminar registro";
-      onError?.(errorMsg);
+      onError?.(errorMessage);
     } finally {
       setIsEditing(false);
     }
@@ -278,12 +319,10 @@ export function usePlanillaEdition<T extends BaseItem>(
 
   return {
     data,
-    setData,
     isEditing,
-    hasChanges,
     handleAdd,
     handleUpdate,
-    handleDelete: handleDeleteFromBackend,
+    handleDelete,
     handleSave,
   };
 }

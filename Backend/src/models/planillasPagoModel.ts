@@ -1,5 +1,7 @@
+// Backend/src/models/planillasPagoModel.ts
 // ========================================
-// PLANILLAS DE PAGO MODEL - REFACTORIZADO Y CORREGIDO
+// PLANILLAS DE PAGO MODEL - REFACTORIZADO
+// Ahora consulta desde wtorneos_fechas como fuente principal
 // ========================================
 
 import { pool } from "../config/db";
@@ -55,37 +57,50 @@ export const deleteOtroGasto = otrosGastosService.deleteOtroGasto;
 
 // ========================================
 // LISTADO DE PLANILLAS CON FILTROS
+// ✅ AHORA CONSULTA DESDE wtorneos_fechas
 // ========================================
 export const getPlanillasByFiltros = async (
   filtros: PlanillasFiltros
 ): Promise<PlanillaPago[]> => {
   try {
+    // ✅ PARTIR DESDE wtorneos_fechas como fuente principal
     let query = `
-      SELECT DISTINCT ON (p.idfecha)
-        p.idfecha as partido_idfecha,
-        p.id as partido_id,
-        p.fecha,
-        p.idsede,
+      SELECT 
+        wtf.id as planilla_id,
+        wtf.fecha,
+        wtf.idsede,
+        wtf.idsubsede,
+        wtf.codfecha,
+        wtf.idtorneo,
+        wtf.idprofesor,
+        wtf.idprofesor_cierre,
+        wtf.idturno,
+        wtf.fhcarga,
+        wtf.fhcierre,
+        wtf.fhcierrecaja,
+        wtf.totcierre,
+        wtf.totefectivo,
+        wtf.observ,
+        wtf.observ_caja,
         s.nombre as sede_nombre,
-        z.idtorneo,
-        p.nrofecha as codfecha,
         t.nombre as torneo_nombre,
-        z.nombre as zona_nombre,
         CASE 
-          WHEN MAX(wtf.fhcierrecaja) IS NOT NULL THEN 'contabilizada'
-          WHEN MAX(wtf.fhcierre) IS NOT NULL THEN 'cerrada'
+          WHEN wtf.fhcierrecaja IS NOT NULL THEN 'contabilizada'
+          WHEN wtf.fhcierre IS NOT NULL THEN 'cerrada'
           ELSE 'abierta'
         END as estado,
-        MAX(wtf.fhcierre) as fhcierre,
-        MAX(wtf.fhcierrecaja) as fhcierrecaja,
-        COALESCE(MAX(wtf.totcierre), 0) as totcierre,
-        COALESCE(MAX(wtf.totefectivo), 0) as totefectivo
-      FROM partidos p
-      INNER JOIN zonas z ON p.idzona = z.id
-      INNER JOIN wtorneos t ON z.idtorneo = t.id
-      LEFT JOIN wsedes s ON p.idsede = s.id
-      LEFT JOIN wtorneos_fechas wtf ON p.idfecha = wtf.id
-      WHERE p.fhbaja IS NULL
+        -- Contar partidos asociados a esta caja
+        (SELECT COUNT(*) FROM partidos p 
+         WHERE p.idfecha = wtf.id AND p.fhbaja IS NULL) as cantidad_partidos,
+        -- Obtener zona del primer partido (para mostrar info adicional)
+        (SELECT z.nombre FROM partidos p 
+         INNER JOIN zonas z ON p.idzona = z.id
+         WHERE p.idfecha = wtf.id AND p.fhbaja IS NULL 
+         LIMIT 1) as zona_nombre
+      FROM wtorneos_fechas wtf
+      LEFT JOIN wsedes s ON wtf.idsede = s.id
+      LEFT JOIN wtorneos t ON wtf.idtorneo = t.id
+      WHERE wtf.fhbaja IS NULL
     `;
 
     const params: any[] = [];
@@ -93,60 +108,57 @@ export const getPlanillasByFiltros = async (
 
     // Filtro por torneo
     if (filtros.idtorneo) {
-      query += ` AND z.idtorneo = $${paramIndex}`;
+      query += ` AND wtf.idtorneo = $${paramIndex}`;
       params.push(filtros.idtorneo);
       paramIndex++;
     }
 
     // Filtro por sede
     if (filtros.idsede) {
-      query += ` AND p.idsede = $${paramIndex}`;
+      query += ` AND wtf.idsede = $${paramIndex}`;
       params.push(filtros.idsede);
       paramIndex++;
     }
 
     // Filtro por fecha desde
     if (filtros.fecha_desde) {
-      query += ` AND p.fecha >= $${paramIndex}`;
+      query += ` AND wtf.fecha >= $${paramIndex}`;
       params.push(filtros.fecha_desde);
       paramIndex++;
     }
 
     // Filtro por fecha hasta
     if (filtros.fecha_hasta) {
-      query += ` AND p.fecha <= $${paramIndex}`;
+      query += ` AND wtf.fecha <= $${paramIndex}`;
       params.push(filtros.fecha_hasta);
       paramIndex++;
     }
 
-    query += `
-      GROUP BY p.idfecha, p.id, p.fecha, p.idsede, s.nombre, z.idtorneo, p.nrofecha, t.nombre, z.nombre
-    `;
-
     // Filtro por estado
     if (filtros.estado) {
-      query += ` HAVING `;
       if (filtros.estado === "abierta") {
-        query += `(MAX(wtf.fhcierre) IS NULL AND MAX(wtf.fhcierrecaja) IS NULL)`;
+        query += ` AND wtf.fhcierre IS NULL AND wtf.fhcierrecaja IS NULL`;
       } else if (filtros.estado === "cerrada") {
-        query += `(MAX(wtf.fhcierre) IS NOT NULL AND MAX(wtf.fhcierrecaja) IS NULL)`;
+        query += ` AND wtf.fhcierre IS NOT NULL AND wtf.fhcierrecaja IS NULL`;
       } else if (filtros.estado === "contabilizada") {
-        query += `MAX(wtf.fhcierrecaja) IS NOT NULL`;
+        query += ` AND wtf.fhcierrecaja IS NOT NULL`;
       }
     }
 
-    query += ` ORDER BY p.idfecha, p.fecha DESC, p.nrofecha DESC`;
+    query += ` ORDER BY wtf.fecha DESC, wtf.codfecha DESC`;
 
     const { rows } = await pool.query(query, params);
 
     return rows.map((row: any) => ({
-      id: row.partido_idfecha, // ✅ Usar idfecha como ID principal
-      idfecha: row.partido_idfecha,
+      id: row.planilla_id,
+      idfecha: row.planilla_id,
       fecha: row.fecha,
       idsede: row.idsede,
+      idsubsede: row.idsubsede,
       sede_nombre: row.sede_nombre,
       idtorneo: row.idtorneo,
       codfecha: row.codfecha,
+      idprofesor: row.idprofesor,
       torneo: row.torneo_nombre,
       torneo_nombre: row.torneo_nombre,
       zona: row.zona_nombre,
@@ -155,6 +167,7 @@ export const getPlanillasByFiltros = async (
       fhcierre: row.fhcierre,
       fhcierrecaja: row.fhcierrecaja,
       total_caja: parseFloat(row.totcierre || "0"),
+      cantidad_partidos: row.cantidad_partidos || 0,
     }));
   } catch (error) {
     console.error("Error en getPlanillasByFiltros:", error);
@@ -164,21 +177,21 @@ export const getPlanillasByFiltros = async (
 
 // ========================================
 // OBTENER PLANILLA COMPLETA POR IDFECHA
+// ✅ AHORA CONSULTA DESDE wtorneos_fechas
 // ========================================
 export const getPlanillaByIdFecha = async (
   idfecha: number
 ): Promise<PlanillaCompleta | null> => {
   try {
-    // ✅ CORREGIDO: Usar p.idfecha en lugar de p.id
+    // ✅ Consultar primero desde wtorneos_fechas
     const planillaQuery = `
       SELECT 
         wtf.id as planilla_id,
-        p.idfecha,
-        p.fecha,
-        p.idsede,
-        s.nombre as sede_nombre,
-        z.idtorneo,
-        p.nrofecha as codfecha,
+        wtf.fecha,
+        wtf.idsede,
+        wtf.idsubsede,
+        wtf.idtorneo,
+        wtf.codfecha,
         wtf.idprofesor,
         wtf.idprofesor_cierre,
         wtf.idturno,
@@ -191,24 +204,12 @@ export const getPlanillaByIdFecha = async (
         wtf.idusrcierrecaja,
         wtf.totcierre,
         wtf.totefectivo,
-        t.nombre as torneo_nombre,
-        z.nombre as zona_nombre,
-        p.idequipo1,
-        p.idequipo2,
-        p.goles1,
-        p.goles2,
-        p.codestado,
-        p.arbitro,
-        e1.nombre as nombre_equipo1,
-        e2.nombre as nombre_equipo2
-      FROM partidos p
-      INNER JOIN zonas z ON p.idzona = z.id
-      INNER JOIN wtorneos t ON z.idtorneo = t.id
-      LEFT JOIN wsedes s ON p.idsede = s.id
-      LEFT JOIN wtorneos_fechas wtf ON p.idfecha = wtf.id
-      LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
-      LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
-      WHERE p.idfecha = $1
+        s.nombre as sede_nombre,
+        t.nombre as torneo_nombre
+      FROM wtorneos_fechas wtf
+      LEFT JOIN wsedes s ON wtf.idsede = s.id
+      LEFT JOIN wtorneos t ON wtf.idtorneo = t.id
+      WHERE wtf.id = $1
     `;
 
     const planillaResult = await pool.query(planillaQuery, [idfecha]);
@@ -219,11 +220,33 @@ export const getPlanillaByIdFecha = async (
 
     const row = planillaResult.rows[0];
 
+    // Obtener partidos asociados a esta caja
+    const partidosQuery = `
+      SELECT 
+        p.id,
+        p.idequipo1,
+        p.idequipo2,
+        p.goles1,
+        p.goles2,
+        p.codestado,
+        p.arbitro,
+        e1.nombre as nombre_equipo1,
+        e2.nombre as nombre_equipo2,
+        z.nombre as zona_nombre
+      FROM partidos p
+      LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
+      LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
+      LEFT JOIN zonas z ON p.idzona = z.id
+      WHERE p.idfecha = $1 AND p.fhbaja IS NULL
+    `;
+    const partidosResult = await pool.query(partidosQuery, [idfecha]);
+
     const planilla: PlanillaPago = {
-      id: row.planilla_id || row.idfecha,
-      idfecha: row.idfecha,
+      id: row.planilla_id,
+      idfecha: row.planilla_id,
       fecha: row.fecha,
       idsede: row.idsede,
+      idsubsede: row.idsubsede,
       sede_nombre: row.sede_nombre,
       idtorneo: row.idtorneo,
       codfecha: row.codfecha,
@@ -241,23 +264,28 @@ export const getPlanillaByIdFecha = async (
       totefectivo: parseFloat(row.totefectivo || "0"),
       torneo: row.torneo_nombre,
       torneo_nombre: row.torneo_nombre,
-      zona: row.zona_nombre,
-      zona_nombre: row.zona_nombre,
-      partido_info: {
-        nombre1: row.nombre_equipo1,
-        nombre2: row.nombre_equipo2,
-        goles1: row.goles1,
-        goles2: row.goles2,
-        codestado: row.codestado,
-        arbitro: row.arbitro,
-      },
+      // Zona del primer partido
+      zona: partidosResult.rows[0]?.zona_nombre,
+      zona_nombre: partidosResult.rows[0]?.zona_nombre,
+      // Info del primer partido (para mostrar en el header)
+      partido_info:
+        partidosResult.rows.length > 0
+          ? {
+              nombre1: partidosResult.rows[0].nombre_equipo1,
+              nombre2: partidosResult.rows[0].nombre_equipo2,
+              goles1: partidosResult.rows[0].goles1,
+              goles2: partidosResult.rows[0].goles2,
+              codestado: partidosResult.rows[0].codestado,
+              arbitro: partidosResult.rows[0].arbitro,
+            }
+          : undefined,
     };
 
-    // 2. Obtener todos los detalles usando servicios modulares
+    // Obtener todos los detalles usando servicios modulares
     const equipos = await equiposService.getEquiposByPlanilla(
       idfecha,
-      row.nombre_equipo1,
-      row.nombre_equipo2
+      partidosResult.rows[0]?.nombre_equipo1,
+      partidosResult.rows[0]?.nombre_equipo2
     );
     const arbitros = await arbitrosService.getArbitrosByPlanilla(idfecha);
     const canchas = await canchasService.getCanchasByPlanilla(idfecha);
@@ -267,7 +295,7 @@ export const getPlanillaByIdFecha = async (
       idfecha
     );
 
-    // 3. Calcular totales
+    // Calcular totales
     const totales = calcularTotales(
       equipos,
       arbitros,
@@ -295,6 +323,8 @@ export const getPlanillaByIdFecha = async (
 
 // ========================================
 // CREAR PLANILLA BASE
+// ⚠️ DEPRECADO - Ahora las cajas se crean automáticamente
+// desde partidosModel al guardar partidos
 // ========================================
 export const createPlanilla = async (
   idfecha: number
@@ -305,7 +335,7 @@ export const createPlanilla = async (
     const existe = await pool.query(existeQuery, [idfecha]);
 
     if (existe.rows.length > 0) {
-      throw new Error("Ya existe una planilla para este partido");
+      throw new Error("Ya existe una planilla para este idfecha");
     }
 
     // Obtener datos del partido usando idfecha
@@ -319,7 +349,7 @@ export const createPlanilla = async (
         p.idprofesor
       FROM partidos p
       INNER JOIN zonas z ON p.idzona = z.id
-      WHERE p.idfecha = $1
+      WHERE p.id = $1
     `;
     const partidoResult = await pool.query(partidoQuery, [idfecha]);
 

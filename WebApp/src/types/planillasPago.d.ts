@@ -7,8 +7,11 @@ export interface PlanillaPago {
   idtorneo: number;
   codfecha?: number;
   idprofesor?: number;
+  profesor_nombre?: string; // ✅ NUEVO: Nombre del profesor
   idprofesor_cierre?: number;
+  profesor_cierre_nombre?: string; // ✅ NUEVO: Nombre del profesor que cerró
   idturno?: number;
+  turno_nombre?: string; // ✅ NUEVO: Nombre del turno
   observ?: string;
   observ_caja?: string;
   fhcarga?: string;
@@ -28,9 +31,9 @@ export interface PlanillaPago {
   torneo?: string;
   zona?: string;
   zona_nombre?: string;
-  profesor_nombre?: string;
   estado?: string;
-  // ✅ NUEVO: Información del partido
+  cantidad_partidos?: number; // ✅ AGREGADO: Cantidad de partidos en la caja
+  // ✅ MANTENIDO: Información del partido
   partido_info?: {
     nombre1?: string;
     nombre2?: string;

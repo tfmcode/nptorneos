@@ -1,8 +1,3 @@
-// ========================================
-// PLANILLAS DE PAGO - TYPES
-// ========================================
-
-// Tabla principal: wfechas_equipos (planilla base)
 export interface PlanillaPago {
   id?: number;
   idfecha: number; // Referencia a partidos.id
@@ -13,8 +8,11 @@ export interface PlanillaPago {
   idtorneo: number;
   codfecha?: number;
   idprofesor?: number;
+  profesor_nombre?: string; // ✅ NUEVO: Nombre del profesor desde proveedores
   idprofesor_cierre?: number;
+  profesor_cierre_nombre?: string; // ✅ NUEVO: Nombre del profesor que cerró
   idturno?: number;
+  turno_nombre?: string; // ✅ NUEVO: Nombre del turno desde codificadores
   observ?: string;
   observ_caja?: string;
   fhcarga?: string;
@@ -24,7 +22,6 @@ export interface PlanillaPago {
   idusrcierrecaja?: number;
   totcierre?: number;
   totefectivo?: number;
-  // Campos calculados (no en DB)
   total_ingresos?: number;
   total_egresos?: number;
   total_caja?: number;
@@ -34,6 +31,7 @@ export interface PlanillaPago {
   zona?: string;
   zona_nombre?: string;
   estado?: "abierta" | "cerrada" | "contabilizada";
+  cantidad_partidos?: number; // ✅ AGREGADO: Cantidad de partidos en la caja
   partido_info?: {
     nombre1?: string;
     nombre2?: string;
@@ -129,10 +127,6 @@ export interface PlanillaOtroGasto {
   [key: string]: unknown;
 }
 
-// ========================================
-// TOTALES DE PLANILLA
-// ========================================
-
 export interface TotalesPlanilla {
   ingreso_inscripciones: number;
   ingreso_depositos: number;
@@ -148,11 +142,6 @@ export interface TotalesPlanilla {
   total_efectivo: number;
   diferencia_caja: number;
 }
-
-// ========================================
-// INPUTS (para crear/actualizar)
-// ========================================
-
 export interface PlanillaPagoInput {
   idfecha: number;
   fecha: string;
@@ -215,10 +204,6 @@ export interface PlanillaOtroGastoInput {
   valor_unidad: number;
 }
 
-// ========================================
-// RESPUESTA COMPLETA DE PLANILLA
-// ========================================
-
 export interface PlanillaCompleta {
   planilla: PlanillaPago;
   equipos: PlanillaEquipo[];
@@ -229,10 +214,6 @@ export interface PlanillaCompleta {
   otros_gastos: PlanillaOtroGasto[];
   totales: TotalesPlanilla;
 }
-
-// ========================================
-// PARA LISTADO CON FILTROS
-// ========================================
 
 export interface PlanillaPagoListado {
   id?: number;

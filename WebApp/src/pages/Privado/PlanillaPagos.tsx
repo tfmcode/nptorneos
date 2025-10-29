@@ -1,3 +1,6 @@
+// WebApp/src/pages/Privado/PlanillaPagos.tsx
+// ✅ ACTUALIZADO: Ahora muestra el nombre del profesor en la tabla
+
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
@@ -226,7 +229,6 @@ const PlanillaPagos: React.FC = () => {
                   <th className="px-4 py-2 text-left">Sede</th>
                   <th className="px-4 py-2 text-left">Torneo</th>
                   <th className="px-4 py-2 text-left">Profesor</th>
-                  <th className="px-4 py-2 text-center">Partidos</th>
                   <th className="px-4 py-2 text-center">Estado</th>
                   <th className="px-4 py-2 text-right">Total Caja</th>
                   <th className="px-4 py-2 text-center">Acciones</th>
@@ -249,10 +251,22 @@ const PlanillaPagos: React.FC = () => {
                     <td className="px-4 py-2">
                       {planilla.torneo_nombre || planilla.torneo || "-"}
                     </td>
+                    {/* ✅ ACTUALIZADO: Ahora muestra el nombre del profesor */}
                     <td className="px-4 py-2">
-                      {planilla.idprofesor ? `ID: ${planilla.idprofesor}` : "-"}
+                      {planilla.profesor_nombre ||
+                        (planilla.idprofesor
+                          ? `ID: ${planilla.idprofesor}`
+                          : "-")}
                     </td>
-                    <td className="px-4 py-2 text-center"></td>
+                    <td className="px-4 py-2 text-center">
+                      {planilla.cantidad_partidos ? (
+                        <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-blue-700 bg-blue-100 rounded-full">
+                          {planilla.cantidad_partidos}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-center">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
@@ -310,6 +324,14 @@ const PlanillaPagos: React.FC = () => {
               <div>
                 <strong>Contabilizadas:</strong>{" "}
                 {planillas.filter((p) => p.fhcierrecaja).length}
+              </div>
+              {/* ✅ NUEVO: Total de partidos */}
+              <div>
+                <strong>Total partidos:</strong>{" "}
+                {planillas.reduce(
+                  (sum, p) => sum + (p.cantidad_partidos || 0),
+                  0
+                )}
               </div>
             </div>
           </div>

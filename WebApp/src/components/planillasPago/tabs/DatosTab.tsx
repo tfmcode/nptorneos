@@ -1,3 +1,6 @@
+// WebApp/src/components/planillasPago/tabs/DatosTab.tsx
+// ✅ ACTUALIZADO: Ahora muestra nombres de profesor y turno
+
 import React from "react";
 import { PlanillaPago } from "../../../types/planillasPago";
 
@@ -67,20 +70,20 @@ export const DatosTab: React.FC<DatosTabProps> = ({
           />
         </div>
 
+        {/* ✅ ACTUALIZADO: Ahora muestra el nombre del profesor SIN el ID */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Profesor Asignado
           </label>
           <input
             type="text"
-            value={
-              planilla.idprofesor ? `ID: ${planilla.idprofesor}` : "Sin asignar"
-            }
+            value={planilla.profesor_nombre || "Sin asignar"}
             className="mt-1 w-full px-3 py-2 border rounded-md bg-gray-50"
             disabled
           />
         </div>
 
+        {/* ✅ ACTUALIZADO: Ahora muestra el nombre del turno */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Turno
@@ -98,6 +101,12 @@ export const DatosTab: React.FC<DatosTabProps> = ({
             <option value={2}>Tarde</option>
             <option value={3}>Noche</option>
           </select>
+          {/* ✅ NUEVO: Mostrar el nombre del turno actual si existe */}
+          {planilla.turno_nombre && (
+            <p className="text-xs text-gray-500 mt-1">
+              Turno actual: {planilla.turno_nombre}
+            </p>
+          )}
         </div>
       </div>
 
@@ -125,12 +134,15 @@ export const DatosTab: React.FC<DatosTabProps> = ({
             </div>
           </div>
 
+          {/* ✅ ACTUALIZADO: Ahora muestra el nombre del profesor que cerró */}
           <div>
             <span className="font-medium text-gray-700">
               Profesor que Cerró:
             </span>
             <div className="text-gray-600">
-              {planilla.idprofesor_cierre
+              {planilla.profesor_cierre_nombre
+                ? `${planilla.profesor_cierre_nombre} (ID: ${planilla.idprofesor_cierre})`
+                : planilla.idprofesor_cierre
                 ? `ID: ${planilla.idprofesor_cierre}`
                 : "-"}
             </div>

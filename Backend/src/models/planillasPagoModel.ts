@@ -1,7 +1,8 @@
 // Backend/src/models/planillasPagoModel.ts
 // ========================================
 // PLANILLAS DE PAGO MODEL - REFACTORIZADO
-// Ahora consulta desde wtorneos_fechas como fuente principal
+// ✅ CORREGIDO: Agregados JOINs con proveedores y codificadores
+// ✅ CORREGIDO: Usa cod.descripcion (no cod.nombre)
 // ========================================
 
 import { pool } from "../config/db";
@@ -57,13 +58,15 @@ export const deleteOtroGasto = otrosGastosService.deleteOtroGasto;
 
 // ========================================
 // LISTADO DE PLANILLAS CON FILTROS
-// ✅ AHORA CONSULTA DESDE wtorneos_fechas
+// ✅ CORREGIDO: Agregados JOINs con proveedores y codificadores
+// ✅ USA cod.descripcion (tu tabla tiene descripcion, no nombre)
 // ========================================
 export const getPlanillasByFiltros = async (
   filtros: PlanillasFiltros
 ): Promise<PlanillaPago[]> => {
   try {
     // ✅ PARTIR DESDE wtorneos_fechas como fuente principal
+    // ✅ AGREGADO: JOINs con proveedores y codificadores
     let query = `
       SELECT 
         wtf.id as planilla_id,
@@ -84,6 +87,10 @@ export const getPlanillasByFiltros = async (
         wtf.observ_caja,
         s.nombre as sede_nombre,
         t.nombre as torneo_nombre,
+        -- ✅ NUEVO: Nombre del profesor desde proveedores
+        prov.nombre as profesor_nombre,
+        -- ✅ NUEVO: DESCRIPCION del turno desde codificadores
+        cod.descripcion as turno_nombre,
         CASE 
           WHEN wtf.fhcierrecaja IS NOT NULL THEN 'contabilizada'
           WHEN wtf.fhcierre IS NOT NULL THEN 'cerrada'
@@ -100,6 +107,10 @@ export const getPlanillasByFiltros = async (
       FROM wtorneos_fechas wtf
       LEFT JOIN wsedes s ON wtf.idsede = s.id
       LEFT JOIN wtorneos t ON wtf.idtorneo = t.id
+      -- ✅ NUEVO: JOIN con proveedores para obtener nombre del profesor
+      LEFT JOIN proveedores prov ON wtf.idprofesor = prov.id
+      -- ✅ NUEVO: JOIN con codificadores para obtener DESCRIPCION del turno
+      LEFT JOIN codificadores cod ON wtf.idturno = cod.id AND cod.idcodificador = 7
       WHERE wtf.fhbaja IS NULL
     `;
 
@@ -159,6 +170,9 @@ export const getPlanillasByFiltros = async (
       idtorneo: row.idtorneo,
       codfecha: row.codfecha,
       idprofesor: row.idprofesor,
+      profesor_nombre: row.profesor_nombre, // ✅ NUEVO
+      idturno: row.idturno,
+      turno_nombre: row.turno_nombre, // ✅ NUEVO
       torneo: row.torneo_nombre,
       torneo_nombre: row.torneo_nombre,
       zona: row.zona_nombre,
@@ -177,13 +191,14 @@ export const getPlanillasByFiltros = async (
 
 // ========================================
 // OBTENER PLANILLA COMPLETA POR IDFECHA
-// ✅ AHORA CONSULTA DESDE wtorneos_fechas
+// ✅ CORREGIDO: Agregados JOINs con proveedores y codificadores
+// ✅ USA cod.descripcion (tu tabla tiene descripcion, no nombre)
 // ========================================
 export const getPlanillaByIdFecha = async (
   idfecha: number
 ): Promise<PlanillaCompleta | null> => {
   try {
-    // ✅ Consultar primero desde wtorneos_fechas
+    // ✅ CORREGIDO: Agregados JOINs con proveedores y codificadores
     const planillaQuery = `
       SELECT 
         wtf.id as planilla_id,
@@ -205,10 +220,22 @@ export const getPlanillaByIdFecha = async (
         wtf.totcierre,
         wtf.totefectivo,
         s.nombre as sede_nombre,
-        t.nombre as torneo_nombre
+        t.nombre as torneo_nombre,
+        -- ✅ NUEVO: Nombre del profesor asignado
+        prov.nombre as profesor_nombre,
+        -- ✅ NUEVO: Nombre del profesor que cerró
+        prov_cierre.nombre as profesor_cierre_nombre,
+        -- ✅ NUEVO: DESCRIPCION del turno
+        cod.descripcion as turno_nombre
       FROM wtorneos_fechas wtf
       LEFT JOIN wsedes s ON wtf.idsede = s.id
       LEFT JOIN wtorneos t ON wtf.idtorneo = t.id
+      -- ✅ NUEVO: JOIN con proveedores para el profesor asignado
+      LEFT JOIN proveedores prov ON wtf.idprofesor = prov.id
+      -- ✅ NUEVO: JOIN con proveedores para el profesor que cerró
+      LEFT JOIN proveedores prov_cierre ON wtf.idprofesor_cierre = prov_cierre.id
+      -- ✅ NUEVO: JOIN con codificadores para el turno (usa descripcion)
+      LEFT JOIN codificadores cod ON wtf.idturno = cod.id AND cod.idcodificador = 7
       WHERE wtf.id = $1
     `;
 
@@ -251,8 +278,11 @@ export const getPlanillaByIdFecha = async (
       idtorneo: row.idtorneo,
       codfecha: row.codfecha,
       idprofesor: row.idprofesor,
+      profesor_nombre: row.profesor_nombre, // ✅ NUEVO
       idprofesor_cierre: row.idprofesor_cierre,
+      profesor_cierre_nombre: row.profesor_cierre_nombre, // ✅ NUEVO
       idturno: row.idturno || undefined,
+      turno_nombre: row.turno_nombre, // ✅ NUEVO
       observ: row.observ,
       observ_caja: row.observ_caja,
       fhcarga: row.fhcarga,

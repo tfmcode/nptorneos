@@ -6,10 +6,6 @@ import { EditableTable, EditableColumn } from "../shared/EditableTable";
 interface EquiposTabProps {
   equipos: PlanillaEquipo[];
   idfecha: number;
-  partidoInfo?: {
-    nombre1?: string;
-    nombre2?: string;
-  };
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -17,7 +13,6 @@ interface EquiposTabProps {
 export const EquiposTab: React.FC<EquiposTabProps> = ({
   equipos,
   idfecha,
-  partidoInfo,
   onSuccess,
   onError,
 }) => {
@@ -38,12 +33,8 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
     },
     {
       header: "Equipo",
-      render: (equipo, index) => {
-        if (partidoInfo && index === 0)
-          return partidoInfo.nombre1 || "Equipo Local";
-        if (partidoInfo && index === 1)
-          return partidoInfo.nombre2 || "Equipo Visitante";
-        return equipo.nombre_equipo || equipo.idequipo;
+      render: (equipo) => {
+        return equipo.nombre_equipo || `ID: ${equipo.idequipo}`;
       },
       width: "200px",
     },

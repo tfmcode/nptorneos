@@ -10,8 +10,6 @@ export const DatosTab: React.FC<DatosTabProps> = ({
   planilla,
   onUpdateObserv,
 }) => {
-  const partidoInfo = planilla.partido_info;
-
   return (
     <div className="space-y-6">
       <h3 className="text-md font-semibold">Información General</h3>
@@ -28,6 +26,18 @@ export const DatosTab: React.FC<DatosTabProps> = ({
                 ? new Date(planilla.fecha).toISOString().split("T")[0]
                 : ""
             }
+            className="mt-1 w-full px-3 py-2 border rounded-md bg-gray-50"
+            disabled
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Número de Fecha
+          </label>
+          <input
+            type="text"
+            value={planilla.codfecha || "-"}
             className="mt-1 w-full px-3 py-2 border rounded-md bg-gray-50"
             disabled
           />
@@ -59,46 +69,87 @@ export const DatosTab: React.FC<DatosTabProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Zona
+            Profesor Asignado
           </label>
           <input
             type="text"
-            value={planilla.zona_nombre || planilla.zona || "-"}
+            value={
+              planilla.idprofesor ? `ID: ${planilla.idprofesor}` : "Sin asignar"
+            }
             className="mt-1 w-full px-3 py-2 border rounded-md bg-gray-50"
             disabled
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Turno
+          </label>
+          <select
+            value={planilla.idturno || 0}
+            className="mt-1 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              // TODO: Implementar actualización de turno
+              console.log("Turno cambiado a:", e.target.value);
+            }}
+          >
+            <option value={0}>Sin especificar</option>
+            <option value={1}>Mañana</option>
+            <option value={2}>Tarde</option>
+            <option value={3}>Noche</option>
+          </select>
+        </div>
       </div>
 
-      {partidoInfo && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
-          <h4 className="text-md font-semibold mb-3">
-            Información del Partido
-          </h4>
-          <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
-              <div className="text-lg font-bold">
-                {partidoInfo.nombre1 || "Equipo Local"}
-              </div>
-              <div className="text-3xl font-bold text-blue-600 mt-2">
-                {partidoInfo.goles1 ?? 0}
-              </div>
+      {/* Información de fechas de cierre */}
+      <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
+        <h4 className="text-md font-semibold mb-3 text-blue-800">
+          Estado de la Planilla
+        </h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="font-medium text-gray-700">Fecha de Carga:</span>
+            <div className="text-gray-600">
+              {planilla.fhcarga
+                ? new Date(planilla.fhcarga).toLocaleString("es-AR")
+                : "-"}
             </div>
+          </div>
 
-            <div className="px-4 text-2xl font-bold text-gray-400">VS</div>
+          <div>
+            <span className="font-medium text-gray-700">Fecha de Cierre:</span>
+            <div className="text-gray-600">
+              {planilla.fhcierre
+                ? new Date(planilla.fhcierre).toLocaleString("es-AR")
+                : "No cerrada"}
+            </div>
+          </div>
 
-            <div className="text-center flex-1">
-              <div className="text-lg font-bold">
-                {partidoInfo.nombre2 || "Equipo Visitante"}
-              </div>
-              <div className="text-3xl font-bold text-indigo-600 mt-2">
-                {partidoInfo.goles2 ?? 0}
-              </div>
+          <div>
+            <span className="font-medium text-gray-700">
+              Profesor que Cerró:
+            </span>
+            <div className="text-gray-600">
+              {planilla.idprofesor_cierre
+                ? `ID: ${planilla.idprofesor_cierre}`
+                : "-"}
+            </div>
+          </div>
+
+          <div>
+            <span className="font-medium text-gray-700">
+              Fecha Contabilizada:
+            </span>
+            <div className="text-gray-600">
+              {planilla.fhcierrecaja
+                ? new Date(planilla.fhcierrecaja).toLocaleString("es-AR")
+                : "No contabilizada"}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
+      {/* Observaciones */}
       <div className="mt-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Observaciones
@@ -110,6 +161,9 @@ export const DatosTab: React.FC<DatosTabProps> = ({
           className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
           placeholder="Ej: Transferencias, Tiburón $35.000..."
         />
+        <p className="text-xs text-gray-500 mt-1">
+          Usa este campo para notas generales sobre la jornada
+        </p>
       </div>
     </div>
   );

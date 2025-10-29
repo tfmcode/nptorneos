@@ -100,7 +100,6 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
           <EquiposTab
             equipos={equipos}
             idfecha={planilla.idfecha}
-            partidoInfo={planilla.partido_info}
             onSuccess={handleSuccess}
             onError={handleError}
           />

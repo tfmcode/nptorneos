@@ -38,7 +38,7 @@ export const PlanillaHeader: React.FC<PlanillaHeaderProps> = ({
       <div>
         <div className="flex items-center gap-3 mb-1">
           <h2 className="text-lg font-semibold text-gray-900">
-            Planilla de Pago
+            Caja - Fecha {planilla.codfecha || "-"}
           </h2>
           <Badge text={estado} color={estadoColor} />
         </div>
@@ -57,8 +57,12 @@ export const PlanillaHeader: React.FC<PlanillaHeaderProps> = ({
             <strong>Sede:</strong> {planilla.sede_nombre || "-"} ·{" "}
             <strong>Torneo:</strong>{" "}
             {planilla.torneo_nombre || planilla.torneo || "-"}
-            {planilla.zona && ` · ${planilla.zona}`}
           </div>
+          {planilla.idprofesor && (
+            <div>
+              <strong>Profesor Asignado:</strong> ID: {planilla.idprofesor}
+            </div>
+          )}
         </div>
       </div>
     </div>

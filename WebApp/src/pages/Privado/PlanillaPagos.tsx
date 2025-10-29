@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
@@ -17,7 +16,6 @@ import {
 
 import { fetchTorneos } from "../../store/slices/torneoSlice";
 import { fetchSedes } from "../../store/slices/sedeSlice";
-import { fetchZonasByTorneo } from "../../store/slices/zonaSlice";
 import { PlanillaPago, PlanillasFiltros } from "../../types/planillasPago";
 
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
@@ -31,7 +29,6 @@ const PlanillaPagos: React.FC = () => {
   );
   const { torneos } = useSelector((state: RootState) => state.torneos);
   const { sedes } = useSelector((state: RootState) => state.sedes);
-  const { zonas } = useSelector((state: RootState) => state.zonas);
 
   const [filtros, setFiltros] = useState<PlanillasFiltros>({
     idtorneo: 0,
@@ -40,8 +37,6 @@ const PlanillaPagos: React.FC = () => {
     idsede: 0,
     estado: undefined,
   });
-
-  const [idZonaFiltro, setIdZonaFiltro] = useState<number>(0);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlanilla, setSelectedPlanilla] = useState<PlanillaPago | null>(
@@ -63,14 +58,6 @@ const PlanillaPagos: React.FC = () => {
     dispatch(fetchTorneos({ page: 1, limit: 1000, searchTerm: "" }));
     dispatch(fetchSedes());
   }, [dispatch]);
-
-  // Cargar zonas cuando cambia el torneo
-  useEffect(() => {
-    if (filtros.idtorneo) {
-      dispatch(fetchZonasByTorneo(filtros.idtorneo));
-      setIdZonaFiltro(0);
-    }
-  }, [filtros.idtorneo, dispatch]);
 
   const handleFiltrar = () => {
     dispatch(getPlanillasByFiltros(filtros));
@@ -104,15 +91,6 @@ const PlanillaPagos: React.FC = () => {
   // Filtrar torneos activos
   const torneosActivos = torneos.filter((t) => t.codestado === 1);
 
-  // Filtrar planillas por zona en el frontend
-  const planillasFiltradas = idZonaFiltro
-    ? planillas.filter((p) => {
-        // Comparar el nombre de zona o buscar por ID si está disponible
-        const zonaSeleccionada = zonas.find((z) => z.id === idZonaFiltro);
-        return zonaSeleccionada && p.zona === zonaSeleccionada.nombre;
-      })
-    : planillas;
-
   return (
     <div className="flex justify-center items-center">
       <PopupNotificacion
@@ -125,12 +103,12 @@ const PlanillaPagos: React.FC = () => {
       <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-7xl">
         <PageHeader
           title="Planillas de Pago"
-          subtitle="Gestión de ingresos y egresos por fecha/evento"
+          subtitle="Gestión de ingresos y egresos por caja (agrupación de fecha/profesor/sede)"
         />
 
         {/* Filtros */}
         <div className="mb-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Torneo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -140,7 +118,6 @@ const PlanillaPagos: React.FC = () => {
                 value={filtros.idtorneo || 0}
                 onChange={(e) => {
                   setFiltros({ ...filtros, idtorneo: Number(e.target.value) });
-                  setIdZonaFiltro(0);
                 }}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               >
@@ -148,26 +125,6 @@ const PlanillaPagos: React.FC = () => {
                 {torneosActivos.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Zona - NUEVO FILTRO */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Zona
-              </label>
-              <select
-                value={idZonaFiltro}
-                onChange={(e) => setIdZonaFiltro(Number(e.target.value))}
-                disabled={!filtros.idtorneo}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:bg-gray-100"
-              >
-                <option value={0}>Todas las zonas</option>
-                {zonas.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.nombre}
                   </option>
                 ))}
               </select>
@@ -242,7 +199,6 @@ const PlanillaPagos: React.FC = () => {
                   idsede: 0,
                   estado: undefined,
                 });
-                setIdZonaFiltro(0);
               }}
               className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition"
             >
@@ -260,22 +216,24 @@ const PlanillaPagos: React.FC = () => {
         <StatusMessage loading={loading} error={error} />
 
         {/* Tabla de Planillas con SCROLL */}
-        {!loading && planillasFiltradas.length > 0 && (
+        {!loading && planillas.length > 0 && (
           <div className="overflow-auto max-h-[600px] border border-gray-300 rounded-lg">
             <table className="w-full text-sm">
               <thead className="bg-gray-100 sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-2 text-left">Fecha</th>
+                  <th className="px-4 py-2 text-left">Nro. Fecha</th>
                   <th className="px-4 py-2 text-left">Sede</th>
                   <th className="px-4 py-2 text-left">Torneo</th>
-                  <th className="px-4 py-2 text-left">Zona</th>
+                  <th className="px-4 py-2 text-left">Profesor</th>
+                  <th className="px-4 py-2 text-center">Partidos</th>
                   <th className="px-4 py-2 text-center">Estado</th>
                   <th className="px-4 py-2 text-right">Total Caja</th>
                   <th className="px-4 py-2 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {planillasFiltradas.map((planilla: PlanillaPago) => (
+                {planillas.map((planilla: PlanillaPago) => (
                   <tr
                     key={`planilla-${planilla.idfecha}`}
                     className="border-t hover:bg-gray-50 cursor-pointer"
@@ -284,13 +242,17 @@ const PlanillaPagos: React.FC = () => {
                     <td className="px-4 py-2">
                       {new Date(planilla.fecha).toLocaleDateString("es-AR")}
                     </td>
+                    <td className="px-4 py-2 text-center">
+                      {planilla.codfecha || "-"}
+                    </td>
                     <td className="px-4 py-2">{planilla.sede_nombre || "-"}</td>
                     <td className="px-4 py-2">
                       {planilla.torneo_nombre || planilla.torneo || "-"}
                     </td>
                     <td className="px-4 py-2">
-                      {planilla.zona_nombre || planilla.zona || "-"}
+                      {planilla.idprofesor ? `ID: ${planilla.idprofesor}` : "-"}
                     </td>
+                    <td className="px-4 py-2 text-center"></td>
                     <td className="px-4 py-2 text-center">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
@@ -324,38 +286,30 @@ const PlanillaPagos: React.FC = () => {
           </div>
         )}
 
-        {!loading && planillasFiltradas.length === 0 && (
+        {!loading && planillas.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             No se encontraron planillas con los filtros seleccionados
           </div>
         )}
 
         {/* Estadísticas */}
-        {planillasFiltradas.length > 0 && (
+        {planillas.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
             <div className="flex flex-wrap gap-4">
               <div>
-                <strong>Total planillas:</strong> {planillasFiltradas.length}
+                <strong>Total cajas:</strong> {planillas.length}
               </div>
               <div>
                 <strong>Abiertas:</strong>{" "}
-                {
-                  planillasFiltradas.filter(
-                    (p) => !p.fhcierre && !p.fhcierrecaja
-                  ).length
-                }
+                {planillas.filter((p) => !p.fhcierre && !p.fhcierrecaja).length}
               </div>
               <div>
                 <strong>Cerradas:</strong>{" "}
-                {
-                  planillasFiltradas.filter(
-                    (p) => p.fhcierre && !p.fhcierrecaja
-                  ).length
-                }
+                {planillas.filter((p) => p.fhcierre && !p.fhcierrecaja).length}
               </div>
               <div>
                 <strong>Contabilizadas:</strong>{" "}
-                {planillasFiltradas.filter((p) => p.fhcierrecaja).length}
+                {planillas.filter((p) => p.fhcierrecaja).length}
               </div>
             </div>
           </div>
@@ -370,10 +324,10 @@ const PlanillaPagos: React.FC = () => {
           }}
           title={
             selectedPlanilla
-              ? `Planilla - ${new Date(
-                  selectedPlanilla.fecha
-                ).toLocaleDateString("es-AR")}`
-              : "Detalle de Planilla"
+              ? `Caja - ${new Date(selectedPlanilla.fecha).toLocaleDateString(
+                  "es-AR"
+                )} - Fecha ${selectedPlanilla.codfecha || ""}`
+              : "Detalle de Caja"
           }
         >
           {planillaActual && (

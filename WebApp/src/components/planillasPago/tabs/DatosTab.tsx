@@ -16,6 +16,15 @@ export const DatosTab: React.FC<DatosTabProps> = ({
 }) => {
   const [turnos, setTurnos] = useState<Codificador[]>([]);
   const [loadingTurnos, setLoadingTurnos] = useState(true);
+  // ✅ NUEVO: Estado local para el turno seleccionado
+  const [turnoSeleccionado, setTurnoSeleccionado] = useState<number>(
+    planilla.idturno || 0
+  );
+
+  // ✅ NUEVO: Actualizar turno local cuando cambia la planilla
+  useEffect(() => {
+    setTurnoSeleccionado(planilla.idturno || 0);
+  }, [planilla.idturno]);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -30,6 +39,14 @@ export const DatosTab: React.FC<DatosTabProps> = ({
     };
     cargarTurnos();
   }, []);
+
+  // ✅ NUEVO: Función para manejar cambio de turno
+  const handleTurnoChange = async (nuevoTurno: number) => {
+    setTurnoSeleccionado(nuevoTurno); // Actualizar UI inmediatamente
+    if (onUpdateTurno) {
+      await onUpdateTurno(nuevoTurno); // Guardar en backend
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -112,26 +129,22 @@ export const DatosTab: React.FC<DatosTabProps> = ({
               disabled
             />
           ) : (
-            <select
-              value={planilla.idturno || 0}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-              onChange={(e) => {
-                const nuevoTurno = Number(e.target.value);
-                onUpdateTurno?.(nuevoTurno);
-              }}
-            >
-              <option value={0}>Sin especificar</option>
-              {turnos.map((turno) => (
-                <option key={turno.id} value={turno.id}>
-                  {turno.descripcion}
-                </option>
-              ))}
-            </select>
-          )}
-          {planilla.turno_nombre && (
-            <p className="text-xs text-gray-500 mt-1">
-              Turno actual: {planilla.turno_nombre}
-            </p>
+            <>
+              <select
+                value={turnoSeleccionado}
+                className="mt-1 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  handleTurnoChange(Number(e.target.value));
+                }}
+              >
+                <option value={0}>Sin especificar</option>
+                {turnos.map((turno) => (
+                  <option key={turno.id} value={turno.id}>
+                    {turno.descripcion}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
         </div>
       </div>

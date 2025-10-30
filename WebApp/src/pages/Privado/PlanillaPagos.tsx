@@ -1,5 +1,5 @@
 // WebApp/src/pages/Privado/PlanillaPagos.tsx
-// ✅ ACTUALIZADO: Ahora muestra el nombre del profesor en la tabla
+// ✅ ACTUALIZADO: Agregado onUpdate para refrescar datos después de cambios
 
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
@@ -71,6 +71,18 @@ const PlanillaPagos: React.FC = () => {
       await dispatch(getPlanillaCompleta(planilla.idfecha));
       setSelectedPlanilla(planilla);
       setIsModalOpen(true);
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Refrescar la planilla actual después de cambios
+  const handleRefreshPlanilla = async () => {
+    if (selectedPlanilla?.idfecha) {
+      await dispatch(getPlanillaCompleta(selectedPlanilla.idfecha));
+      setPopup({
+        open: true,
+        type: "success",
+        message: "Cambios guardados exitosamente.",
+      });
     }
   };
 
@@ -251,7 +263,6 @@ const PlanillaPagos: React.FC = () => {
                     <td className="px-4 py-2">
                       {planilla.torneo_nombre || planilla.torneo || "-"}
                     </td>
-                    {/* ✅ ACTUALIZADO: Ahora muestra el nombre del profesor */}
                     <td className="px-4 py-2">
                       {planilla.profesor_nombre ||
                         (planilla.idprofesor
@@ -325,7 +336,6 @@ const PlanillaPagos: React.FC = () => {
                 <strong>Contabilizadas:</strong>{" "}
                 {planillas.filter((p) => p.fhcierrecaja).length}
               </div>
-              {/* ✅ NUEVO: Total de partidos */}
               <div>
                 <strong>Total partidos:</strong>{" "}
                 {planillas.reduce(
@@ -337,7 +347,7 @@ const PlanillaPagos: React.FC = () => {
           </div>
         )}
 
-        {/* Modal Detalle */}
+        {/* Modal Detalle - ✅ ACTUALIZADO con onUpdate */}
         <Modal
           isOpen={isModalOpen}
           onClose={() => {
@@ -352,7 +362,7 @@ const PlanillaPagos: React.FC = () => {
               : "Detalle de Caja"
           }
         >
-          {planillaActual && (
+          {planillaActual && selectedPlanilla && (
             <PlanillaDetalleTabs
               planillaCompleta={planillaActual}
               onClose={() => {
@@ -360,6 +370,7 @@ const PlanillaPagos: React.FC = () => {
                 setSelectedPlanilla(null);
                 handleFiltrar();
               }}
+              onUpdate={handleRefreshPlanilla}
             />
           )}
         </Modal>

@@ -24,7 +24,6 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
 }) => {
   const {
     planilla,
-    equipos,
     arbitros,
     canchas,
     profesores,
@@ -80,6 +79,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
       );
     }
   };
+  const isEditable = !planilla.fhcierre && !planilla.fhcierrecaja;
 
   return (
     <div className="flex flex-col h-full">
@@ -106,13 +106,12 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
 
         {activeTab === "equipos" && (
           <EquiposTab
-            equipos={equipos}
             idfecha={planilla.idfecha}
+            isEditable={isEditable}
             onSuccess={handleSuccess}
             onError={handleError}
           />
         )}
-
         {activeTab === "arbitros" && (
           <ArbitrosTab
             arbitros={arbitros}

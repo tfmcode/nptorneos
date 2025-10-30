@@ -1,6 +1,3 @@
-// Ubicación: WebApp/src/components/planillasPago/PlanillaDetalleTabs.tsx
-// VERSIÓN REFACTORIZADA - Componente simplificado y modular
-
 import React, { useState } from "react";
 import { PlanillaCompleta } from "../../types/planillasPago";
 import { PlanillaHeader } from "./shared/PlanillaHeader";
@@ -12,6 +9,7 @@ import { CanchasTab } from "./tabs/CanchasTab";
 import { ProfesoresTab } from "./tabs/ProfesoresTab";
 import { MedicoTab } from "./tabs/MedicoTab";
 import { OtrosGastosTab } from "./tabs/OtrosGastosTab";
+import { updateTurnoPlanilla } from "../../api/planillasPagosService";
 
 type Props = {
   planillaCompleta: PlanillaCompleta;
@@ -39,7 +37,6 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
   const [, setObserv] = useState(planilla.observ || "");
   const [observCaja, setObservCaja] = useState(planilla.observ_caja || "");
 
-  // Determinar el estado de la planilla
   const getEstado = (): string => {
     if (planilla.fhcierrecaja) return "Contabilizada";
     if (planilla.fhcierre) return "Cerrada";
@@ -52,7 +49,6 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     return "gray";
   };
 
-  // Configuración de tabs
   const tabs: Tab[] = [
     { id: "datos", label: "Datos", icon: "📋" },
     { id: "equipos", label: "Equipos", icon: "👥" },
@@ -74,26 +70,38 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     alert(`Error: ${error}`);
   };
 
+  const handleUpdateTurno = async (idturno: number) => {
+    try {
+      await updateTurnoPlanilla(planilla.idfecha, idturno);
+      handleSuccess();
+    } catch (error) {
+      handleError(
+        error instanceof Error ? error.message : "Error al actualizar turno"
+      );
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <PlanillaHeader
         planilla={planilla}
         estado={getEstado()}
         estadoColor={getEstadoColor()}
       />
 
-      {/* Tabs Navigation */}
       <TabNavigation
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
 
-      {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === "datos" && (
-          <DatosTab planilla={planilla} onUpdateObserv={setObserv} />
+          <DatosTab
+            planilla={planilla}
+            onUpdateObserv={setObserv}
+            onUpdateTurno={handleUpdateTurno}
+          />
         )}
 
         {activeTab === "equipos" && (
@@ -159,7 +167,6 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Footer Actions */}
       <div className="border-t p-4 flex justify-between gap-3">
         <button
           onClick={onClose}

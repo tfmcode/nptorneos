@@ -1,5 +1,3 @@
-// WebApp/src/components/planillasPago/shared/PlanillaHeader.tsx
-
 import React from "react";
 import { PlanillaPago } from "../../../types/planillasPago";
 
@@ -58,9 +56,9 @@ export const PlanillaHeader: React.FC<PlanillaHeaderProps> = ({
             <strong>Torneo:</strong>{" "}
             {planilla.torneo_nombre || planilla.torneo || "-"}
           </div>
-          {planilla.idprofesor && (
+          {planilla.profesor_nombre && (
             <div>
-              <strong>Profesor Asignado:</strong> ID: {planilla.idprofesor}
+              <strong>Profesor Asignado:</strong> {planilla.profesor_nombre}
             </div>
           )}
         </div>

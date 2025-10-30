@@ -27,6 +27,7 @@ import {
   addOtroGastoController,
   updateOtroGastoController,
   deleteOtroGastoController,
+  updateTurnoController,
 } from "../controllers/planillasPagoController";
 
 const router = express.Router();
@@ -393,6 +394,17 @@ router.delete(
   ],
   validateRequest,
   asyncHandler(deleteOtroGastoController)
+);
+
+router.put(
+  "/:idfecha/turno",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("idturno").isInt().withMessage("ID de turno inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updateTurnoController)
 );
 
 export default router;

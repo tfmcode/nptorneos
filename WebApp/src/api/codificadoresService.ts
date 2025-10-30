@@ -47,3 +47,13 @@ export const deleteCodificador = async (
     handleAxiosError(error);
   }
 };
+
+export const getTurnos = async (): Promise<Codificador[]> => {
+  try {
+    const response = await getCodificadores();
+    return response.filter((c) => c.idcodificador === 7 && c.codestado === "1");
+  } catch (error) {
+    handleAxiosError(error);
+  }
+  return [];
+};

@@ -1,18 +1,36 @@
-// WebApp/src/components/planillasPago/tabs/DatosTab.tsx
-// ✅ ACTUALIZADO: Ahora muestra nombres de profesor y turno
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { PlanillaPago } from "../../../types/planillasPago";
+import { Codificador } from "../../../types/codificador";
+import { getTurnos } from "../../../api/codificadoresService";
 
 interface DatosTabProps {
   planilla: PlanillaPago;
   onUpdateObserv: (observ: string) => void;
+  onUpdateTurno?: (idturno: number) => void;
 }
 
 export const DatosTab: React.FC<DatosTabProps> = ({
   planilla,
   onUpdateObserv,
+  onUpdateTurno,
 }) => {
+  const [turnos, setTurnos] = useState<Codificador[]>([]);
+  const [loadingTurnos, setLoadingTurnos] = useState(true);
+
+  useEffect(() => {
+    const cargarTurnos = async () => {
+      try {
+        const turnosData = await getTurnos();
+        setTurnos(turnosData);
+      } catch (error) {
+        console.error("Error al cargar turnos:", error);
+      } finally {
+        setLoadingTurnos(false);
+      }
+    };
+    cargarTurnos();
+  }, []);
+
   return (
     <div className="space-y-6">
       <h3 className="text-md font-semibold">Información General</h3>
@@ -70,7 +88,6 @@ export const DatosTab: React.FC<DatosTabProps> = ({
           />
         </div>
 
-        {/* ✅ ACTUALIZADO: Ahora muestra el nombre del profesor SIN el ID */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Profesor Asignado
@@ -83,25 +100,34 @@ export const DatosTab: React.FC<DatosTabProps> = ({
           />
         </div>
 
-        {/* ✅ ACTUALIZADO: Ahora muestra el nombre del turno */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Turno
           </label>
-          <select
-            value={planilla.idturno || 0}
-            className="mt-1 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-            onChange={(e) => {
-              // TODO: Implementar actualización de turno
-              console.log("Turno cambiado a:", e.target.value);
-            }}
-          >
-            <option value={0}>Sin especificar</option>
-            <option value={1}>Mañana</option>
-            <option value={2}>Tarde</option>
-            <option value={3}>Noche</option>
-          </select>
-          {/* ✅ NUEVO: Mostrar el nombre del turno actual si existe */}
+          {loadingTurnos ? (
+            <input
+              type="text"
+              value="Cargando turnos..."
+              className="mt-1 w-full px-3 py-2 border rounded-md bg-gray-50"
+              disabled
+            />
+          ) : (
+            <select
+              value={planilla.idturno || 0}
+              className="mt-1 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                const nuevoTurno = Number(e.target.value);
+                onUpdateTurno?.(nuevoTurno);
+              }}
+            >
+              <option value={0}>Sin especificar</option>
+              {turnos.map((turno) => (
+                <option key={turno.id} value={turno.id}>
+                  {turno.descripcion}
+                </option>
+              ))}
+            </select>
+          )}
           {planilla.turno_nombre && (
             <p className="text-xs text-gray-500 mt-1">
               Turno actual: {planilla.turno_nombre}
@@ -110,7 +136,6 @@ export const DatosTab: React.FC<DatosTabProps> = ({
         </div>
       </div>
 
-      {/* Información de fechas de cierre */}
       <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
         <h4 className="text-md font-semibold mb-3 text-blue-800">
           Estado de la Planilla
@@ -134,17 +159,12 @@ export const DatosTab: React.FC<DatosTabProps> = ({
             </div>
           </div>
 
-          {/* ✅ ACTUALIZADO: Ahora muestra el nombre del profesor que cerró */}
           <div>
             <span className="font-medium text-gray-700">
               Profesor que Cerró:
             </span>
             <div className="text-gray-600">
-              {planilla.profesor_cierre_nombre
-                ? `${planilla.profesor_cierre_nombre} (ID: ${planilla.idprofesor_cierre})`
-                : planilla.idprofesor_cierre
-                ? `ID: ${planilla.idprofesor_cierre}`
-                : "-"}
+              {planilla.profesor_cierre_nombre || "-"}
             </div>
           </div>
 
@@ -161,7 +181,6 @@ export const DatosTab: React.FC<DatosTabProps> = ({
         </div>
       </div>
 
-      {/* Observaciones */}
       <div className="mt-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Observaciones
@@ -181,9 +200,6 @@ export const DatosTab: React.FC<DatosTabProps> = ({
   );
 };
 
-// ============================================
-// TOTALES TAB
-// ============================================
 interface TotalesTabProps {
   totales: {
     ingreso_inscripciones: number;
@@ -216,7 +232,6 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
       <h3 className="text-md font-semibold">Resumen Financiero</h3>
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Ingresos */}
         <div className="border rounded-lg p-4 bg-green-50">
           <h4 className="text-sm font-semibold text-green-700 mb-3">
             INGRESOS
@@ -247,7 +262,6 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
           </div>
         </div>
 
-        {/* Egresos */}
         <div className="border rounded-lg p-4 bg-red-50">
           <h4 className="text-sm font-semibold text-red-700 mb-3">EGRESOS</h4>
           <div className="space-y-2 text-sm">
@@ -289,7 +303,6 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
         </div>
       </div>
 
-      {/* Resultados */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-200">
           <div className="text-sm text-gray-600">Total Caja</div>
@@ -327,7 +340,6 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
         </div>
       </div>
 
-      {/* Observación de Caja */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Observación de Cierre de Caja

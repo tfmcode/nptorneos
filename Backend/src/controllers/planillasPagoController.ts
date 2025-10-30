@@ -2,10 +2,6 @@ import { Request, Response } from "express";
 import * as planillasModel from "../models/planillasPagoModel";
 import { PlanillasFiltros } from "../types/planillasPago";
 
-// ========================================
-// LISTADO Y FILTROS
-// ========================================
-
 export const getPlanillasController = async (req: Request, res: Response) => {
   try {
     const filtros: PlanillasFiltros = {
@@ -25,10 +21,6 @@ export const getPlanillasController = async (req: Request, res: Response) => {
       .json({ message: "Error al obtener planillas.", error });
   }
 };
-
-// ========================================
-// OBTENER PLANILLA COMPLETA
-// ========================================
 
 export const getPlanillaCompletaController = async (
   req: Request,
@@ -56,22 +48,16 @@ export const getPlanillaCompletaController = async (
   }
 };
 
-// ========================================
-// CREAR PLANILLA
-// ========================================
-
 export const createPlanillaController = async (req: Request, res: Response) => {
   try {
     const { idfecha } = req.body;
 
-    // Validación
     if (!idfecha) {
       return res.status(400).json({
         message: "Campo obligatorio: idfecha",
       });
     }
 
-    // Verificar si ya existe planilla para ese idfecha
     const existente = await planillasModel.getPlanillaByIdFecha(idfecha);
     if (existente) {
       return res.status(400).json({
@@ -90,10 +76,6 @@ export const createPlanillaController = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Error al crear planilla.", error });
   }
 };
-
-// ========================================
-// CERRAR PLANILLA
-// ========================================
 
 export const cerrarPlanillaController = async (req: Request, res: Response) => {
   try {
@@ -119,14 +101,10 @@ export const cerrarPlanillaController = async (req: Request, res: Response) => {
   }
 };
 
-// ========================================
-// CERRAR CAJA (CONTABILIZAR)
-// ========================================
-
 export const cerrarCajaController = async (req: Request, res: Response) => {
   try {
     const idfecha = Number(req.params.idfecha);
-    const idusuario = req.body.idusuario || 1; // Debería venir del middleware de auth
+    const idusuario = req.body.idusuario || 1;
 
     await planillasModel.cerrarCaja(idfecha, idusuario);
 
@@ -139,9 +117,27 @@ export const cerrarCajaController = async (req: Request, res: Response) => {
   }
 };
 
-// ========================================
-// EQUIPOS
-// ========================================
+export const updateTurnoController = async (req: Request, res: Response) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { idturno } = req.body;
+
+    if (isNaN(idfecha)) {
+      return res.status(400).json({ message: "ID de fecha inválido." });
+    }
+
+    await planillasModel.updateTurno(idfecha, idturno);
+
+    return res.status(200).json({
+      message: "Turno actualizado exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar turno:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar turno.", error });
+  }
+};
 
 export const addEquipoController = async (req: Request, res: Response) => {
   try {
@@ -156,7 +152,6 @@ export const addEquipoController = async (req: Request, res: Response) => {
   }
 };
 
-// ✅ CORREGIDO: Ahora usa (idfecha, orden) en lugar de id
 export const updateEquipoController = async (req: Request, res: Response) => {
   try {
     const { idfecha, orden } = req.params;
@@ -177,7 +172,6 @@ export const updateEquipoController = async (req: Request, res: Response) => {
   }
 };
 
-// ✅ CORREGIDO: Ahora usa (idfecha, orden) en lugar de id
 export const deleteEquipoController = async (req: Request, res: Response) => {
   try {
     const { idfecha, orden } = req.params;
@@ -198,10 +192,6 @@ export const deleteEquipoController = async (req: Request, res: Response) => {
       .json({ message: "Error al eliminar equipo.", error });
   }
 };
-
-// ========================================
-// ÁRBITROS
-// ========================================
 
 export const addArbitroController = async (req: Request, res: Response) => {
   try {
@@ -259,10 +249,6 @@ export const deleteArbitroController = async (req: Request, res: Response) => {
   }
 };
 
-// ========================================
-// CANCHAS
-// ========================================
-
 export const addCanchaController = async (req: Request, res: Response) => {
   try {
     const canchaGuardada = await planillasModel.addCancha(req.body);
@@ -316,10 +302,6 @@ export const deleteCanchaController = async (req: Request, res: Response) => {
       .json({ message: "Error al eliminar cancha.", error });
   }
 };
-
-// ========================================
-// PROFESORES
-// ========================================
 
 export const addProfesorController = async (req: Request, res: Response) => {
   try {
@@ -379,10 +361,6 @@ export const deleteProfesorController = async (req: Request, res: Response) => {
   }
 };
 
-// ========================================
-// SERVICIO MÉDICO
-// ========================================
-
 export const addMedicoController = async (req: Request, res: Response) => {
   try {
     const medicoGuardado = await planillasModel.addMedico(req.body);
@@ -436,10 +414,6 @@ export const deleteMedicoController = async (req: Request, res: Response) => {
       .json({ message: "Error al eliminar médico.", error });
   }
 };
-
-// ========================================
-// OTROS GASTOS
-// ========================================
 
 export const addOtroGastoController = async (req: Request, res: Response) => {
   try {

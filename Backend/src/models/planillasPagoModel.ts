@@ -475,6 +475,23 @@ export const cerrarPlanilla = async (
   }
 };
 
+export const updateTurno = async (
+  idfecha: number,
+  idturno: number | null
+): Promise<void> => {
+  try {
+    const query = `
+      UPDATE wtorneos_fechas 
+      SET idturno = $1
+      WHERE id = $2
+    `;
+    await pool.query(query, [idturno, idfecha]);
+  } catch (error) {
+    console.error("Error en updateTurno:", error);
+    throw error;
+  }
+};
+
 // ========================================
 // CERRAR CAJA (CONTABILIZAR)
 // ========================================

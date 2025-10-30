@@ -1,5 +1,3 @@
-// Ubicación: WebApp/src/api/planillasPagosService.ts
-
 import { AxiosError } from "axios";
 import API from "./httpClient";
 import {
@@ -29,10 +27,6 @@ const handleAxiosError = (error: unknown): never => {
   throw new Error("Ocurrió un error inesperado.");
 };
 
-// ========================================
-// PLANILLAS - CRUD PRINCIPAL
-// ========================================
-
 export const getPlanillasByFiltros = async (
   filtros: PlanillasFiltros
 ): Promise<PlanillaPago[]> => {
@@ -58,7 +52,6 @@ export const getPlanillaCompleta = async (
     const response = await API.get(`/api/planillas-pago/${idfecha}`);
     const planillaCompleta = response.data;
 
-    // Enriquecer con información del partido si está disponible
     try {
       const partidoResponse = await API.get(`/api/partidos/${idfecha}`);
       const partido = partidoResponse.data;
@@ -128,9 +121,16 @@ export const cerrarCaja = async (
   }
 };
 
-// ========================================
-// EQUIPOS (CORREGIDO)
-// ========================================
+export const updateTurnoPlanilla = async (
+  idfecha: number,
+  idturno: number
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/turno`, { idturno });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
 
 export const addEquipoPlanilla = async (
   data: PlanillaEquipoInput
@@ -143,7 +143,6 @@ export const addEquipoPlanilla = async (
   }
 };
 
-// ✅ CORREGIDO: Usa idfecha y orden en la URL
 export const updateEquipoPlanilla = async (
   idfecha: number,
   orden: number,
@@ -160,7 +159,6 @@ export const updateEquipoPlanilla = async (
   }
 };
 
-// ✅ CORREGIDO: Usa idfecha y orden en la URL
 export const deleteEquipoPlanilla = async (
   idfecha: number,
   orden: number
@@ -171,10 +169,6 @@ export const deleteEquipoPlanilla = async (
     return handleAxiosError(error);
   }
 };
-
-// ========================================
-// ÁRBITROS
-// ========================================
 
 export const addArbitroPlanilla = async (
   data: PlanillaArbitroInput
@@ -214,10 +208,6 @@ export const deleteArbitroPlanilla = async (
   }
 };
 
-// ========================================
-// CANCHAS
-// ========================================
-
 export const addCanchaPlanilla = async (
   data: PlanillaCanchaInput
 ): Promise<PlanillaCancha | null> => {
@@ -255,10 +245,6 @@ export const deleteCanchaPlanilla = async (
     return handleAxiosError(error);
   }
 };
-
-// ========================================
-// PROFESORES
-// ========================================
 
 export const addProfesorPlanilla = async (
   data: PlanillaProfesorInput
@@ -298,10 +284,6 @@ export const deleteProfesorPlanilla = async (
   }
 };
 
-// ========================================
-// MÉDICOS
-// ========================================
-
 export const addMedicoPlanilla = async (
   data: PlanillaMedicoInput
 ): Promise<PlanillaMedico | null> => {
@@ -339,10 +321,6 @@ export const deleteMedicoPlanilla = async (
     return handleAxiosError(error);
   }
 };
-
-// ========================================
-// OTROS GASTOS
-// ========================================
 
 export const addOtroGastoPlanilla = async (
   data: PlanillaOtroGastoInput

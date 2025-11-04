@@ -12,7 +12,85 @@ interface CajaData extends CajaKey {
   fecha: string;
   idtorneo?: number;
   idsubsede?: number;
+  idequipo1?: number;
+  idequipo2?: number;
 }
+
+/**
+ * Crea los registros iniciales en wfechas_equipos para los dos equipos del partido
+ */
+const createEquiposInCaja = async (
+  client: any,
+  idfecha: number,
+  idequipo1?: number,
+  idequipo2?: number
+): Promise<void> => {
+  if (!idequipo1 || !idequipo2) {
+    console.log(
+      `⚠️ No se pueden crear equipos en caja ${idfecha}: equipos no definidos`
+    );
+    return;
+  }
+
+  try {
+    // Verificar si ya existen registros para esta caja
+    const checkQuery = `
+      SELECT COUNT(*) as count 
+      FROM wfechas_equipos 
+      WHERE idfecha = $1
+    `;
+    const checkResult = await client.query(checkQuery, [idfecha]);
+
+    if (checkResult.rows[0].count > 0) {
+      console.log(
+        `ℹ️ Ya existen registros en wfechas_equipos para idfecha=${idfecha}`
+      );
+      return;
+    }
+
+    // Crear registro para equipo 1 (orden 1)
+    const insertEquipo1Query = `
+      INSERT INTO wfechas_equipos (
+        idfecha, 
+        orden, 
+        idequipo, 
+        tipopago, 
+        importe, 
+        iddeposito,
+        fhcarga
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    `;
+
+    await client.query(insertEquipo1Query, [
+      idfecha,
+      1, // orden 1 para el primer equipo
+      idequipo1,
+      1, // tipopago 1 = efectivo por defecto
+      0, // importe 0 inicial
+      0, // sin depósito
+    ]);
+
+    // Crear registro para equipo 2 (orden 2)
+    await client.query(insertEquipo1Query, [
+      idfecha,
+      2, // orden 2 para el segundo equipo
+      idequipo2,
+      1, // tipopago 1 = efectivo por defecto
+      0, // importe 0 inicial
+      0, // sin depósito
+    ]);
+
+    console.log(
+      `✅ Creados registros en wfechas_equipos para idfecha=${idfecha}: equipo1=${idequipo1}, equipo2=${idequipo2}`
+    );
+  } catch (error) {
+    console.error(
+      `❌ Error al crear equipos en wfechas_equipos para idfecha=${idfecha}:`,
+      error
+    );
+    throw error;
+  }
+};
 
 /**
  * Busca o crea una caja en wtorneos_fechas según la triple clave
@@ -90,6 +168,9 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
       data.codfecha,
       data.idprofesor,
     ]);
+
+    // ✅ NUEVO: Crear registros en wfechas_equipos para los equipos del partido
+    await createEquiposInCaja(client, nextId, data.idequipo1, data.idequipo2);
 
     await client.query("COMMIT");
     console.log(

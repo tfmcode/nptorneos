@@ -143,6 +143,8 @@ export const createPartido = async (partido: IPartido): Promise<IPartido> => {
         idsede: newPartido.idsede,
         fecha: newPartido.fecha,
         idtorneo,
+        idequipo1: newPartido.idequipo1,
+        idequipo2: newPartido.idequipo2,
       });
 
       console.log(`✅ Caja asignada: idfecha=${idfecha}`);
@@ -249,6 +251,8 @@ export const updatePartido = async (
         idsede: updatedPartido.idsede,
         fecha: updatedPartido.fecha,
         idtorneo,
+        idequipo1: updatedPartido.idequipo1,
+        idequipo2: updatedPartido.idequipo2,
       });
 
       console.log(`✅ Nueva caja asignada: idfecha=${idfecha}`);
@@ -283,6 +287,8 @@ export const updatePartido = async (
         idsede: updatedPartido.idsede,
         fecha: updatedPartido.fecha,
         idtorneo,
+        idequipo1: updatedPartido.idequipo1,
+        idequipo2: updatedPartido.idequipo2,
       });
 
       const updateCajaQuery = `

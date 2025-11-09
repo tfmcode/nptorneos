@@ -70,7 +70,18 @@ export const useImageUpload = (
     if (!entityId) return;
 
     try {
-      const info = await getJugadorImagenInfo(entityId);
+      let info;
+      if (entityType === "jugador") {
+        info = await getJugadorImagenInfo(entityId);
+      } else if (entityType === "equipo") {
+        const { getEquipoImagenInfo } = await import(
+          "../api/uploadEquipoService"
+        );
+        info = await getEquipoImagenInfo(entityId);
+      } else {
+        return;
+      }
+
       setImageInfo(info);
 
       if (info.hasImage && info.data?.url) {
@@ -79,7 +90,7 @@ export const useImageUpload = (
     } catch (err) {
       console.error("Error al cargar info de imagen:", err);
     }
-  }, [entityId]);
+  }, [entityId, entityType]);
 
   /**
    * 📤 Subir imagen
@@ -111,6 +122,17 @@ export const useImageUpload = (
         let response;
         if (entityType === "jugador") {
           response = await uploadJugadorImagen(
+            entityId,
+            file,
+            (progressValue) => {
+              setProgress(progressValue);
+            }
+          );
+        } else if (entityType === "equipo") {
+          const { uploadEquipoImagen } = await import(
+            "../api/uploadEquipoService"
+          );
+          response = await uploadEquipoImagen(
             entityId,
             file,
             (progressValue) => {
@@ -164,6 +186,11 @@ export const useImageUpload = (
       let response;
       if (entityType === "jugador") {
         response = await deleteJugadorImagen(entityId);
+      } else if (entityType === "equipo") {
+        const { deleteEquipoImagen } = await import(
+          "../api/uploadEquipoService"
+        );
+        response = await deleteEquipoImagen(entityId);
       } else {
         throw new Error(`Tipo de entidad no soportado: ${entityType}`);
       }

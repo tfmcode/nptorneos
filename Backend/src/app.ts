@@ -31,6 +31,7 @@ import partidosJugadoresRoute from "./routes/partidosJugadoresRoute";
 import cajamovimientosRoutes from "./routes/cajamovimientosRoutes";
 import planillasPagosRoutes from "./routes/planillasPagoRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
+import uploadEquipoRoutes from "./routes/uploadEquipoRoutes";
 
 dotenv.config();
 
@@ -77,6 +78,7 @@ app.use("/api/cajamovimientos", cajamovimientosRoutes);
 app.use("/api/planillas-pago", planillasPagosRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/upload", uploadRoutes);
+app.use("/api/upload", uploadEquipoRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Ruta no encontrada." });

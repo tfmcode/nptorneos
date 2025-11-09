@@ -6,6 +6,7 @@ import { fetchSedes } from "../../store/slices/sedeSlice";
 import { saveEquipoThunk } from "../../store/slices/equiposSlice";
 import DynamicForm from "../forms/DynamicForm";
 import { PopupNotificacion } from "../common/PopupNotificacion";
+import ImageUploader from "../common/ImageUploader";
 
 interface Props {
   formData: Equipo;
@@ -35,11 +36,9 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
     dispatch(fetchSedes());
   }, [dispatch]);
 
-  // Función de validación
   const validateForm = (): ValidationError[] => {
     const errors: ValidationError[] = [];
 
-    // Validar nombre (obligatorio)
     if (!formData.nombre?.trim()) {
       errors.push({
         field: "nombre",
@@ -47,7 +46,6 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
       });
     }
 
-    // Validar iniciales (2-3 letras)
     const iniciales = formData.iniciales?.trim();
     if (!iniciales) {
       errors.push({
@@ -66,7 +64,6 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
       });
     }
 
-    // Validar sede (obligatoria)
     if (!formData.idsede || formData.idsede === 0) {
       errors.push({
         field: "idsede",
@@ -74,7 +71,6 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
       });
     }
 
-    // Validar email (obligatorio y formato)
     if (!formData.emailcto?.trim()) {
       errors.push({
         field: "emailcto",
@@ -93,11 +89,9 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
     return errors;
   };
 
-  // Manejar el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar formulario
     const errors = validateForm();
 
     if (errors.length > 0) {
@@ -139,6 +133,46 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
         message={showPopup.message}
         onClose={() => setShowPopup({ ...showPopup, open: false })}
       />
+
+      {formData.id && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Logo del Equipo
+          </label>
+          <ImageUploader
+            entityId={formData.id}
+            entityType="equipo"
+            currentImageUrl={formData.foto}
+            maxImages={1}
+            onUploadSuccess={(imageUrl) => {
+              console.log("✅ Logo subido:", imageUrl);
+            }}
+            onUploadError={(error) => {
+              setShowPopup({
+                open: true,
+                type: "error",
+                message: `Error al subir logo: ${error}`,
+              });
+            }}
+            onDeleteSuccess={() => {
+              setShowPopup({
+                open: true,
+                type: "success",
+                message: "Logo eliminado correctamente",
+              });
+            }}
+            height="250px"
+          />
+        </div>
+      )}
+
+      {!formData.id && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            ℹ️ El logo del equipo se puede agregar después de crear el registro
+          </p>
+        </div>
+      )}
 
       <DynamicForm
         fields={[
@@ -213,12 +247,6 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
             ],
             value: formData.idsede ?? 0,
             label: "Sede",
-          },
-          {
-            name: "foto",
-            type: "text",
-            placeholder: "URL de Foto",
-            value: formData.foto ?? "",
           },
           {
             name: "observ",

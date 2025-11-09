@@ -71,7 +71,6 @@ export const getAllEquipos = async (
   };
 };
 
-// Obtener todos los equipos de un jugador
 export const getEquiposByJugador = async (
   idjugador: number
 ): Promise<IEquipo[]> => {
@@ -168,7 +167,6 @@ export const updateEquipo = async (
     "archivonom",
     "idsede",
     "idusuario",
-    "foto",
     "observ",
     "saldodeposito",
   ];
@@ -179,7 +177,7 @@ export const updateEquipo = async (
 
   for (const campo of camposValidos) {
     const val = data[campo as keyof IEquipo];
-    if (val !== undefined) {
+    if (val !== undefined && campo !== "foto") {
       updates.push(`${campo} = $${idx}`);
       values.push(val);
       idx++;
@@ -193,7 +191,7 @@ export const updateEquipo = async (
 
   const q = `UPDATE wequipos SET ${updates.join(
     ", "
-  )} WHERE id = $${idx} RETURNING *;`;
+  )} WHERE id = $${idx} AND fhbaja IS NULL RETURNING *;`;
   const { rows } = await pool.query(q, values);
 
   return rows.length ? rows[0] : null;

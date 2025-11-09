@@ -49,7 +49,6 @@ export const getAllJugadores = async (
   let params: any[];
 
   if (searchTerm) {
-    // ✅ ACTUALIZADO: Incluye búsqueda por documento
     totalQuery = `
       SELECT COUNT(*) 
       FROM jugadores 
@@ -152,7 +151,11 @@ export const updateJugador = async (
   let index = 1;
 
   for (const key in jugador) {
-    if (jugador[key as keyof IJugador] !== undefined && key !== "fhultmod") {
+    if (
+      jugador[key as keyof IJugador] !== undefined &&
+      key !== "fhultmod" &&
+      key !== "foto"
+    ) {
       let value = jugador[key as keyof IJugador];
 
       if (key === "fhnacimiento" && value) {
@@ -176,7 +179,7 @@ export const updateJugador = async (
   values.push(id);
 
   const query = `UPDATE jugadores SET ${updates.join(", ")} 
-                 WHERE id = $${index} RETURNING *;`;
+                 WHERE id = $${index} AND fhbaja IS NULL RETURNING *;`;
 
   const { rows } = await pool.query(query, values);
   return rows.length > 0 ? rows[0] : null;

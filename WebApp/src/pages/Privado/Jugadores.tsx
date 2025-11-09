@@ -1,15 +1,23 @@
+/**
+ * 📝 EJEMPLO DE INTEGRACIÓN - ImageUploader en Jugadores
+ *
+ * Este archivo muestra cómo integrar el componente ImageUploader
+ * en el formulario de edición/creación de jugadores
+ */
+
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { Jugador } from "../../types/jugadores";
 import DataTable from "../../components/tables/DataTable";
 import DynamicForm from "../../components/forms/DynamicForm";
+import ImageUploader from "../../components/common/ImageUploader"; // ✅ IMPORTAR
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
   fetchJugadores,
   saveJugadorThunk,
   removeJugador,
-  clearError, // ✅ Importar nueva acción
+  clearError,
 } from "../../store/slices/jugadoresSlice";
 import {
   Modal,
@@ -24,10 +32,7 @@ import { jugadorColumns } from "../../components/tables/columns/jugadorColumns";
 const Jugadores: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { jugadores, loading, error, errorType, page, limit, total } =
-    useSelector(
-      // ✅ Agregar errorType
-      (state: RootState) => state.jugadores
-    );
+    useSelector((state: RootState) => state.jugadores);
 
   const {
     formData,
@@ -49,6 +54,7 @@ const Jugadores: React.FC = () => {
     peso: "",
     codestado: 1,
     id: undefined,
+    foto: undefined,
   });
 
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
@@ -97,7 +103,6 @@ const Jugadores: React.FC = () => {
     } catch (err: unknown) {
       console.error("Error al guardar jugador:", err);
 
-      // ✅ Manejar específicamente el error de documento duplicado
       if (
         typeof err === "object" &&
         err !== null &&
@@ -143,10 +148,29 @@ const Jugadores: React.FC = () => {
     setSearchTerm(pendingSearchTerm);
   };
 
-  // ✅ Función para cerrar modal y limpiar errores
   const handleCloseModalAndClearError = () => {
     handleCloseModal();
     dispatch(clearError());
+  };
+
+  // ✅ CALLBACKS PARA EL IMAGE UPLOADER
+  const handleImageUploadSuccess = (imageUrl: string) => {
+    console.log("✅ Imagen subida correctamente:", imageUrl);
+    // Opcionalmente, recargar los datos del jugador
+    if (formData.id) {
+      dispatch(fetchJugadores({ page, limit, searchTerm }));
+    }
+  };
+
+  const handleImageUploadError = (error: string) => {
+    showPopup("error", `Error al subir imagen: ${error}`);
+  };
+
+  const handleImageDeleteSuccess = () => {
+    showPopup("success", "Imagen eliminada correctamente");
+    if (formData.id) {
+      dispatch(fetchJugadores({ page, limit, searchTerm }));
+    }
   };
 
   return (
@@ -205,9 +229,43 @@ const Jugadores: React.FC = () => {
 
         <Modal
           isOpen={isModalOpen}
-          onClose={handleCloseModalAndClearError} // ✅ Usar nueva función
+          onClose={handleCloseModalAndClearError}
           title={formData.id ? "Editar Jugador" : "Crear Jugador"}
         >
+          {/* ✅ AGREGAR COMPONENTE DE IMAGE UPLOADER */}
+          {/* Solo mostrar si estamos editando un jugador existente */}
+          {formData.id && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Foto del Jugador
+              </label>
+              <ImageUploader
+                entityId={formData.id}
+                entityType="jugador"
+                currentImageUrl={formData.foto}
+                maxImages={1}
+                onUploadSuccess={handleImageUploadSuccess}
+                onUploadError={handleImageUploadError}
+                onDeleteSuccess={handleImageDeleteSuccess}
+                height="250px"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                💡 Tip: La imagen se puede subir/actualizar después de crear el
+                jugador
+              </p>
+            </div>
+          )}
+
+          {/* Mostrar mensaje si es un jugador nuevo */}
+          {!formData.id && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                ℹ️ La foto del jugador se puede agregar después de crear el
+                registro
+              </p>
+            </div>
+          )}
+
           <DynamicForm
             fields={[
               {
@@ -291,7 +349,6 @@ const Jugadores: React.FC = () => {
             submitLabel="Guardar"
           />
 
-          {/* ✅ Mostrar error específico de documento duplicado en el modal */}
           {errorType === "DUPLICATE_DOCUMENT" && (
             <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
               <strong>⚠️ Documento duplicado:</strong> El número de documento

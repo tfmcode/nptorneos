@@ -1,219 +1,337 @@
+// Backend/src/services/imageService.ts
+
 import sharp from "sharp";
 import path from "path";
-import fs from "fs";
-import { UPLOADS_DIR } from "../config/multerConfig";
+import fs from "fs/promises";
+import { existsSync } from "fs";
 
-// ✅ Configuración de límites de imagen
-export const IMAGE_CONFIG = {
-  maxSizeBytes: 2 * 1024 * 1024, // 2MB después de compresión
-  maxWidth: 1920,
-  maxHeight: 1920,
-  quality: 85,
-  allowedFormats: ["jpeg", "jpg", "png", "webp"],
-};
+/**
+ * 📁 CONFIGURACIÓN DE CARPETAS
+ */
+const UPLOADS_BASE_DIR = path.join(__dirname, "../../uploads");
 
-// ✅ Interface para resultado de upload
-export interface UploadResult {
+const UPLOAD_DIRS = {
+  jugadores: path.join(UPLOADS_BASE_DIR, "jugadores"),
+  equipos: path.join(UPLOADS_BASE_DIR, "equipos"),
+  arbitros: path.join(UPLOADS_BASE_DIR, "arbitros"),
+} as const;
+
+type EntityType = keyof typeof UPLOAD_DIRS;
+
+/**
+ * 🎨 OPCIONES DE PROCESAMIENTO DE IMAGEN
+ */
+interface ImageProcessingOptions {
+  format?: "jpeg" | "png" | "webp";
+  quality?: number;
+  maxWidth?: number;
+  maxHeight?: number;
+}
+
+/**
+ * 📊 RESULTADO DE OPERACIÓN DE IMAGEN
+ */
+interface ImageOperationResult {
   success: boolean;
   filename?: string;
   path?: string;
   size?: number;
-  message?: string;
   error?: string;
 }
 
-// ✅ Interface para opciones de compresión
-interface CompressionOptions {
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number;
-  format?: "jpeg" | "png" | "webp";
+/**
+ * 📷 INFORMACIÓN DE IMAGEN
+ */
+interface ImageInfo {
+  exists: boolean;
+  size?: number;
+  width?: number;
+  height?: number;
+  format?: string;
 }
 
 /**
- * 🎯 SERVICIO GENÉRICO DE IMÁGENES
- * Maneja compresión, validación, guardado y eliminación de imágenes
+ * 🚀 SERVICIO DE GESTIÓN DE IMÁGENES
  */
-export class ImageService {
-  private uploadsDir: string;
-
-  constructor(uploadsDir: string = UPLOADS_DIR) {
-    this.uploadsDir = uploadsDir;
-    this.ensureUploadsDirExists();
-  }
-
+class ImageService {
   /**
-   * Asegurar que el directorio de uploads existe
+   * 📁 Crear directorios necesarios
    */
-  private ensureUploadsDirExists(): void {
-    if (!fs.existsSync(this.uploadsDir)) {
-      fs.mkdirSync(this.uploadsDir, { recursive: true });
+  private async ensureDirectories(): Promise<void> {
+    for (const dir of Object.values(UPLOAD_DIRS)) {
+      if (!existsSync(dir)) {
+        await fs.mkdir(dir, { recursive: true });
+        console.log(`✅ Directorio creado: ${dir}`);
+      }
     }
   }
 
   /**
-   * Generar nombre único para archivo
+   * 📂 Crear carpeta específica para un equipo
    */
-  private generateUniqueFilename(prefix: string, originalName: string): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 9);
-    const ext = path.extname(originalName).toLowerCase();
-    return `${prefix}_${timestamp}_${random}${ext}`;
-  }
-
-  /**
-   * Validar buffer de imagen
-   */
-  private async validateImageBuffer(buffer: Buffer): Promise<void> {
-    try {
-      const metadata = await sharp(buffer).metadata();
-
-      if (!metadata.format) {
-        throw new Error("No se pudo determinar el formato de la imagen");
-      }
-
-      if (!IMAGE_CONFIG.allowedFormats.includes(metadata.format)) {
-        throw new Error(
-          `Formato no permitido: ${
-            metadata.format
-          }. Permitidos: ${IMAGE_CONFIG.allowedFormats.join(", ")}`
-        );
-      }
-    } catch (error) {
-      throw new Error(
-        `Imagen inválida: ${
-          error instanceof Error ? error.message : "Error desconocido"
-        }`
-      );
+  private async ensureTeamDirectory(teamSlug: string): Promise<string> {
+    const teamDir = path.join(UPLOAD_DIRS.equipos, teamSlug);
+    if (!existsSync(teamDir)) {
+      await fs.mkdir(teamDir, { recursive: true });
+      console.log(`✅ Carpeta de equipo creada: ${teamDir}`);
     }
+    return teamDir;
   }
 
   /**
-   * Comprimir y optimizar imagen
+   * 🔄 Convertir nombre de equipo a slug
    */
-  private async compressImage(
+  private teamNameToSlug(teamName: string): string {
+    return teamName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+  }
+
+  /**
+   * 🖼️ Procesar y guardar imagen
+   */
+  private async processAndSaveImage(
     buffer: Buffer,
-    options: CompressionOptions = {}
-  ): Promise<Buffer> {
+    outputPath: string,
+    options: ImageProcessingOptions = {}
+  ): Promise<{ size: number }> {
     const {
-      maxWidth = IMAGE_CONFIG.maxWidth,
-      maxHeight = IMAGE_CONFIG.maxHeight,
-      quality = IMAGE_CONFIG.quality,
       format = "jpeg",
+      quality = 85,
+      maxWidth = 2000,
+      maxHeight = 2000,
     } = options;
 
-    let sharpInstance = sharp(buffer);
+    let pipeline = sharp(buffer).rotate(); // Auto-rotate basado en EXIF
 
-    // Obtener metadata original
-    const metadata = await sharpInstance.metadata();
-
-    // Redimensionar si es necesario (manteniendo aspect ratio)
+    // Redimensionar si excede límites
+    const metadata = await sharp(buffer).metadata();
     if (
       metadata.width &&
       metadata.height &&
       (metadata.width > maxWidth || metadata.height > maxHeight)
     ) {
-      sharpInstance = sharpInstance.resize(maxWidth, maxHeight, {
+      pipeline = pipeline.resize(maxWidth, maxHeight, {
         fit: "inside",
         withoutEnlargement: true,
       });
     }
 
-    // Aplicar compresión según formato
+    // Aplicar formato y calidad
     if (format === "jpeg") {
-      sharpInstance = sharpInstance.jpeg({ quality, progressive: true });
+      pipeline = pipeline.jpeg({ quality, mozjpeg: true });
     } else if (format === "png") {
-      sharpInstance = sharpInstance.png({
-        quality,
-        compressionLevel: 9,
-      });
+      pipeline = pipeline.png({ quality, compressionLevel: 9 });
     } else if (format === "webp") {
-      sharpInstance = sharpInstance.webp({ quality });
+      pipeline = pipeline.webp({ quality });
     }
 
-    return await sharpInstance.toBuffer();
+    // Guardar archivo
+    await pipeline.toFile(outputPath);
+
+    // Obtener tamaño del archivo generado
+    const stats = await fs.stat(outputPath);
+    return { size: stats.size };
   }
 
   /**
-   * Validar tamaño final de imagen
+   * 📤 SUBIR IMAGEN DE JUGADOR
    */
-  private validateFinalSize(buffer: Buffer): void {
-    if (buffer.length > IMAGE_CONFIG.maxSizeBytes) {
-      const sizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
-      const maxSizeMB = (IMAGE_CONFIG.maxSizeBytes / (1024 * 1024)).toFixed(2);
-      throw new Error(
-        `La imagen es demasiado grande (${sizeMB}MB). Máximo permitido: ${maxSizeMB}MB`
-      );
-    }
-  }
-
-  /**
-   * 🚀 MÉTODO PRINCIPAL: Procesar y guardar imagen
-   */
-  public async processAndSaveImage(
+  async uploadJugadorImage(
     file: Express.Multer.File,
-    prefix: string,
-    options: CompressionOptions = {}
-  ): Promise<UploadResult> {
+    baseFilename: string,
+    options?: ImageProcessingOptions
+  ): Promise<ImageOperationResult> {
     try {
-      // 1. Validar buffer original
-      await this.validateImageBuffer(file.buffer);
+      await this.ensureDirectories();
 
-      // 2. Comprimir imagen
-      const compressedBuffer = await this.compressImage(file.buffer, options);
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 9);
+      const extension = options?.format || "jpg";
+      const filename = `${baseFilename}_${timestamp}_${randomSuffix}.${extension}`;
+      const outputPath = path.join(UPLOAD_DIRS.jugadores, filename);
 
-      // 3. Validar tamaño final
-      this.validateFinalSize(compressedBuffer);
+      const { size } = await this.processAndSaveImage(
+        file.buffer,
+        outputPath,
+        options
+      );
 
-      // 4. Generar nombre único
-      const filename = this.generateUniqueFilename(prefix, file.originalname);
-      const filepath = path.join(this.uploadsDir, filename);
+      console.log("✅ Imagen de jugador guardada:", {
+        filename,
+        size: `${(size / 1024).toFixed(2)}KB`,
+      });
 
-      // 5. Guardar archivo
-      await fs.promises.writeFile(filepath, compressedBuffer);
-
-      // 6. Retornar resultado exitoso
       return {
         success: true,
         filename,
-        path: filepath,
-        size: compressedBuffer.length,
-        message: "Imagen procesada y guardada correctamente",
+        path: outputPath,
+        size,
       };
     } catch (error) {
-      console.error("❌ Error al procesar imagen:", error);
+      console.error("❌ Error al procesar imagen de jugador:", error);
       return {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Error desconocido al procesar imagen",
+        error: error instanceof Error ? error.message : "Error desconocido",
       };
     }
   }
 
   /**
-   * 🗑️ Eliminar imagen del sistema de archivos
+   * 📤 SUBIR ESCUDO DE EQUIPO
    */
-  public async deleteImage(filename: string): Promise<boolean> {
+  async uploadEquipoEscudo(
+    file: Express.Multer.File,
+    teamId: number,
+    teamName: string,
+    options?: ImageProcessingOptions
+  ): Promise<ImageOperationResult> {
     try {
-      if (!filename) {
-        console.warn("⚠️ No se proporcionó nombre de archivo para eliminar");
-        return false;
+      await this.ensureDirectories();
+
+      const teamSlug = this.teamNameToSlug(teamName);
+      const teamDir = await this.ensureTeamDirectory(teamSlug);
+
+      // Nombre fijo para el escudo
+      const extension = options?.format || "jpg";
+      const filename = `escudo.${extension}`;
+      const outputPath = path.join(teamDir, filename);
+
+      // Si existe escudo anterior, eliminarlo
+      if (existsSync(outputPath)) {
+        await fs.unlink(outputPath);
+        console.log("🗑️ Escudo anterior eliminado");
       }
 
-      const filepath = path.join(this.uploadsDir, filename);
+      const { size } = await this.processAndSaveImage(
+        file.buffer,
+        outputPath,
+        options
+      );
 
-      // Verificar si el archivo existe
-      if (!fs.existsSync(filepath)) {
-        console.warn(`⚠️ Archivo no encontrado: ${filename}`);
-        return false;
+      // Retornar ruta relativa desde uploads/equipos/
+      const relativeFilename = `${teamSlug}/escudo.${extension}`;
+
+      console.log("✅ Escudo de equipo guardado:", {
+        filename: relativeFilename,
+        size: `${(size / 1024).toFixed(2)}KB`,
+      });
+
+      return {
+        success: true,
+        filename: relativeFilename,
+        path: outputPath,
+        size,
+      };
+    } catch (error) {
+      console.error("❌ Error al procesar escudo de equipo:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Error desconocido",
+      };
+    }
+  }
+
+  /**
+   * 📤 SUBIR FOTO GRUPAL DE EQUIPO
+   */
+  async uploadEquipoFotoGrupal(
+    file: Express.Multer.File,
+    teamId: number,
+    teamName: string,
+    orden: number,
+    options?: ImageProcessingOptions
+  ): Promise<ImageOperationResult> {
+    try {
+      await this.ensureDirectories();
+
+      const teamSlug = this.teamNameToSlug(teamName);
+      const teamDir = await this.ensureTeamDirectory(teamSlug);
+
+      const timestamp = Date.now();
+      const extension = options?.format || "jpg";
+      const filename = `grupo_foto${orden}_${timestamp}.${extension}`;
+      const outputPath = path.join(teamDir, filename);
+
+      const { size } = await this.processAndSaveImage(
+        file.buffer,
+        outputPath,
+        options
+      );
+
+      // Retornar ruta relativa desde uploads/equipos/
+      const relativeFilename = `${teamSlug}/${filename}`;
+
+      console.log("✅ Foto grupal de equipo guardada:", {
+        filename: relativeFilename,
+        orden,
+        size: `${(size / 1024).toFixed(2)}KB`,
+      });
+
+      return {
+        success: true,
+        filename: relativeFilename,
+        path: outputPath,
+        size,
+      };
+    } catch (error) {
+      console.error("❌ Error al procesar foto grupal:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Error desconocido",
+      };
+    }
+  }
+
+  /**
+   * 🔄 REEMPLAZAR IMAGEN (mantener compatibilidad con código existente)
+   */
+  async replaceImage(
+    oldFilename: string | null,
+    file: Express.Multer.File,
+    baseFilename: string,
+    options?: ImageProcessingOptions
+  ): Promise<ImageOperationResult> {
+    // Determinar tipo de entidad por la ruta del archivo anterior
+    let entityType: EntityType = "jugadores"; // Por defecto
+
+    if (oldFilename) {
+      if (oldFilename.includes("/")) {
+        // Es un equipo (tiene carpeta)
+        entityType = "equipos";
+      }
+    }
+
+    // Eliminar archivo anterior si existe
+    if (oldFilename) {
+      await this.deleteImage(oldFilename, entityType);
+    }
+
+    // Subir nueva imagen (por ahora solo jugadores usan esta función)
+    return this.uploadJugadorImage(file, baseFilename, options);
+  }
+
+  /**
+   * 🗑️ ELIMINAR IMAGEN
+   */
+  async deleteImage(
+    filename: string,
+    entityType: EntityType = "jugadores"
+  ): Promise<boolean> {
+    try {
+      const filePath = path.join(UPLOAD_DIRS[entityType], filename);
+
+      if (existsSync(filePath)) {
+        await fs.unlink(filePath);
+        console.log("🗑️ Imagen eliminada:", filePath);
+        return true;
       }
 
-      // Eliminar archivo
-      await fs.promises.unlink(filepath);
-      console.log(`✅ Imagen eliminada: ${filename}`);
-      return true;
+      console.log("⚠️ Imagen no encontrada:", filePath);
+      return false;
     } catch (error) {
       console.error("❌ Error al eliminar imagen:", error);
       return false;
@@ -221,61 +339,42 @@ export class ImageService {
   }
 
   /**
-   * 🔄 Reemplazar imagen antigua con nueva
+   * 🗑️ ELIMINAR CARPETA DE EQUIPO COMPLETA
    */
-  public async replaceImage(
-    oldFilename: string | null,
-    newFile: Express.Multer.File,
-    prefix: string,
-    options: CompressionOptions = {}
-  ): Promise<UploadResult> {
+  async deleteTeamDirectory(teamName: string): Promise<boolean> {
     try {
-      // 1. Procesar y guardar nueva imagen
-      const uploadResult = await this.processAndSaveImage(
-        newFile,
-        prefix,
-        options
-      );
+      const teamSlug = this.teamNameToSlug(teamName);
+      const teamDir = path.join(UPLOAD_DIRS.equipos, teamSlug);
 
-      if (!uploadResult.success) {
-        return uploadResult;
+      if (existsSync(teamDir)) {
+        await fs.rm(teamDir, { recursive: true, force: true });
+        console.log("🗑️ Carpeta de equipo eliminada:", teamDir);
+        return true;
       }
 
-      // 2. Eliminar imagen anterior si existe
-      if (oldFilename) {
-        await this.deleteImage(oldFilename);
-      }
-
-      return uploadResult;
+      return false;
     } catch (error) {
-      console.error("❌ Error al reemplazar imagen:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Error al reemplazar imagen",
-      };
+      console.error("❌ Error al eliminar carpeta de equipo:", error);
+      return false;
     }
   }
 
   /**
-   * 📊 Obtener información de imagen
+   * 📊 OBTENER INFORMACIÓN DE IMAGEN
    */
-  public async getImageInfo(filename: string): Promise<{
-    exists: boolean;
-    size?: number;
-    width?: number;
-    height?: number;
-    format?: string;
-  }> {
+  async getImageInfo(
+    filename: string,
+    entityType: EntityType = "jugadores"
+  ): Promise<ImageInfo> {
     try {
-      const filepath = path.join(this.uploadsDir, filename);
+      const filePath = path.join(UPLOAD_DIRS[entityType], filename);
 
-      if (!fs.existsSync(filepath)) {
+      if (!existsSync(filePath)) {
         return { exists: false };
       }
 
-      const stats = await fs.promises.stat(filepath);
-      const metadata = await sharp(filepath).metadata();
+      const stats = await fs.stat(filePath);
+      const metadata = await sharp(filePath).metadata();
 
       return {
         exists: true,
@@ -289,7 +388,33 @@ export class ImageService {
       return { exists: false };
     }
   }
+
+  /**
+   * 📋 LISTAR FOTOS GRUPALES DE UN EQUIPO
+   */
+  async listTeamGallery(teamName: string): Promise<string[]> {
+    try {
+      const teamSlug = this.teamNameToSlug(teamName);
+      const teamDir = path.join(UPLOAD_DIRS.equipos, teamSlug);
+
+      if (!existsSync(teamDir)) {
+        return [];
+      }
+
+      const files = await fs.readdir(teamDir);
+
+      // Filtrar solo fotos grupales (excluir escudo)
+      const galleryPhotos = files
+        .filter((file) => file.startsWith("grupo_foto"))
+        .sort(); // Ordenar por nombre (incluye timestamp)
+
+      return galleryPhotos;
+    } catch (error) {
+      console.error("❌ Error al listar galería de equipo:", error);
+      return [];
+    }
+  }
 }
 
-// ✅ Exportar instancia singleton
+// Exportar instancia única
 export const imageService = new ImageService();

@@ -1,8 +1,14 @@
+// Backend/src/controllers/uploadEquipoController.ts
+
 import { Request, Response } from "express";
 import { imageService } from "../services/imageService";
 import { pool } from "../config/db";
 
-export const uploadEquipoImagen = async (req: Request, res: Response) => {
+/**
+ * 📸 SUBIR ESCUDO DE EQUIPO
+ * Endpoint: POST /api/upload/equipo/:id/escudo
+ */
+export const uploadEquipoEscudo = async (req: Request, res: Response) => {
   const equipoId = parseInt(req.params.id);
   const client = await pool.connect();
 
@@ -14,8 +20,15 @@ export const uploadEquipoImagen = async (req: Request, res: Response) => {
       });
     }
 
+    console.log("📤 Iniciando upload de escudo:", {
+      equipoId,
+      originalName: req.file.originalname,
+      size: `${(req.file.size / 1024).toFixed(2)}KB`,
+    });
+
     await client.query("BEGIN");
 
+    // Obtener datos del equipo
     const equipoResult = await client.query(
       "SELECT id, nombre, foto FROM wequipos WHERE id = $1 AND fhbaja IS NULL FOR UPDATE",
       [equipoId]
@@ -29,20 +42,19 @@ export const uploadEquipoImagen = async (req: Request, res: Response) => {
       });
     }
 
-    const equipoActual = equipoResult.rows[0];
-    const fotoAnterior = equipoActual.foto;
+    const equipo = equipoResult.rows[0];
+    const escudoAnterior = equipo.foto;
 
-    const nombreArchivo = `${equipoActual.nombre}`
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "");
+    // Eliminar escudo anterior si existe
+    if (escudoAnterior) {
+      await imageService.deleteImage(escudoAnterior, "equipos");
+    }
 
-    const uploadResult = await imageService.replaceImage(
-      fotoAnterior,
+    // Procesar y guardar nuevo escudo
+    const uploadResult = await imageService.uploadEquipoEscudo(
       req.file,
-      nombreArchivo,
+      equipoId,
+      equipo.nombre,
       {
         format: "jpeg",
         quality: 85,
@@ -53,19 +65,20 @@ export const uploadEquipoImagen = async (req: Request, res: Response) => {
       await client.query("ROLLBACK");
       return res.status(400).json({
         success: false,
-        message: uploadResult.error || "Error al procesar la imagen",
+        message: uploadResult.error || "Error al procesar el escudo",
       });
     }
 
+    // Actualizar base de datos
     const updateResult = await client.query(
-      "UPDATE wequipos SET foto = $1, fhultmod = NOW() WHERE id = $2 AND fhbaja IS NULL RETURNING id, nombre, foto, fhultmod",
+      "UPDATE wequipos SET foto = $1, fhultmod = NOW() WHERE id = $2 RETURNING id, foto",
       [uploadResult.filename, equipoId]
     );
 
     if (updateResult.rows.length === 0) {
       await client.query("ROLLBACK");
       if (uploadResult.filename) {
-        await imageService.deleteImage(uploadResult.filename);
+        await imageService.deleteImage(uploadResult.filename, "equipos");
       }
       return res.status(500).json({
         success: false,
@@ -75,13 +88,18 @@ export const uploadEquipoImagen = async (req: Request, res: Response) => {
 
     await client.query("COMMIT");
 
+    console.log("✅ Escudo de equipo actualizado:", {
+      equipoId,
+      filename: uploadResult.filename,
+    });
+
     return res.status(200).json({
       success: true,
-      message: "Imagen de equipo actualizada correctamente",
+      message: "Escudo de equipo actualizado correctamente",
       data: {
         filename: uploadResult.filename,
         size: uploadResult.size,
-        url: `/uploads/${uploadResult.filename}`,
+        url: `/uploads/equipos/${uploadResult.filename}`,
       },
     });
   } catch (error) {
@@ -91,10 +109,10 @@ export const uploadEquipoImagen = async (req: Request, res: Response) => {
       console.error("❌ Error al hacer rollback:", rollbackError);
     }
 
-    console.error("❌ Error en uploadEquipoImagen:", error);
+    console.error("❌ Error en uploadEquipoEscudo:", error);
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor al subir imagen",
+      message: "Error interno del servidor al subir escudo",
       error: error instanceof Error ? error.message : "Error desconocido",
     });
   } finally {
@@ -102,7 +120,11 @@ export const uploadEquipoImagen = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteEquipoImagen = async (req: Request, res: Response) => {
+/**
+ * 🗑️ ELIMINAR ESCUDO DE EQUIPO
+ * Endpoint: DELETE /api/upload/equipo/:id/escudo
+ */
+export const deleteEquipoEscudo = async (req: Request, res: Response) => {
   const equipoId = parseInt(req.params.id);
   const client = await pool.connect();
 
@@ -122,31 +144,38 @@ export const deleteEquipoImagen = async (req: Request, res: Response) => {
       });
     }
 
-    const equipoActual = equipoResult.rows[0];
-    const fotoActual = equipoActual.foto;
+    const escudoActual = equipoResult.rows[0].foto;
 
-    if (!fotoActual) {
+    if (!escudoActual) {
       await client.query("ROLLBACK");
       return res.status(400).json({
         success: false,
-        message: "El equipo no tiene ninguna imagen asociada",
+        message: "El equipo no tiene escudo asociado",
       });
     }
 
+    // Actualizar base de datos
     await client.query(
-      "UPDATE wequipos SET foto = NULL, fhultmod = NOW() WHERE id = $1 AND fhbaja IS NULL",
+      "UPDATE wequipos SET foto = NULL, fhultmod = NOW() WHERE id = $1",
       [equipoId]
     );
 
     await client.query("COMMIT");
 
-    const deleted = await imageService.deleteImage(fotoActual);
+    // Eliminar archivo físico
+    const deleted = await imageService.deleteImage(escudoActual, "equipos");
+
+    console.log("🗑️ Escudo de equipo eliminado:", {
+      equipoId,
+      filename: escudoActual,
+      fileDeleted: deleted,
+    });
 
     return res.status(200).json({
       success: true,
       message: deleted
-        ? "Imagen eliminada correctamente"
-        : "Referencia eliminada (archivo no encontrado en servidor)",
+        ? "Escudo eliminado correctamente"
+        : "Referencia eliminada (archivo no encontrado)",
       fileDeleted: deleted,
     });
   } catch (error) {
@@ -156,10 +185,10 @@ export const deleteEquipoImagen = async (req: Request, res: Response) => {
       console.error("❌ Error al hacer rollback:", rollbackError);
     }
 
-    console.error("❌ Error en deleteEquipoImagen:", error);
+    console.error("❌ Error en deleteEquipoEscudo:", error);
     return res.status(500).json({
       success: false,
-      message: "Error interno del servidor al eliminar imagen",
+      message: "Error interno del servidor al eliminar escudo",
       error: error instanceof Error ? error.message : "Error desconocido",
     });
   } finally {
@@ -167,7 +196,11 @@ export const deleteEquipoImagen = async (req: Request, res: Response) => {
   }
 };
 
-export const getEquipoImagenInfo = async (req: Request, res: Response) => {
+/**
+ * 📊 OBTENER INFORMACIÓN DEL ESCUDO
+ * Endpoint: GET /api/upload/equipo/:id/escudo/info
+ */
+export const getEquipoEscudoInfo = async (req: Request, res: Response) => {
   const equipoId = parseInt(req.params.id);
 
   try {
@@ -183,25 +216,24 @@ export const getEquipoImagenInfo = async (req: Request, res: Response) => {
       });
     }
 
-    const equipoActual = equipoResult.rows[0];
-    const fotoActual = equipoActual.foto;
+    const escudoActual = equipoResult.rows[0].foto;
 
-    if (!fotoActual) {
+    if (!escudoActual) {
       return res.status(200).json({
         success: true,
         hasImage: false,
-        message: "El equipo no tiene imagen asociada",
+        message: "El equipo no tiene escudo asociado",
       });
     }
 
-    const imageInfo = await imageService.getImageInfo(fotoActual);
+    const imageInfo = await imageService.getImageInfo(escudoActual, "equipos");
 
     if (!imageInfo.exists) {
       return res.status(200).json({
         success: true,
         hasImage: false,
-        message: "Imagen no encontrada en el servidor",
-        filename: fotoActual,
+        message: "Escudo no encontrado en el servidor",
+        filename: escudoActual,
       });
     }
 
@@ -209,8 +241,8 @@ export const getEquipoImagenInfo = async (req: Request, res: Response) => {
       success: true,
       hasImage: true,
       data: {
-        filename: fotoActual,
-        url: `/uploads/${fotoActual}`,
+        filename: escudoActual,
+        url: `/uploads/equipos/${escudoActual}`,
         size: imageInfo.size,
         width: imageInfo.width,
         height: imageInfo.height,
@@ -218,10 +250,10 @@ export const getEquipoImagenInfo = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error en getEquipoImagenInfo:", error);
+    console.error("❌ Error en getEquipoEscudoInfo:", error);
     return res.status(500).json({
       success: false,
-      message: "Error al obtener información de la imagen",
+      message: "Error al obtener información del escudo",
       error: error instanceof Error ? error.message : "Error desconocido",
     });
   }

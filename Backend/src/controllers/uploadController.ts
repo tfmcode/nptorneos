@@ -1,3 +1,5 @@
+// Backend/src/controllers/uploadController.ts
+
 import { Request, Response } from "express";
 import { imageService } from "../services/imageService";
 import { pool } from "../config/db";
@@ -5,20 +7,12 @@ import { pool } from "../config/db";
 /**
  * 📸 SUBIR IMAGEN DE JUGADOR
  * Endpoint: POST /api/upload/jugador/:id
- *
- * ✅ MEJORAS IMPLEMENTADAS:
- * - Uso de transacciones para garantizar atomicidad
- * - Row-level locking (FOR UPDATE) para evitar race conditions
- * - Verificación post-commit para confirmar persistencia
- * - Mejor logging para debugging
- * - Cleanup automático en caso de error
  */
 export const uploadJugadorImagen = async (req: Request, res: Response) => {
   const jugadorId = parseInt(req.params.id);
-  const client = await pool.connect(); // ✅ Usar cliente con transacción
+  const client = await pool.connect();
 
   try {
-    // 1. Validar que existe el archivo
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -26,17 +20,15 @@ export const uploadJugadorImagen = async (req: Request, res: Response) => {
       });
     }
 
-    console.log("📤 Iniciando upload de imagen:", {
+    console.log("📤 Iniciando upload de imagen de jugador:", {
       jugadorId,
       originalName: req.file.originalname,
       size: `${(req.file.size / 1024).toFixed(2)}KB`,
-      mimetype: req.file.mimetype,
     });
 
-    // ✅ Iniciar transacción
     await client.query("BEGIN");
 
-    // 2. Validar que existe el jugador y obtener sus datos (con FOR UPDATE para bloquear)
+    // Obtener datos del jugador
     const jugadorResult = await client.query(
       "SELECT id, nombres, apellido, foto FROM jugadores WHERE id = $1 AND fhbaja IS NULL FOR UPDATE",
       [jugadorId]
@@ -50,30 +42,26 @@ export const uploadJugadorImagen = async (req: Request, res: Response) => {
       });
     }
 
-    const jugadorActual = jugadorResult.rows[0];
-    const fotoAnterior = jugadorActual.foto;
+    const jugador = jugadorResult.rows[0];
+    const fotoAnterior = jugador.foto;
 
-    console.log("👤 Jugador encontrado:", {
-      id: jugadorActual.id,
-      nombre: `${jugadorActual.nombres} ${jugadorActual.apellido}`,
-      fotoAnterior: fotoAnterior || "ninguna",
-    });
-
-    // ✅ Crear nombre de archivo usando nombre y apellido del jugador
-    const nombreArchivo = `${jugadorActual.nombres}_${jugadorActual.apellido}`
+    // Generar nombre base para el archivo
+    const nombreBase = `${jugador.nombres}_${jugador.apellido}`
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "_")
       .replace(/[^a-z0-9_]/g, "");
 
-    console.log("📝 Nombre de archivo base generado:", nombreArchivo);
+    // Eliminar foto anterior si existe
+    if (fotoAnterior) {
+      await imageService.deleteImage(fotoAnterior, "jugadores");
+    }
 
-    // 3. Procesar y guardar nueva imagen (reemplazando la anterior si existe)
-    const uploadResult = await imageService.replaceImage(
-      fotoAnterior,
+    // Procesar y guardar nueva imagen
+    const uploadResult = await imageService.uploadJugadorImage(
       req.file,
-      nombreArchivo,
+      nombreBase,
       {
         format: "jpeg",
         quality: 85,
@@ -88,24 +76,16 @@ export const uploadJugadorImagen = async (req: Request, res: Response) => {
       });
     }
 
-    console.log("💾 Imagen procesada:", {
-      filename: uploadResult.filename,
-      size: `${((uploadResult.size || 0) / 1024).toFixed(2)}KB`,
-      path: uploadResult.path,
-    });
-
-    // 4. Actualizar base de datos con el nuevo nombre de archivo
+    // Actualizar base de datos
     const updateResult = await client.query(
-      "UPDATE jugadores SET foto = $1, fhultmod = NOW() WHERE id = $2 RETURNING id, nombres, apellido, foto, fhultmod",
+      "UPDATE jugadores SET foto = $1, fhultmod = NOW() WHERE id = $2 RETURNING id, foto",
       [uploadResult.filename, jugadorId]
     );
 
     if (updateResult.rows.length === 0) {
-      console.error("❌ UPDATE no afectó ninguna fila");
       await client.query("ROLLBACK");
-      // Eliminar la imagen guardada
       if (uploadResult.filename) {
-        await imageService.deleteImage(uploadResult.filename);
+        await imageService.deleteImage(uploadResult.filename, "jugadores");
       }
       return res.status(500).json({
         success: false,
@@ -113,46 +93,23 @@ export const uploadJugadorImagen = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ Commit de la transacción
     await client.query("COMMIT");
 
-    const jugadorActualizado = updateResult.rows[0];
-
-    console.log("✅ BD actualizada y comiteada:", {
-      id: jugadorActualizado.id,
-      foto: jugadorActualizado.foto,
-      fhultmod: jugadorActualizado.fhultmod,
+    console.log("✅ Imagen de jugador actualizada:", {
+      jugadorId,
+      filename: uploadResult.filename,
     });
 
-    // 5. Verificar que el cambio persistió (consulta independiente)
-    const verificacion = await pool.query(
-      "SELECT id, foto, fhultmod FROM jugadores WHERE id = $1",
-      [jugadorId]
-    );
-
-    console.log("🔍 Verificación post-commit:", {
-      foto: verificacion.rows[0]?.foto,
-      persistio: verificacion.rows[0]?.foto === uploadResult.filename,
-    });
-
-    if (verificacion.rows[0]?.foto !== uploadResult.filename) {
-      console.error(
-        "⚠️ ADVERTENCIA: El valor no persistió correctamente en la BD"
-      );
-    }
-
-    // 6. Retornar respuesta exitosa
     return res.status(200).json({
       success: true,
       message: "Imagen de jugador actualizada correctamente",
       data: {
         filename: uploadResult.filename,
         size: uploadResult.size,
-        url: `/uploads/${uploadResult.filename}`,
+        url: `/uploads/jugadores/${uploadResult.filename}`,
       },
     });
   } catch (error) {
-    // Rollback en caso de error
     try {
       await client.query("ROLLBACK");
     } catch (rollbackError) {
@@ -166,7 +123,6 @@ export const uploadJugadorImagen = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : "Error desconocido",
     });
   } finally {
-    // ✅ Siempre liberar el cliente
     client.release();
   }
 };
@@ -182,7 +138,6 @@ export const deleteJugadorImagen = async (req: Request, res: Response) => {
   try {
     await client.query("BEGIN");
 
-    // 1. Obtener información del jugador
     const jugadorResult = await client.query(
       "SELECT id, foto FROM jugadores WHERE id = $1 AND fhbaja IS NULL FOR UPDATE",
       [jugadorId]
@@ -196,8 +151,7 @@ export const deleteJugadorImagen = async (req: Request, res: Response) => {
       });
     }
 
-    const jugadorActual = jugadorResult.rows[0];
-    const fotoActual = jugadorActual.foto;
+    const fotoActual = jugadorResult.rows[0].foto;
 
     if (!fotoActual) {
       await client.query("ROLLBACK");
@@ -207,19 +161,18 @@ export const deleteJugadorImagen = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Actualizar base de datos (eliminar referencia)
+    // Actualizar base de datos
     await client.query(
       "UPDATE jugadores SET foto = NULL, fhultmod = NOW() WHERE id = $1",
       [jugadorId]
     );
 
-    // 3. Commit de la transacción
     await client.query("COMMIT");
 
-    // 4. Eliminar imagen del sistema de archivos (después del commit)
-    const deleted = await imageService.deleteImage(fotoActual);
+    // Eliminar archivo físico
+    const deleted = await imageService.deleteImage(fotoActual, "jugadores");
 
-    console.log("🗑️ Imagen eliminada:", {
+    console.log("🗑️ Imagen de jugador eliminada:", {
       jugadorId,
       filename: fotoActual,
       fileDeleted: deleted,
@@ -229,7 +182,7 @@ export const deleteJugadorImagen = async (req: Request, res: Response) => {
       success: true,
       message: deleted
         ? "Imagen eliminada correctamente"
-        : "Referencia eliminada (archivo no encontrado en servidor)",
+        : "Referencia eliminada (archivo no encontrado)",
       fileDeleted: deleted,
     });
   } catch (error) {
@@ -258,7 +211,6 @@ export const getJugadorImagenInfo = async (req: Request, res: Response) => {
   const jugadorId = parseInt(req.params.id);
 
   try {
-    // 1. Obtener información del jugador
     const jugadorResult = await pool.query(
       "SELECT id, foto FROM jugadores WHERE id = $1 AND fhbaja IS NULL",
       [jugadorId]
@@ -271,8 +223,7 @@ export const getJugadorImagenInfo = async (req: Request, res: Response) => {
       });
     }
 
-    const jugadorActual = jugadorResult.rows[0];
-    const fotoActual = jugadorActual.foto;
+    const fotoActual = jugadorResult.rows[0].foto;
 
     if (!fotoActual) {
       return res.status(200).json({
@@ -282,8 +233,7 @@ export const getJugadorImagenInfo = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Obtener información de la imagen
-    const imageInfo = await imageService.getImageInfo(fotoActual);
+    const imageInfo = await imageService.getImageInfo(fotoActual, "jugadores");
 
     if (!imageInfo.exists) {
       return res.status(200).json({
@@ -299,7 +249,7 @@ export const getJugadorImagenInfo = async (req: Request, res: Response) => {
       hasImage: true,
       data: {
         filename: fotoActual,
-        url: `/uploads/${fotoActual}`,
+        url: `/uploads/jugadores/${fotoActual}`,
         size: imageInfo.size,
         width: imageInfo.width,
         height: imageInfo.height,

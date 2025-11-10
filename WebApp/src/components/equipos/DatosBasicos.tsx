@@ -6,7 +6,7 @@ import { fetchSedes } from "../../store/slices/sedeSlice";
 import { saveEquipoThunk } from "../../store/slices/equiposSlice";
 import DynamicForm from "../forms/DynamicForm";
 import { PopupNotificacion } from "../common/PopupNotificacion";
-import ImageUploader from "../common/ImageUploader";
+import ImageUploaderInline from "../common/ImageUploaderWithCrop";
 
 interface Props {
   formData: Equipo;
@@ -134,38 +134,6 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
         onClose={() => setShowPopup({ ...showPopup, open: false })}
       />
 
-      {formData.id && (
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Logo del Equipo
-          </label>
-          <ImageUploader
-            entityId={formData.id}
-            entityType="equipo"
-            currentImageUrl={formData.foto}
-            maxImages={1}
-            onUploadSuccess={(imageUrl) => {
-              console.log("✅ Logo subido:", imageUrl);
-            }}
-            onUploadError={(error) => {
-              setShowPopup({
-                open: true,
-                type: "error",
-                message: `Error al subir logo: ${error}`,
-              });
-            }}
-            onDeleteSuccess={() => {
-              setShowPopup({
-                open: true,
-                type: "success",
-                message: "Logo eliminado correctamente",
-              });
-            }}
-            height="250px"
-          />
-        </div>
-      )}
-
       {!formData.id && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
@@ -174,21 +142,100 @@ const DatosBasicos = ({ formData, onChange }: Props) => {
         </div>
       )}
 
+      {/* ✅ NUEVO DISEÑO: Logo arriba + nombre/abrev al lado */}
+      {formData.id && (
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row gap-6 mb-6">
+            {/* Logo - Izquierda */}
+            <div className="flex-shrink-0">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Logo del Equipo
+              </label>
+              <ImageUploaderInline
+                entityId={formData.id}
+                entityType="equipo"
+                currentImageUrl={formData.foto}
+                size="large"
+                aspectRatio={1}
+                onUploadSuccess={(imageUrl) => {
+                  console.log("✅ Logo subido:", imageUrl);
+                  setShowPopup({
+                    open: true,
+                    type: "success",
+                    message: "Logo actualizado correctamente",
+                  });
+                }}
+                onUploadError={(error) => {
+                  setShowPopup({
+                    open: true,
+                    type: "error",
+                    message: `Error al subir logo: ${error}`,
+                  });
+                }}
+                onDeleteSuccess={() => {
+                  setShowPopup({
+                    open: true,
+                    type: "success",
+                    message: "Logo eliminado correctamente",
+                  });
+                }}
+              />
+            </div>
+
+            {/* Nombre y Abreviatura - Derecha */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre del Equipo *
+                </label>
+                <input
+                  type="text"
+                  name="nombre"
+                  value={formData.nombre ?? ""}
+                  onChange={onChange}
+                  placeholder="Nombre completo del equipo"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Abreviatura
+                </label>
+                <input
+                  type="text"
+                  name="abrev"
+                  value={formData.abrev ?? ""}
+                  onChange={onChange}
+                  placeholder="Ej: FCB"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ RESTO DE CAMPOS EN GRID 2 COLUMNAS */}
       <DynamicForm
         fields={[
-          {
-            name: "nombre",
-            type: "text",
-            placeholder: "Nombre del Equipo (Obligatorio)",
-            value: formData.nombre ?? "",
-            colSpan: 2,
-          },
-          {
-            name: "abrev",
-            type: "text",
-            placeholder: "Abreviatura",
-            value: formData.abrev ?? "",
-          },
+          // Si NO hay ID, mostrar nombre completo arriba
+          ...(!formData.id
+            ? [
+                {
+                  name: "nombre",
+                  type: "text" as const,
+                  placeholder: "Nombre del Equipo (Obligatorio)",
+                  value: formData.nombre ?? "",
+                  colSpan: 2,
+                },
+                {
+                  name: "abrev",
+                  type: "text" as const,
+                  placeholder: "Abreviatura",
+                  value: formData.abrev ?? "",
+                },
+              ]
+            : []),
           {
             name: "contacto",
             type: "text",

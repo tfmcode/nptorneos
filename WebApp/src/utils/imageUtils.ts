@@ -1,6 +1,7 @@
 // WebApp/src/utils/imageUtils.ts
 
-const API_URL = import.meta.env.VITE_API_URL || "https://nptorneos.com.ar";
+// ✅ Obtener URL del backend desde variables de entorno
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 /**
  * 🖼️ CONSTRUCCIÓN DE URLs DE IMÁGENES CON CARPETAS SEGREGADAS
@@ -19,6 +20,16 @@ export const getJugadorFotoUrl = (
   filename: string | null | undefined
 ): string | null => {
   if (!filename || filename.trim() === "") return null;
+
+  // Si ya es una URL completa, devolverla tal cual
+  if (filename.startsWith("http")) return filename;
+
+  // Si empieza con /uploads, construir URL completa
+  if (filename.startsWith("/uploads")) {
+    return `${API_URL}${filename}`;
+  }
+
+  // Si es solo el nombre del archivo
   return `${API_URL}/uploads/jugadores/${filename}`;
 };
 
@@ -30,6 +41,16 @@ export const getEquipoEscudoUrl = (
   filename: string | null | undefined
 ): string | null => {
   if (!filename || filename.trim() === "") return null;
+
+  // Si ya es una URL completa, devolverla tal cual
+  if (filename.startsWith("http")) return filename;
+
+  // Si empieza con /uploads, construir URL completa
+  if (filename.startsWith("/uploads")) {
+    return `${API_URL}${filename}`;
+  }
+
+  // Si es solo el nombre del archivo/ruta relativa
   return `${API_URL}/uploads/equipos/${filename}`;
 };
 
@@ -41,6 +62,16 @@ export const getEquipoFotoGrupalUrl = (
   filename: string | null | undefined
 ): string | null => {
   if (!filename || filename.trim() === "") return null;
+
+  // Si ya es una URL completa, devolverla tal cual
+  if (filename.startsWith("http")) return filename;
+
+  // Si empieza con /uploads, construir URL completa
+  if (filename.startsWith("/uploads")) {
+    return `${API_URL}${filename}`;
+  }
+
+  // Si es solo el nombre del archivo/ruta relativa
   return `${API_URL}/uploads/equipos/${filename}`;
 };
 

@@ -1,17 +1,9 @@
-/**
- * 📝 EJEMPLO DE INTEGRACIÓN - ImageUploader en Jugadores
- *
- * Este archivo muestra cómo integrar el componente ImageUploader
- * en el formulario de edición/creación de jugadores
- */
-
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { Jugador } from "../../types/jugadores";
 import DataTable from "../../components/tables/DataTable";
-import DynamicForm from "../../components/forms/DynamicForm";
-import ImageUploader from "../../components/common/ImageUploader"; // ✅ IMPORTAR
+import ImageUploaderInline from "../../components/common/ImageUploaderWithCrop";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
   fetchJugadores,
@@ -153,10 +145,9 @@ const Jugadores: React.FC = () => {
     dispatch(clearError());
   };
 
-  // ✅ CALLBACKS PARA EL IMAGE UPLOADER
   const handleImageUploadSuccess = (imageUrl: string) => {
     console.log("✅ Imagen subida correctamente:", imageUrl);
-    // Opcionalmente, recargar los datos del jugador
+    showPopup("success", "Foto actualizada correctamente");
     if (formData.id) {
       dispatch(fetchJugadores({ page, limit, searchTerm }));
     }
@@ -227,36 +218,13 @@ const Jugadores: React.FC = () => {
           </button>
         </div>
 
+        {/* ✅ MODAL CON NUEVO DISEÑO MEJORADO */}
         <Modal
           isOpen={isModalOpen}
           onClose={handleCloseModalAndClearError}
           title={formData.id ? "Editar Jugador" : "Crear Jugador"}
+          size="large"
         >
-          {/* ✅ AGREGAR COMPONENTE DE IMAGE UPLOADER */}
-          {/* Solo mostrar si estamos editando un jugador existente */}
-          {formData.id && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Foto del Jugador
-              </label>
-              <ImageUploader
-                entityId={formData.id}
-                entityType="jugador"
-                currentImageUrl={formData.foto}
-                maxImages={1}
-                onUploadSuccess={handleImageUploadSuccess}
-                onUploadError={handleImageUploadError}
-                onDeleteSuccess={handleImageDeleteSuccess}
-                height="250px"
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                💡 Tip: La imagen se puede subir/actualizar después de crear el
-                jugador
-              </p>
-            </div>
-          )}
-
-          {/* Mostrar mensaje si es un jugador nuevo */}
           {!formData.id && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
@@ -266,88 +234,215 @@ const Jugadores: React.FC = () => {
             </div>
           )}
 
-          <DynamicForm
-            fields={[
-              {
-                name: "nombres",
-                type: "text",
-                placeholder: "Nombre",
-                value: formData.nombres ?? "",
-              },
-              {
-                name: "apellido",
-                type: "text",
-                placeholder: "Apellido",
-                value: formData.apellido ?? "",
-              },
-              {
-                name: "docnro",
-                type: "text",
-                placeholder: "Documento",
-                value: formData.docnro ?? "",
-              },
-              {
-                name: "fhnacimiento",
-                type: "date",
-                placeholder: "Fecha de nacimiento",
-                value: formData.fhnacimiento ?? "",
-              },
-              {
-                name: "telefono",
-                type: "text",
-                placeholder: "Teléfono",
-                value: formData.telefono ?? "",
-              },
-              {
-                name: "email",
-                type: "email",
-                placeholder: "Email",
-                value: formData.email ?? "",
-              },
-              {
-                name: "categoria",
-                type: "text",
-                placeholder: "Categoría",
-                value: formData.categoria ?? "",
-              },
-              {
-                name: "posicion",
-                type: "text",
-                placeholder: "Posición",
-                value: formData.posicion ?? "",
-              },
-              {
-                name: "piernahabil",
-                type: "text",
-                placeholder: "Pierna Hábil",
-                value: formData.piernahabil ?? "",
-              },
-              {
-                name: "altura",
-                type: "text",
-                placeholder: "Altura",
-                value: formData.altura ?? "",
-              },
-              {
-                name: "peso",
-                type: "text",
-                placeholder: "Peso",
-                value: formData.peso ?? "",
-              },
-              {
-                name: "codestado",
-                type: "select",
-                options: [
-                  { label: "Activo", value: 1 },
-                  { label: "Inactivo", value: 0 },
-                ],
-                value: formData.codestado ?? 1,
-              },
-            ]}
-            onChange={handleInputChange}
-            onSubmit={handleSubmit}
-            submitLabel="Guardar"
-          />
+          {/* ✅ NUEVO DISEÑO: Foto arriba + nombre/apellido al lado */}
+          {formData.id && (
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row gap-6 mb-6">
+                {/* Foto - Izquierda */}
+                <div className="flex-shrink-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Foto del Jugador
+                  </label>
+                  <ImageUploaderInline
+                    entityId={formData.id}
+                    entityType="jugador"
+                    currentImageUrl={formData.foto}
+                    size="large"
+                    aspectRatio={1}
+                    onUploadSuccess={handleImageUploadSuccess}
+                    onUploadError={handleImageUploadError}
+                    onDeleteSuccess={handleImageDeleteSuccess}
+                  />
+                </div>
+
+                {/* Nombre y Apellido - Derecha */}
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre *
+                    </label>
+                    <input
+                      type="text"
+                      name="nombres"
+                      value={formData.nombres ?? ""}
+                      onChange={handleInputChange}
+                      placeholder="Nombre del jugador"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Apellido *
+                    </label>
+                    <input
+                      type="text"
+                      name="apellido"
+                      value={formData.apellido ?? ""}
+                      onChange={handleInputChange}
+                      placeholder="Apellido del jugador"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ RESTO DE CAMPOS EN GRID 2 COLUMNAS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Documento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Documento *
+              </label>
+              <input
+                type="text"
+                name="docnro"
+                value={formData.docnro ?? ""}
+                onChange={handleInputChange}
+                placeholder="Número de documento"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Fecha de Nacimiento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de Nacimiento *
+              </label>
+              <input
+                type="date"
+                name="fhnacimiento"
+                value={formData.fhnacimiento ?? ""}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Teléfono */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Teléfono
+              </label>
+              <input
+                type="text"
+                name="telefono"
+                value={formData.telefono ?? ""}
+                onChange={handleInputChange}
+                placeholder="Teléfono"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email ?? ""}
+                onChange={handleInputChange}
+                placeholder="correo@ejemplo.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Categoría */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Categoría
+              </label>
+              <input
+                type="text"
+                name="categoria"
+                value={formData.categoria ?? ""}
+                onChange={handleInputChange}
+                placeholder="Ej: Sub-20"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Posición */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Posición
+              </label>
+              <input
+                type="text"
+                name="posicion"
+                value={formData.posicion ?? ""}
+                onChange={handleInputChange}
+                placeholder="Ej: Delantero"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Pierna Hábil */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pierna Hábil
+              </label>
+              <select
+                name="piernahabil"
+                value={formData.piernahabil ?? ""}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Derecha">Derecha</option>
+                <option value="Izquierda">Izquierda</option>
+                <option value="Ambas">Ambas</option>
+              </select>
+            </div>
+
+            {/* Altura */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Altura (cm)
+              </label>
+              <input
+                type="text"
+                name="altura"
+                value={formData.altura ?? ""}
+                onChange={handleInputChange}
+                placeholder="Ej: 175"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Peso */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Peso (kg)
+              </label>
+              <input
+                type="text"
+                name="peso"
+                value={formData.peso ?? ""}
+                onChange={handleInputChange}
+                placeholder="Ej: 70"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            {/* Estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estado
+              </label>
+              <select
+                name="codestado"
+                value={formData.codestado ?? 1}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value={1}>Activo</option>
+                <option value={0}>Inactivo</option>
+              </select>
+            </div>
+          </div>
 
           {errorType === "DUPLICATE_DOCUMENT" && (
             <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -355,6 +450,24 @@ const Jugadores: React.FC = () => {
               ingresado ya existe en el sistema.
             </div>
           )}
+
+          {/* Botón Guardar */}
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleCloseModalAndClearError}
+              className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors font-medium"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+            >
+              Guardar
+            </button>
+          </div>
 
           <PopupNotificacion
             open={popup.open}

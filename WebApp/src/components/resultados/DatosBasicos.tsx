@@ -25,6 +25,14 @@ function DatosBasicos({
   const { sedes } = useSelector((state: RootState) => state.sedes);
   const { proveedores } = useSelector((state: RootState) => state.proveedores);
 
+  // ✅ NUEVO: Obtener perfil del usuario
+  const { user } = useSelector((state: RootState) => state.auth);
+  const isStaff = user?.perfil === 2;
+  const isAdmin = user?.perfil === 1;
+
+  // ✅ NUEVO: Campos restringidos para Staff
+  const canEditRestrictedFields = isAdmin;
+
   useEffect(() => {
     dispatch(fetchSedes());
     dispatch(fetchUsuarios());
@@ -55,26 +63,82 @@ function DatosBasicos({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 text-sm text-gray-800">
+      {/* ✅ NUEVO: Mensaje informativo para Staff */}
+      {isStaff && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-yellow-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                <strong>Nota:</strong> Como usuario Staff, no podés modificar la
+                fecha, sede ni profesor asignado. Solo el administrador puede
+                cambiar estos campos.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Info principal */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
+        {/* ✅ MODIFICADO: Fecha - Deshabilitada para Staff */}
         <div>
-          <label className="block font-medium mb-1">Fecha</label>
+          <label className="block font-medium mb-1">
+            Fecha
+            {isStaff && (
+              <span className="ml-2 text-xs text-red-600">(Solo Admin)</span>
+            )}
+          </label>
           <input
             type="date"
             name="fecha"
             value={formData.fecha ? formData.fecha.split("T")[0] : ""}
             onChange={onChange}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            disabled={!canEditRestrictedFields}
+            className={`w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+              !canEditRestrictedFields
+                ? "bg-gray-100 cursor-not-allowed opacity-60"
+                : ""
+            }`}
+            title={
+              isStaff ? "Solo el administrador puede modificar la fecha" : ""
+            }
           />
         </div>
 
+        {/* ✅ MODIFICADO: Sede - Deshabilitada para Staff */}
         <div>
-          <label className="block font-medium mb-1">Sede</label>
+          <label className="block font-medium mb-1">
+            Sede
+            {isStaff && (
+              <span className="ml-2 text-xs text-red-600">(Solo Admin)</span>
+            )}
+          </label>
           <select
             name="idsede"
             value={formData.idsede ?? 0}
             onChange={onChange}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            disabled={!canEditRestrictedFields}
+            className={`w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+              !canEditRestrictedFields
+                ? "bg-gray-100 cursor-not-allowed opacity-60"
+                : ""
+            }`}
+            title={
+              isStaff ? "Solo el administrador puede modificar la sede" : ""
+            }
           >
             <option value={0}>Seleccionar</option>
             {sedes.map((s) => (
@@ -85,13 +149,29 @@ function DatosBasicos({
           </select>
         </div>
 
+        {/* ✅ MODIFICADO: Profesor - Deshabilitado para Staff */}
         <div>
-          <label className="block font-medium mb-1">Profesor/Árbitro</label>
+          <label className="block font-medium mb-1">
+            Profesor/Árbitro
+            {isStaff && (
+              <span className="ml-2 text-xs text-red-600">(Solo Admin)</span>
+            )}
+          </label>
           <select
             name="idprofesor"
             value={formData.idprofesor ?? 0}
             onChange={onChange}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            disabled={!canEditRestrictedFields}
+            className={`w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+              !canEditRestrictedFields
+                ? "bg-gray-100 cursor-not-allowed opacity-60"
+                : ""
+            }`}
+            title={
+              isStaff
+                ? "Solo el administrador puede modificar el profesor asignado"
+                : ""
+            }
           >
             <option value={0}>Sin asignar</option>
             {profesores.map((p) => (
@@ -102,6 +182,7 @@ function DatosBasicos({
           </select>
         </div>
 
+        {/* Estado - Staff SÍ puede modificar */}
         <div>
           <label className="block font-medium mb-1">Estado</label>
           <select
@@ -124,18 +205,6 @@ function DatosBasicos({
             <option value={70}>No Computa</option>
           </select>
         </div>
-
-        {/* <div>
-          <label className="block font-medium mb-1">Árbitro (Texto)</label>
-          <input
-            type="text"
-            name="arbitro"
-            value={formData.arbitro ?? ""}
-            onChange={onChange}
-            placeholder="Nombre del árbitro"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
-        </div> */}
       </section>
 
       {/* Equipo 1 */}

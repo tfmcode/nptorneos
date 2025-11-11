@@ -4,14 +4,14 @@ import { pool } from "../config/db";
 
 interface CajaKey {
   idprofesor: number;
-  codfecha: number;
+  fecha: string; // ✅ CAMBIADO: Ahora es fecha timestamp, no codfecha (nrofecha)
   idsede: number;
 }
 
 interface CajaData extends CajaKey {
-  fecha: string;
   idtorneo?: number;
   idsubsede?: number;
+  codfecha?: number; // Mantener para guardar en la tabla, pero no se usa para agrupar
   idequipo1?: number;
   idequipo2?: number;
 }
@@ -93,7 +93,7 @@ const createEquiposInCaja = async (
 };
 
 /**
- * Busca o crea una caja en wtorneos_fechas según la triple clave
+ * ✅ CAMBIADO: Busca o crea una caja usando fecha timestamp + sede + profesor
  * @returns El ID de la caja (idfecha)
  */
 export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
@@ -101,8 +101,8 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
   if (!data.idprofesor || data.idprofesor === 0) {
     throw new Error("El profesor es obligatorio para abrir una caja");
   }
-  if (!data.codfecha || data.codfecha === 0) {
-    throw new Error("El número de fecha es obligatorio para abrir una caja");
+  if (!data.fecha) {
+    throw new Error("La fecha es obligatoria para abrir una caja");
   }
   if (!data.idsede || data.idsede === 0) {
     throw new Error("La sede es obligatoria para abrir una caja");
@@ -112,12 +112,15 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
   try {
     await client.query("BEGIN");
 
-    // 1. Buscar si ya existe una caja con la misma triple clave
+    // ✅ CAMBIADO: Normalizar la fecha a YYYY-MM-DD para comparación
+    const fechaNormalizada = new Date(data.fecha).toISOString().split("T")[0];
+
+    // ✅ CAMBIADO: Buscar si ya existe una caja con la misma triple clave (fecha timestamp + sede + profesor)
     const findQuery = `
       SELECT id 
       FROM wtorneos_fechas 
       WHERE idprofesor = $1 
-        AND codfecha = $2 
+        AND DATE(fecha) = DATE($2)
         AND idsede = $3
         AND fhbaja IS NULL
       LIMIT 1
@@ -125,7 +128,7 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
 
     const findResult = await client.query(findQuery, [
       data.idprofesor,
-      data.codfecha,
+      fechaNormalizada,
       data.idsede,
     ]);
 
@@ -133,7 +136,7 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
     if (findResult.rows.length > 0) {
       await client.query("COMMIT");
       console.log(
-        `✅ Caja existente encontrada: idfecha=${findResult.rows[0].id} (profesor=${data.idprofesor}, fecha=${data.codfecha}, sede=${data.idsede})`
+        `✅ Caja existente encontrada: idfecha=${findResult.rows[0].id} (profesor=${data.idprofesor}, fecha=${fechaNormalizada}, sede=${data.idsede})`
       );
       return findResult.rows[0].id;
     }
@@ -161,11 +164,11 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
 
     const insertResult = await client.query(insertQuery, [
       nextId,
-      data.fecha,
+      data.fecha, // ✅ Guardar fecha completa
       data.idsede,
       data.idsubsede || null,
       data.idtorneo || null,
-      data.codfecha,
+      data.codfecha || null, // ✅ codfecha es opcional, solo informativo
       data.idprofesor,
     ]);
 
@@ -174,7 +177,7 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
 
     await client.query("COMMIT");
     console.log(
-      `✅ Nueva caja creada: idfecha=${nextId} (profesor=${data.idprofesor}, fecha=${data.codfecha}, sede=${data.idsede})`
+      `✅ Nueva caja creada: idfecha=${nextId} (profesor=${data.idprofesor}, fecha=${fechaNormalizada}, sede=${data.idsede})`
     );
     return insertResult.rows[0].id;
   } catch (error) {
@@ -187,15 +190,15 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
 };
 
 /**
- * Verifica si un partido debe cambiar de caja
- * (cuando cambia alguno de los 3 campos clave)
+ * ✅ CAMBIADO: Verifica si un partido debe cambiar de caja
+ * (cuando cambia alguno de los 3 campos clave: fecha timestamp, sede o profesor)
  */
 export const shouldUpdateCaja = async (
   idpartido: number,
   newData: Partial<CajaData>
 ): Promise<boolean> => {
   const query = `
-    SELECT idprofesor, nrofecha, idsede, idfecha
+    SELECT idprofesor, fecha, idsede, idfecha
     FROM partidos
     WHERE id = $1
   `;
@@ -205,13 +208,18 @@ export const shouldUpdateCaja = async (
 
   const current = result.rows[0];
 
-  // ✅ CORREGIDO: Asegurar que siempre devuelve boolean
-  // Si cambió alguno de los 3 campos clave, necesita nueva caja
+  // ✅ CAMBIADO: Comparar fecha como timestamp (normalizado a YYYY-MM-DD)
+  const currentFecha = current.fecha
+    ? new Date(current.fecha).toISOString().split("T")[0]
+    : null;
+  const newFecha = newData.fecha
+    ? new Date(newData.fecha).toISOString().split("T")[0]
+    : null;
+
   const profesorChanged =
     newData.idprofesor !== undefined &&
     newData.idprofesor !== current.idprofesor;
-  const fechaChanged =
-    newData.codfecha !== undefined && newData.codfecha !== current.nrofecha;
+  const fechaChanged = newFecha !== undefined && newFecha !== currentFecha;
   const sedeChanged =
     newData.idsede !== undefined && newData.idsede !== current.idsede;
 
@@ -229,7 +237,7 @@ export const shouldUpdateCaja = async (
 };
 
 /**
- * Obtiene los datos actuales de la caja de un partido
+ * ✅ ACTUALIZADO: Obtiene los datos actuales de la caja de un partido
  */
 export const getCajaDataFromPartido = async (
   idpartido: number
@@ -237,9 +245,9 @@ export const getCajaDataFromPartido = async (
   const query = `
     SELECT 
       p.idprofesor,
+      p.fecha,
       p.nrofecha as codfecha,
       p.idsede,
-      p.fecha,
       p.idsubsede,
       z.idtorneo
     FROM partidos p
@@ -253,9 +261,9 @@ export const getCajaDataFromPartido = async (
   const row = result.rows[0];
   return {
     idprofesor: row.idprofesor,
-    codfecha: row.codfecha,
+    fecha: row.fecha, // ✅ Ahora retorna fecha timestamp
+    codfecha: row.codfecha, // Mantener para guardar en tabla
     idsede: row.idsede,
-    fecha: row.fecha,
     idtorneo: row.idtorneo,
     idsubsede: row.idsubsede,
   };

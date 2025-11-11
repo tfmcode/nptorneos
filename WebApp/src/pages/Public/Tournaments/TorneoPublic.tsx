@@ -187,9 +187,13 @@ const TorneoPublic: React.FC = () => {
           ? p.nombre_sede
           : "SIN SEDE",
       nrofecha: p.nrofecha,
+      // ✅ AGREGADO: Fotos de los equipos desde el backend
+      fotoLocal: p.foto_equipo1 ?? null,
+      fotoVisitante: p.foto_equipo2 ?? null,
     };
   });
 
+  // ✅ CORREGIDO: Usar pos, sc, cr en lugar de posKeys, scKeys, crKeys
   const allZonesTabs = useMemo(() => {
     const pos = Object.keys(positions);
     const sc = Object.keys(scorers);
@@ -207,25 +211,6 @@ const TorneoPublic: React.FC = () => {
 
       <StatusMessage loading={loading} error={error} />
 
-      {/* Selector global de ZONA */}
-    {/*   {allZonesTabs.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {allZonesTabs.map((z) => (
-            <button
-              key={z}
-              onClick={() => setActiveZone(z)}
-              className={`px-4 py-2 rounded font-semibold transition-colors ${
-                activeZone === z
-                  ? "bg-yellow-600 text-white"
-                  : "bg-gray-200 hover:bg-gray-300"
-              }`}
-            >
-              {z.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      )}
- */}
       {/* 1) POSICIONES */}
       {allZonesTabs.length > 0 && Object.keys(positions).length > 0 && (
         <div className="mb-10">
@@ -274,7 +259,7 @@ const TorneoPublic: React.FC = () => {
         </div>
       )}
 
-      {/* 4) SANCIONES - Usando componente modular */}
+      {/* 4) SANCIONES */}
       <Sanctions sanciones={sanciones} />
 
       {/* Sede / Mapa */}

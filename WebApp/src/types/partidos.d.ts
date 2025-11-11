@@ -35,6 +35,8 @@ export interface Partido {
   ausente2?: number;
   idfecha?: number;
   horario?: string;
+  foto_equipo1?: string | null;
+  foto_equipo2?: string | null;
   [key: string]: unknown;
 }
 

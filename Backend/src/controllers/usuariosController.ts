@@ -30,9 +30,9 @@ export const loginUsuario = async (req: Request, res: Response) => {
 
     const isMatch = await comparePassword(contrasenia, usuario.contrasenia);
 
-    // if (!isMatch) {
-    //   return res.status(400).json({ message: "Credenciales incorrectas." });
-    // }
+    if (!isMatch) {
+      return res.status(400).json({ message: "Credenciales incorrectas." });
+    }
 
     const token = generateToken(
       usuario.idusuario?.toString() ?? "0",
@@ -111,6 +111,7 @@ export const updateUsuarioController = async (req: Request, res: Response) => {
     if (habilitado !== undefined)
       usuarioActualizado.habilitado = habilitado ? 1 : 0;
 
+    // Solo hashear si viene contraseña nueva
     if (typeof contrasenia === "string" && contrasenia.trim()) {
       usuarioActualizado.contrasenia = await bcrypt.hash(contrasenia, 10);
     }

@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { Jugador } from "../../types/jugadores";
 import DataTable from "../../components/tables/DataTable";
-import ImageUploaderInline from "../../components/common/ImageUploaderWithCrop";
+import ImageUploaderInline from "../../components/common/ImageUploaderInline";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 import {
   fetchJugadores,

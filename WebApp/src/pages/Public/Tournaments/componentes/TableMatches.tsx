@@ -1,5 +1,8 @@
+// WebApp/src/pages/Public/Tournaments/componentes/TableMatches.tsx
+
 import React, { useState, useMemo } from "react";
 import { TournamentsTable } from "../../../../components/tables";
+import { getImageUrl } from "../../../../utils/imageUtils";
 
 export interface Match {
   id: number;
@@ -12,13 +15,48 @@ export interface Match {
   partido: string;
   fecha: string;
   sede: string;
-  nrofecha?: number; // ✅ Agregar campo para fecha
+  nrofecha?: number;
+  // ✅ NUEVO: URLs de los logos
+  fotoLocal?: string | null;
+  fotoVisitante?: string | null;
 }
 
 interface TableMatchesProps {
   matches: Match[];
   onSelectMatch?: (idpartido: number) => void;
 }
+
+// ✅ Componente para mostrar equipo con logo
+const EquipoConLogo: React.FC<{
+  nombre: string;
+  foto?: string | null;
+}> = ({ nombre, foto }) => {
+  const logoUrl = foto ? getImageUrl(foto, "equipo-escudo") : null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Logo del equipo */}
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={nombre}
+          className="w-8 h-8 object-cover rounded-full border border-gray-200"
+          onError={(e) => {
+            // Si falla la carga, ocultar la imagen
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      ) : (
+        // Placeholder si no hay logo
+        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500 font-bold border border-gray-300">
+          {nombre.substring(0, 2).toUpperCase()}
+        </div>
+      )}
+      {/* Nombre del equipo */}
+      <span className="font-semibold text-blue-700">{nombre}</span>
+    </div>
+  );
+};
 
 const TableMatches: React.FC<TableMatchesProps> = ({
   matches,
@@ -53,7 +91,8 @@ const TableMatches: React.FC<TableMatchesProps> = ({
     const matchesZona = partidosFecha.filter((m) => m.zona === zona);
 
     const rows = matchesZona.map((match) => [
-      <span className="font-semibold text-blue-700">{match.local}</span>,
+      // ✅ MODIFICADO: Ahora muestra logo + nombre
+      <EquipoConLogo nombre={match.local} foto={match.fotoLocal} />,
       <span
         className={
           match.golesLocal > match.golesVisitante
@@ -63,7 +102,8 @@ const TableMatches: React.FC<TableMatchesProps> = ({
       >
         {match.golesLocal}
       </span>,
-      <span className="font-semibold text-blue-700">{match.visitante}</span>,
+      // ✅ MODIFICADO: Ahora muestra logo + nombre
+      <EquipoConLogo nombre={match.visitante} foto={match.fotoVisitante} />,
       <span
         className={
           match.golesVisitante > match.golesLocal
@@ -113,16 +153,7 @@ const TableMatches: React.FC<TableMatchesProps> = ({
 
   return (
     <div>
-      {/* Tabla de partidos */}
-      {partidosFecha.length > 0 ? (
-        <TournamentsTable data={data} />
-      ) : (
-        <div className="text-center text-gray-500 py-8 bg-gray-50 rounded-lg">
-          No hay partidos programados para la Fecha {fechaActiva}
-        </div>
-      )}
-
-      {/* Paginado por fechas */}
+      {/* Paginado por fechas - Ahora ARRIBA */}
       <div className="mb-6">
         <div className="flex flex-wrap justify-center gap-2 mb-4">
           {fechasDisponibles.map((nroFecha) => (
@@ -140,6 +171,15 @@ const TableMatches: React.FC<TableMatchesProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Tabla de partidos */}
+      {partidosFecha.length > 0 ? (
+        <TournamentsTable data={data} />
+      ) : (
+        <div className="text-center text-gray-500 py-8 bg-gray-50 rounded-lg">
+          No hay partidos programados para la Fecha {fechaActiva}
+        </div>
+      )}
     </div>
   );
 };

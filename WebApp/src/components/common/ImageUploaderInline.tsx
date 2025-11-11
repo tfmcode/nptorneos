@@ -24,11 +24,6 @@ interface ImageUploaderProps {
   aspectRatio?: number;
 }
 
-/**
- * 🎨 IMAGE UPLOADER CON CROP INLINE
- *
- * El crop se muestra EN EL MISMO lugar de la imagen, sin overlay fullscreen
- */
 const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
   entityId,
   entityType = "jugador",
@@ -48,7 +43,8 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  // Estados del cropper
+  const [hasBeenDeleted, setHasBeenDeleted] = useState(false);
+
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -83,14 +79,16 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
       const tipo = entityType === "equipo" ? "equipo-escudo" : "jugador";
       const fullUrl = getImageUrl(imageUrl, tipo);
       setPreviewUrl(fullUrl);
-    } else if (currentImageUrl) {
+      setHasBeenDeleted(false); // Resetear flag al subir nueva imagen
+    } else if (currentImageUrl && !hasBeenDeleted) {
+      // ← CLAVE: no usar si se eliminó
       const tipo = entityType === "equipo" ? "equipo-escudo" : "jugador";
       const fullUrl = getImageUrl(currentImageUrl, tipo);
       setPreviewUrl(fullUrl);
     } else {
       setPreviewUrl(null);
     }
-  }, [imageUrl, currentImageUrl, entityType]);
+  }, [imageUrl, currentImageUrl, entityType, hasBeenDeleted]);
 
   const handleFileSelect = async (file: File) => {
     if (disabled || !entityId) return;
@@ -99,7 +97,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
     setImageToCrop(tempUrl);
     setPendingFile(file);
     setShowCropper(true);
-    // Reset crop states
     setCrop({ x: 0, y: 0 });
     setZoom(1);
   };
@@ -111,9 +108,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
     []
   );
 
-  /**
-   * Crear imagen recortada
-   */
   const createCroppedImage = async () => {
     if (!croppedAreaPixels || !imageToCrop) return;
 
@@ -124,11 +118,9 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
 
       if (!ctx) return;
 
-      // Configurar canvas con el tamaño del área recortada
       canvas.width = croppedAreaPixels.width;
       canvas.height = croppedAreaPixels.height;
 
-      // Dibujar imagen recortada
       ctx.drawImage(
         image,
         croppedAreaPixels.x,
@@ -141,7 +133,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
         croppedAreaPixels.height
       );
 
-      // Convertir a blob
       canvas.toBlob(
         async (blob) => {
           if (blob) {
@@ -151,7 +142,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
               { type: "image/jpeg" }
             );
 
-            // Cerrar cropper
             setShowCropper(false);
             if (imageToCrop) {
               URL.revokeObjectURL(imageToCrop);
@@ -159,14 +149,11 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
             setImageToCrop(null);
             setPendingFile(null);
 
-            // Crear preview local
             const localPreview = URL.createObjectURL(croppedFile);
             setPreviewUrl(localPreview);
 
-            // Subir archivo
             const success = await uploadImage(croppedFile);
 
-            // Limpiar preview local
             URL.revokeObjectURL(localPreview);
 
             if (!success) {
@@ -215,6 +202,7 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
     const success = await deleteImage();
     if (success) {
       setPreviewUrl(null);
+      setHasBeenDeleted(true);
       resetState();
       onDeleteSuccess?.();
     }
@@ -222,7 +210,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
 
   return (
     <div className={`space-y-3 ${className}`}>
-      {/* Contenedor principal */}
       <div
         className={`
           ${containerSize}
@@ -240,7 +227,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
           bg-gradient-to-br from-gray-50 to-gray-100
         `}
       >
-        {/* ✅ MODO CROPPER INLINE */}
         {showCropper && imageToCrop ? (
           <div className="absolute inset-0 bg-white">
             <Cropper
@@ -261,7 +247,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
             />
           </div>
         ) : status === "uploading" ? (
-          /* Progreso de subida */
           <div className="absolute inset-0 bg-white bg-opacity-95 flex flex-col items-center justify-center z-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
             <div className="w-3/4">
@@ -278,7 +263,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
             </div>
           </div>
         ) : previewUrl ? (
-          /* Imagen preview */
           <img
             src={previewUrl}
             alt="Preview"
@@ -289,7 +273,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
             }}
           />
         ) : (
-          /* Placeholder vacío */
           <div className="flex flex-col items-center justify-center h-full text-center p-2">
             <PhotoIcon className="h-10 w-10 text-gray-400 mb-2" />
             <p className="text-xs font-medium text-gray-600">
@@ -299,10 +282,8 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
         )}
       </div>
 
-      {/* ✅ CONTROLES DEL CROPPER (cuando está activo) */}
       {showCropper && imageToCrop && (
         <div className="space-y-2">
-          {/* Zoom slider */}
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs text-gray-600">
               <label>🔍 Zoom</label>
@@ -319,7 +300,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
             />
           </div>
 
-          {/* Botones de acción del crop */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -341,7 +321,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
         </div>
       )}
 
-      {/* ✅ BOTONES NORMALES (cuando NO está cropping) */}
       {!showCropper && !disabled && (
         <>
           <div className="grid grid-cols-2 gap-2">
@@ -376,7 +355,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
         </>
       )}
 
-      {/* Mensajes de estado */}
       {status === "error" && error && (
         <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">
           ❌ {error}
@@ -397,7 +375,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
         </p>
       )}
 
-      {/* Inputs ocultos */}
       <input
         ref={fileInputRef}
         type="file"
@@ -419,9 +396,6 @@ const ImageUploaderInline: React.FC<ImageUploaderProps> = ({
   );
 };
 
-/**
- * Helper para crear elemento Image desde URL
- */
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();

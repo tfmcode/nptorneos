@@ -6,7 +6,7 @@ import { fetchSedes } from "../../store/slices/sedeSlice";
 import { saveEquipoThunk } from "../../store/slices/equiposSlice";
 import DynamicForm from "../forms/DynamicForm";
 import { PopupNotificacion } from "../common/PopupNotificacion";
-import ImageUploaderInline from "../common/ImageUploaderWithCrop";
+import ImageUploaderInline from "../common/ImageUploaderInline";
 
 interface Props {
   formData: Equipo;

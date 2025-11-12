@@ -10,7 +10,6 @@ import {
 } from "../models/usuariosModel";
 import { generateToken } from "../utils/jwt";
 import { sanitizeUser } from "../utils/sanitize";
-import bcrypt from "bcryptjs";
 
 export const loginUsuario = async (req: Request, res: Response) => {
   try {
@@ -111,9 +110,9 @@ export const updateUsuarioController = async (req: Request, res: Response) => {
     if (habilitado !== undefined)
       usuarioActualizado.habilitado = habilitado ? 1 : 0;
 
-    // Solo hashear si viene contraseña nueva
+    // ✅ SOLO pasar la contraseña - el model se encarga del hasheo
     if (typeof contrasenia === "string" && contrasenia.trim()) {
-      usuarioActualizado.contrasenia = await bcrypt.hash(contrasenia, 10);
+      usuarioActualizado.contrasenia = contrasenia;
     }
 
     const updatedUser = await updateUsuario(id, usuarioActualizado);

@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../../store";
+import { fetchProveedores } from "../../../store/slices/proveedoresSlice";
 import { PlanillaArbitro } from "../../../types/planillasPago";
 import { usePlanillaEdition } from "../../../hooks/usePlanillaEdition";
 import { SeccionPlanilla } from "../shared/SeccionPlanilla";
@@ -22,7 +25,7 @@ interface FormularioArbitro {
   idarbitro: number;
   partidos: number;
   valor_partido: number;
-  [key: string]: unknown; // Signatura de índice para compatibilidad
+  [key: string]: unknown;
 }
 
 export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
@@ -31,6 +34,9 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
   onSuccess,
   onError,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { proveedores } = useSelector((state: RootState) => state.proveedores);
+
   const { data, isEditing, handleAdd, handleDelete, handleSave } =
     usePlanillaEdition({
       entityType: "arbitro",
@@ -46,6 +52,22 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
     valor_partido: 0,
   });
 
+  // ✅ Cargar proveedores al montar el componente
+  useEffect(() => {
+    dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
+  }, [dispatch]);
+
+  // ✅ Filtrar solo árbitros (codtipo = 1 generalmente, ajustar según tu BD)
+  // ⚠️ IMPORTANTE: Verificá en tu base de datos qué codtipo corresponde a árbitros
+  const arbitrosDisponibles = Array.isArray(proveedores)
+    ? proveedores
+        .filter((p) => p.codtipo === 1) // Ajustar codtipo según tu base de datos
+        .map((p) => ({
+          label: p.nombre,
+          value: p.id || 0,
+        }))
+    : [];
+
   // Configuración de campos del formulario
   const campos: CampoFormulario<FormularioArbitro>[] = [
     {
@@ -53,11 +75,7 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
       label: "Árbitro",
       type: "select",
       required: true,
-      options: [
-        { label: "Árbitro 1", value: 1 },
-        { label: "Árbitro 2", value: 2 },
-        // TODO: Cargar desde API
-      ],
+      options: arbitrosDisponibles,
     },
     {
       name: "partidos",

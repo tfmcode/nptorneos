@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../../store";
+import { fetchProveedores } from "../../../store/slices/proveedoresSlice";
 import { PlanillaProfesor } from "../../../types/planillasPago";
 import { usePlanillaEdition } from "../../../hooks/usePlanillaEdition";
 import { SeccionPlanilla } from "../shared/SeccionPlanilla";
@@ -22,7 +25,7 @@ interface FormularioProfesor {
   idprofesor: number;
   horas: number;
   valor_hora: number;
-  [key: string]: unknown; // Signatura de índice para compatibilidad
+  [key: string]: unknown;
 }
 
 export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
@@ -31,6 +34,9 @@ export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
   onSuccess,
   onError,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { proveedores } = useSelector((state: RootState) => state.proveedores);
+
   const { data, isEditing, handleAdd, handleDelete, handleSave } =
     usePlanillaEdition({
       entityType: "profesor",
@@ -46,17 +52,28 @@ export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
     valor_hora: 0,
   });
 
+  // ✅ Cargar proveedores al montar el componente
+  useEffect(() => {
+    dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
+  }, [dispatch]);
+
+  // ✅ Filtrar solo profesores (codtipo = 2)
+  const profesoresDisponibles = Array.isArray(proveedores)
+    ? proveedores
+        .filter((p) => p.codtipo === 2) // Profesores tienen codtipo = 2
+        .map((p) => ({
+          label: p.nombre,
+          value: p.id || 0,
+        }))
+    : [];
+
   const campos: CampoFormulario<FormularioProfesor>[] = [
     {
       name: "idprofesor",
       label: "Profesor",
       type: "select",
       required: true,
-      options: [
-        { label: "Profesor 1", value: 1 },
-        { label: "Profesor 2", value: 2 },
-        // TODO: Cargar desde API
-      ],
+      options: profesoresDisponibles,
     },
     {
       name: "horas",

@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../../store";
+import { fetchProveedores } from "../../../store/slices/proveedoresSlice";
 import { PlanillaMedico } from "../../../types/planillasPago";
 import { usePlanillaEdition } from "../../../hooks/usePlanillaEdition";
 import { SeccionPlanilla } from "../shared/SeccionPlanilla";
@@ -22,7 +25,7 @@ interface FormularioMedico {
   idmedico: number;
   horas: number;
   valor_hora: number;
-  [key: string]: unknown; // Signatura de índice para compatibilidad
+  [key: string]: unknown;
 }
 
 export const MedicoTab: React.FC<MedicoTabProps> = ({
@@ -31,6 +34,9 @@ export const MedicoTab: React.FC<MedicoTabProps> = ({
   onSuccess,
   onError,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { proveedores } = useSelector((state: RootState) => state.proveedores);
+
   const { data, isEditing, handleAdd, handleDelete, handleSave } =
     usePlanillaEdition({
       entityType: "medico",
@@ -46,17 +52,29 @@ export const MedicoTab: React.FC<MedicoTabProps> = ({
     valor_hora: 0,
   });
 
+  // ✅ Cargar proveedores al montar el componente
+  useEffect(() => {
+    dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
+  }, [dispatch]);
+
+  // ✅ Filtrar solo médicos (codtipo = 3 generalmente, ajustar según tu BD)
+  // ⚠️ IMPORTANTE: Verificá en tu base de datos qué codtipo corresponde a médicos
+  const medicosDisponibles = Array.isArray(proveedores)
+    ? proveedores
+        .filter((p) => p.codtipo === 3) // Ajustar codtipo según tu base de datos
+        .map((p) => ({
+          label: p.nombre,
+          value: p.id || 0,
+        }))
+    : [];
+
   const campos: CampoFormulario<FormularioMedico>[] = [
     {
       name: "idmedico",
       label: "Servicio Médico",
       type: "select",
       required: true,
-      options: [
-        { label: "Médico 1", value: 1 },
-        { label: "Médico 2", value: 2 },
-        // TODO: Cargar desde API
-      ],
+      options: medicosDisponibles,
     },
     {
       name: "horas",

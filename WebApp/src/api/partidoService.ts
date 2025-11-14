@@ -69,11 +69,16 @@ const cleanPartidoData = (data: Partial<Partido>): Partial<Partido> => {
   return camposValidos.reduce((acc, key) => {
     const value = data[key];
 
-    if (value === "" || value === "0" || value === undefined) {
-      acc[key] = null;
-    } else {
-      acc[key] = value;
+    // ⭐ CORRECCIÓN: Solo agregar el campo si existe en data (no es undefined)
+    if (value !== undefined) {
+      // Si el valor es cadena vacía o "0", convertir a null
+      if (value === "" || value === "0") {
+        acc[key] = null;
+      } else {
+        acc[key] = value;
+      }
     }
+    // Si value === undefined, NO agregamos el campo al objeto resultante
 
     return acc;
   }, {} as Partial<Partido>);

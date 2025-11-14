@@ -39,31 +39,57 @@ function DatosBasicos({
     dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
   }, [dispatch]);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    // ✅ Preparar datos base
-    const partido = {
-      ...formData,
-      ausente1: Number(formData.ausente1),
-      ausente2: Number(formData.ausente2),
-      codestado: Number(formData.codestado),
-      idprofesor: Number(formData.idprofesor || 0),
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      let partido: Partial<Partido>;
 
-    // ✅ Si es Staff, eliminar campos restringidos del payload
-    if (isStaff) {
-      delete partido.fecha;
-      delete partido.idsede;
-      delete partido.nrofecha;
+      if (isStaff) {
+        // ⭐ Staff: construir objeto SOLO con campos permitidos
+        partido = {
+          id: formData.id,
+          idzona: formData.idzona,
+          codtipo: formData.codtipo,
+          idequipo1: formData.idequipo1,
+          idequipo2: formData.idequipo2,
+          codestado: Number(formData.codestado),
+          goles1: formData.goles1,
+          goles2: formData.goles2,
+          puntobonus1: formData.puntobonus1,
+          puntobonus2: formData.puntobonus2,
+          ausente1: Number(formData.ausente1),
+          ausente2: Number(formData.ausente2),
+          observaciones: formData.observaciones,
+          arbitro: formData.arbitro,
+          incidencias: formData.incidencias,
+          formacion1: formData.formacion1,
+          formacion2: formData.formacion2,
+          cambios1: formData.cambios1,
+          cambios2: formData.cambios2,
+          dt1: formData.dt1,
+          dt2: formData.dt2,
+          suplentes1: formData.suplentes1,
+          suplentes2: formData.suplentes2,
+          idusuario: formData.idusuario,
+          idfecha: formData.idfecha,
+        };
+      } else {
+        // ⭐ Admin: enviar TODOS los campos
+        partido = {
+          ...formData,
+          ausente1: Number(formData.ausente1),
+          ausente2: Number(formData.ausente2),
+          codestado: Number(formData.codestado),
+          idprofesor: Number(formData.idprofesor || 0),
+        };
+      }
+
+      await dispatch(savePartidoThunk(partido)).unwrap();
+      dispatch(fetchPartidosByZona(formData.idzona));
+    } catch (err) {
+      console.error("Error al guardar partido:", err);
     }
-
-    await dispatch(savePartidoThunk(partido)).unwrap();
-    dispatch(fetchPartidosByZona(formData.idzona));
-  } catch (err) {
-    console.error("Error al guardar partido:", err);
-  }
-};
+  };
 
   // Filtrar solo los profesores (codtipo = 2)
   const profesores = Array.isArray(proveedores)

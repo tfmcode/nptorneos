@@ -25,12 +25,12 @@ function DatosBasicos({
   const { sedes } = useSelector((state: RootState) => state.sedes);
   const { proveedores } = useSelector((state: RootState) => state.proveedores);
 
-  // ✅ NUEVO: Obtener perfil del usuario
+  // ✅ Obtener perfil del usuario
   const { user } = useSelector((state: RootState) => state.auth);
   const isStaff = user?.perfil === 2;
   const isAdmin = user?.perfil === 1;
 
-  // ✅ NUEVO: Campos restringidos para Staff
+  // ✅ Solo estos 3 campos están restringidos para Staff
   const canEditRestrictedFields = isAdmin;
 
   useEffect(() => {
@@ -39,22 +39,31 @@ function DatosBasicos({
     dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
   }, [dispatch]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const partido = {
-        ...formData,
-        ausente1: Number(formData.ausente1),
-        ausente2: Number(formData.ausente2),
-        codestado: Number(formData.codestado),
-        idprofesor: Number(formData.idprofesor || 0),
-      };
-      await dispatch(savePartidoThunk(partido)).unwrap();
-      dispatch(fetchPartidosByZona(formData.idzona));
-    } catch (err) {
-      console.error("Error al guardar partido:", err);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    // ✅ Preparar datos base
+    const partido = {
+      ...formData,
+      ausente1: Number(formData.ausente1),
+      ausente2: Number(formData.ausente2),
+      codestado: Number(formData.codestado),
+      idprofesor: Number(formData.idprofesor || 0),
+    };
+
+    // ✅ Si es Staff, eliminar campos restringidos del payload
+    if (isStaff) {
+      delete partido.fecha;
+      delete partido.idsede;
+      delete partido.nrofecha;
     }
-  };
+
+    await dispatch(savePartidoThunk(partido)).unwrap();
+    dispatch(fetchPartidosByZona(formData.idzona));
+  } catch (err) {
+    console.error("Error al guardar partido:", err);
+  }
+};
 
   // Filtrar solo los profesores (codtipo = 2)
   const profesores = Array.isArray(proveedores)
@@ -63,28 +72,29 @@ function DatosBasicos({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 text-sm text-gray-800">
-      {/* ✅ NUEVO: Mensaje informativo para Staff */}
+      {/* ✅ Mensaje informativo mejorado para Staff */}
       {isStaff && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg
-                className="h-5 w-5 text-yellow-400"
+                className="h-5 w-5 text-blue-400"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
                 <path
                   fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                   clipRule="evenodd"
                 />
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                <strong>Nota:</strong> Como usuario Staff, no podés modificar la
-                fecha, sede ni profesor asignado. Solo el administrador puede
-                cambiar estos campos.
+              <p className="text-sm text-blue-700">
+                <strong>Modo Staff:</strong> Podés modificar el resultado del
+                partido, goles, estado y gestionar jugadores. Los campos de
+                fecha, sede y profesor solo pueden ser modificados por un
+                administrador.
               </p>
             </div>
           </div>
@@ -93,12 +103,14 @@ function DatosBasicos({
 
       {/* Info principal */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
-        {/* ✅ MODIFICADO: Fecha - Deshabilitada para Staff */}
+        {/* ✅ Fecha - Deshabilitada para Staff */}
         <div>
-          <label className="block font-medium mb-1">
+          <label className="block font-medium mb-1 flex items-center gap-2">
             Fecha
             {isStaff && (
-              <span className="ml-2 text-xs text-red-600">(Solo Admin)</span>
+              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-800 rounded font-normal">
+                Solo Admin
+              </span>
             )}
           </label>
           <input
@@ -118,12 +130,14 @@ function DatosBasicos({
           />
         </div>
 
-        {/* ✅ MODIFICADO: Sede - Deshabilitada para Staff */}
+        {/* ✅ Sede - Deshabilitada para Staff */}
         <div>
-          <label className="block font-medium mb-1">
+          <label className="block font-medium mb-1 flex items-center gap-2">
             Sede
             {isStaff && (
-              <span className="ml-2 text-xs text-red-600">(Solo Admin)</span>
+              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-800 rounded font-normal">
+                Solo Admin
+              </span>
             )}
           </label>
           <select
@@ -149,12 +163,14 @@ function DatosBasicos({
           </select>
         </div>
 
-        {/* ✅ MODIFICADO: Profesor - Deshabilitado para Staff */}
+        {/* ✅ Profesor - Deshabilitado para Staff */}
         <div>
-          <label className="block font-medium mb-1">
+          <label className="block font-medium mb-1 flex items-center gap-2">
             Profesor/Árbitro
             {isStaff && (
-              <span className="ml-2 text-xs text-red-600">(Solo Admin)</span>
+              <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-800 rounded font-normal">
+                Solo Admin
+              </span>
             )}
           </label>
           <select
@@ -182,9 +198,16 @@ function DatosBasicos({
           </select>
         </div>
 
-        {/* Estado - Staff SÍ puede modificar */}
+        {/* ✅ Estado - EDITABLE para Staff */}
         <div>
-          <label className="block font-medium mb-1">Estado</label>
+          <label className="block font-medium mb-1 flex items-center gap-2">
+            Estado
+            {isStaff && (
+              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded font-normal">
+                ✓ Editable
+              </span>
+            )}
+          </label>
           <select
             name="codestado"
             value={formData.codestado ?? 10}
@@ -209,8 +232,13 @@ function DatosBasicos({
 
       {/* Equipo 1 */}
       <fieldset className="border border-gray-200 rounded-lg p-4 shadow-sm">
-        <legend className="text-sm font-semibold text-gray-700 px-2">
+        <legend className="text-sm font-semibold text-gray-700 px-2 flex items-center gap-2">
           {formData.nombre1 ?? "Equipo 1"}
+          {isStaff && (
+            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded font-normal">
+              ✓ Editable
+            </span>
+          )}
         </legend>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
           <div>
@@ -261,8 +289,13 @@ function DatosBasicos({
 
       {/* Equipo 2 */}
       <fieldset className="border border-gray-200 rounded-lg p-4 shadow-sm">
-        <legend className="text-sm font-semibold text-gray-700 px-2">
+        <legend className="text-sm font-semibold text-gray-700 px-2 flex items-center gap-2">
           {formData.nombre2 ?? "Equipo 2"}
+          {isStaff && (
+            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded font-normal">
+              ✓ Editable
+            </span>
+          )}
         </legend>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
           <div>

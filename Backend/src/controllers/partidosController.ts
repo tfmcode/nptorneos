@@ -70,6 +70,28 @@ export const createPartidoController = async (req: Request, res: Response) => {
 export const updatePartidoController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
+
+    // ✅ NUEVO: Obtener perfil del usuario desde el token
+    const userPerfil = (req as any).user?.perfil;
+
+    // ✅ NUEVO: Campos restringidos solo para Admin (perfil 1)
+    const camposRestringidos = ["fecha", "idsede", "idprofesor", "nrofecha"];
+
+    // ✅ NUEVO: Si es Staff (perfil 2), validar que no intente modificar campos restringidos
+    if (userPerfil === 2) {
+      const intentaModificarRestringido = camposRestringidos.some(
+        (campo) => req.body[campo] !== undefined
+      );
+
+      if (intentaModificarRestringido) {
+        return res.status(403).json({
+          message:
+            "No tenés permiso para modificar fecha, sede o profesor. Solo el administrador puede cambiar estos campos.",
+          camposRestringidos,
+        });
+      }
+    }
+
     const partidoActualizado = await updatePartido(id, req.body);
 
     if (!partidoActualizado) {

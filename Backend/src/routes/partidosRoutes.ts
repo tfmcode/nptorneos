@@ -9,14 +9,17 @@ import {
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminOrStaffMiddleware } from "../middlewares/adminOrStaffMiddleware"; // ✅ NUEVO
 import { validateRequest } from "../middlewares/validationMiddleware";
 import { body, param } from "express-validator";
 
 const router = express.Router();
 
+// ✅ GET - Staff puede ver partidos
 router.get(
   "/zona/:idZona",
   authMiddleware,
+  adminOrStaffMiddleware, // ✅ CAMBIADO: de sin middleware adicional a adminOrStaffMiddleware
   [
     param("idZona")
       .isInt()
@@ -26,18 +29,21 @@ router.get(
   asyncHandler(getPartidosByZonaController)
 );
 
+// ✅ GET - Staff puede ver un partido específico
 router.get(
   "/:id",
   authMiddleware,
+  adminOrStaffMiddleware, // ✅ CAMBIADO: de sin middleware adicional a adminOrStaffMiddleware
   [param("id").isInt().withMessage("El ID debe ser un número entero.")],
   validateRequest,
   asyncHandler(getPartidoController)
 );
 
+// ✅ POST - Solo Admin puede crear partidos
 router.post(
   "/",
   authMiddleware,
-  adminMiddleware,
+  adminMiddleware, // ✅ MANTIENE: Solo admin puede crear
   [
     body("codtipo")
       .isInt()
@@ -67,10 +73,11 @@ router.post(
   asyncHandler(createPartidoController)
 );
 
+// ✅ PUT - Admin y Staff pueden actualizar (con validación de campos en el controlador)
 router.put(
   "/:id",
   authMiddleware,
-  adminMiddleware,
+  adminOrStaffMiddleware, // ✅ CAMBIADO: de adminMiddleware a adminOrStaffMiddleware
   [
     param("id").isInt().withMessage("El ID debe ser un número entero."),
     body("codtipo")
@@ -98,10 +105,11 @@ router.put(
   asyncHandler(updatePartidoController)
 );
 
+// ✅ DELETE - Solo Admin puede eliminar partidos
 router.delete(
   "/:id",
   authMiddleware,
-  adminMiddleware,
+  adminMiddleware, // ✅ MANTIENE: Solo admin puede eliminar
   [param("id").isInt().withMessage("El ID debe ser un número entero.")],
   validateRequest,
   asyncHandler(deletePartidoController)

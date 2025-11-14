@@ -7,6 +7,7 @@ import {
 } from "../controllers/uploadController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminOrStaffMiddleware } from "../middlewares/adminOrStaffMiddleware"; // ✅ NUEVO
 import { asyncHandler } from "../middlewares/asyncHandler";
 
 const router = express.Router();
@@ -18,36 +19,37 @@ const router = express.Router();
 /**
  * POST /api/upload/jugador/:id
  * Subir o reemplazar imagen de jugador
- * Requiere autenticación de admin
+ * Requiere autenticación de admin o staff
  */
 router.post(
   "/jugador/:id",
   authMiddleware,
-  adminMiddleware,
-  upload.single("imagen"), // Campo esperado en FormData: "imagen"
+  adminOrStaffMiddleware, // ✅ CAMBIADO
+  upload.single("imagen"),
   asyncHandler(uploadJugadorImagen)
 );
 
 /**
  * DELETE /api/upload/jugador/:id
  * Eliminar imagen de jugador
- * Requiere autenticación de admin
+ * Requiere autenticación de admin o staff
  */
 router.delete(
   "/jugador/:id",
   authMiddleware,
-  adminMiddleware,
+  adminOrStaffMiddleware, // ✅ CAMBIADO
   asyncHandler(deleteJugadorImagen)
 );
 
 /**
  * GET /api/upload/jugador/:id/info
  * Obtener información de imagen de jugador
- * Requiere autenticación
+ * Requiere autenticación de admin o staff
  */
 router.get(
   "/jugador/:id/info",
   authMiddleware,
+  adminOrStaffMiddleware, // ✅ CAMBIADO
   asyncHandler(getJugadorImagenInfo)
 );
 

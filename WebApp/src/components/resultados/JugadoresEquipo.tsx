@@ -4,7 +4,7 @@ import {
   savePartidoJugador,
   deletePartidoJugador,
 } from "../../api/partidosJugadoresService";
-import { StatusMessage, PopupNotificacion } from "../common";
+import { StatusMessage, PopupNotificacion, Modal } from "../common";
 import {
   PartidoJugadorExtendido,
   PartidoJugadorInput,
@@ -18,8 +18,11 @@ import {
   PlusIcon,
   TrashIcon,
   UserPlusIcon,
+  CameraIcon,
 } from "@heroicons/react/24/outline";
 import API from "../../api/httpClient";
+import ImageUploaderInline from "../common/ImageUploaderInline";
+import { getImageUrl } from "../../utils/imageUtils";
 
 interface JugadoresEquipoProps {
   idpartido: number;
@@ -66,6 +69,11 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     message: "",
   });
 
+  // ✅ NUEVO: Estado para modal de foto
+  const [fotoModalOpen, setFotoModalOpen] = useState(false);
+  const [jugadorSeleccionadoFoto, setJugadorSeleccionadoFoto] =
+    useState<PartidoJugadorExtendido | null>(null);
+
   const showPopup = (
     type: "success" | "error" | "warning",
     message: string
@@ -75,6 +83,47 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
   const closePopup = () => {
     setPopup({ ...popup, open: false });
+  };
+
+  // ✅ NUEVO: Funciones para manejar modal de foto
+  const handleOpenFotoModal = (jugador: PartidoJugadorExtendido) => {
+    setJugadorSeleccionadoFoto(jugador);
+    setFotoModalOpen(true);
+  };
+
+  const handleCloseFotoModal = () => {
+    setFotoModalOpen(false);
+    setJugadorSeleccionadoFoto(null);
+  };
+
+  const handleFotoUploadSuccess = (imageUrl: string) => {
+    showPopup("success", "Foto actualizada correctamente");
+
+    // Actualizar la foto en el estado local
+    if (jugadorSeleccionadoFoto) {
+      setJugadoresPartido((prev) =>
+        prev.map((j) =>
+          j.idjugador === jugadorSeleccionadoFoto.idjugador
+            ? { ...j, foto: imageUrl.split("/").pop() || "" }
+            : j
+        )
+      );
+    }
+  };
+
+  const handleFotoDeleteSuccess = () => {
+    showPopup("success", "Foto eliminada correctamente");
+
+    // Actualizar el estado local
+    if (jugadorSeleccionadoFoto) {
+      setJugadoresPartido((prev) =>
+        prev.map((j) =>
+          j.idjugador === jugadorSeleccionadoFoto.idjugador
+            ? { ...j, foto: "" }
+            : j
+        )
+      );
+    }
   };
 
   const fetchJugadores = useCallback(async () => {
@@ -151,9 +200,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   const handleCheckboxChange = (jugador: PartidoJugadorExtendido) => {
     if (jugador.listanegra === 1) return;
 
-    // Si intenta marcar como "jugó"
     if (!jugador.jugo) {
-      // Validar que tenga número de camiseta
       if (!jugador.camiseta || jugador.camiseta.trim() === "") {
         showPopup(
           "warning",
@@ -162,7 +209,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         return;
       }
 
-      // Verificar si hay camisetas duplicadas
       const jugadoresConMismaCamiseta = jugadoresPartido.filter(
         (j) =>
           j.camiseta === jugador.camiseta &&
@@ -178,7 +224,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
           "warning",
           `⚠️ El número ${jugador.camiseta} ya está asignado a: <strong>${nombres}</strong>. Verifique antes de continuar.`
         );
-        // Permitir que continúe pero con advertencia
       }
     }
 
@@ -448,7 +493,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     </button>
   );
 
-  // Función para verificar si una camiseta está duplicada
+  // ✅ NUEVO: Función para verificar si una camiseta está duplicada
   const isCamisetaDuplicada = (
     camiseta: string,
     idJugadorActual: number
@@ -462,6 +507,40 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     );
   };
 
+  // ✅ NUEVO: Renderizar miniatura de foto
+  const renderFotoThumbnail = (jugador: PartidoJugadorExtendido) => {
+    const fotoUrl = jugador.foto ? getImageUrl(jugador.foto, "jugador") : null;
+
+    return (
+      <button
+        onClick={() => handleOpenFotoModal(jugador)}
+        className="group relative w-12 h-12 rounded-full overflow-hidden border-2 border-gray-300 hover:border-blue-500 transition-all flex items-center justify-center bg-gray-100"
+        title="Clic para cambiar foto"
+        disabled={jugador.listanegra === 1}
+      >
+        {fotoUrl ? (
+          <>
+            <img
+              src={fotoUrl}
+              alt={jugador.nombre}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
+              <CameraIcon className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center">
+            <CameraIcon className="h-6 w-6 text-gray-400 group-hover:text-blue-500 transition-colors" />
+          </div>
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="w-full">
       {/* Popup de notificaciones */}
@@ -471,6 +550,45 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         message={popup.message}
         onClose={closePopup}
       />
+
+      {/* ✅ NUEVO: Modal para gestionar foto */}
+      <Modal
+        isOpen={fotoModalOpen}
+        onClose={handleCloseFotoModal}
+        title={`Foto de ${jugadorSeleccionadoFoto?.nombre || "Jugador"}`}
+        size="small"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Podés sacar una foto con la cámara o subir una imagen desde tu
+            dispositivo.
+          </p>
+
+          {jugadorSeleccionadoFoto && (
+            <div className="flex justify-center">
+              <ImageUploaderInline
+                entityId={jugadorSeleccionadoFoto.idjugador}
+                entityType="jugador"
+                currentImageUrl={jugadorSeleccionadoFoto.foto}
+                size="large"
+                aspectRatio={1}
+                onUploadSuccess={handleFotoUploadSuccess}
+                onUploadError={(error) => showPopup("error", error)}
+                onDeleteSuccess={handleFotoDeleteSuccess}
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              onClick={handleCloseFotoModal}
+              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors font-medium"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Header con nombre del equipo y botones */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
@@ -646,7 +764,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
       {!loading && (
         <>
-          {/* ✅ VISTA DESKTOP - Tabla con scroll horizontal Y vertical */}
+          {/* ✅ VISTA DESKTOP - Tabla con columna de Foto */}
           <div className="hidden lg:block overflow-auto max-h-[60vh] border border-gray-300 rounded-lg">
             <div className="min-w-max">
               <table className="w-full text-sm">
@@ -654,7 +772,9 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                   <tr>
                     <th className="px-2 py-2 whitespace-nowrap">Jugó</th>
                     <th className="px-2 py-2 whitespace-nowrap">C</th>
-                    <th className="px-2 py-2 whitespace-nowrap">Foto</th>
+                    <th className="px-2 py-2 whitespace-nowrap text-center">
+                      Foto
+                    </th>
                     <th className="px-2 py-2 whitespace-nowrap">
                       <div className="flex items-center">
                         Nombre
@@ -730,9 +850,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                           />
                         </td>
                         <td className="px-2 py-2 text-center">
-                          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs">
-                            📷
-                          </div>
+                          {renderFotoThumbnail(j)}
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-1">
@@ -862,7 +980,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
             </div>
           </div>
 
-          {/* ✅ VISTA MOBILE - Cards con scroll vertical */}
+          {/* ✅ VISTA MOBILE - Cards con foto */}
           <div className="lg:hidden space-y-3 max-h-[60vh] overflow-y-auto pr-2">
             {sortedJugadores.map((j) => {
               const isDisabled = j.listanegra === 1;
@@ -882,10 +1000,8 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 >
                   {/* Header del Card */}
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        📷
-                      </div>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {renderFotoThumbnail(j)}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
                           {renderColorDot(j)}

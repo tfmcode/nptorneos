@@ -2,19 +2,19 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import express from "express";
+import { globalLimiter } from "../config/rateLimitConfig";
 
 export const applyMiddlewares = (app: express.Application) => {
-  // Seguridad básica (permitimos recursos cross-origin si servís imágenes desde el backend)
   app.use(
     helmet({
-      crossOriginResourcePolicy: false, // evita bloquear imágenes/archivos servidos a otro origen (p.ej. Vite)
+      crossOriginResourcePolicy: false,
     })
   );
 
-  // Compresión gzip
   app.use(compression());
 
-  // Orígenes permitidos (lee .env FRONTEND_URL y cae a localhost en dev)
+  app.use(globalLimiter);
+
   const envOrigins = (process.env.FRONTEND_URL || "")
     .split(",")
     .map((s) => s.trim())
@@ -29,11 +29,10 @@ export const applyMiddlewares = (app: express.Application) => {
 
   const allowedOrigins = envOrigins.length ? envOrigins : defaultDevOrigins;
 
-  // CORS con callback para aceptar solo orígenes permitidos y también requests sin Origin (curl/postman)
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin) return callback(null, true); // permite herramientas locales (curl, Postman)
+        if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error(`CORS bloqueado para origen: ${origin}`));
       },
@@ -43,10 +42,8 @@ export const applyMiddlewares = (app: express.Application) => {
     })
   );
 
-  // Preflight explícito con misma config
   app.options("*", cors());
 
-  // Parsers
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 };

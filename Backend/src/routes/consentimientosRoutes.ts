@@ -11,6 +11,7 @@ import { adminMiddleware } from "../middlewares/adminMiddleware";
 import { validateRequest } from "../middlewares/validationMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { body, param } from "express-validator";
+import { strictLimiter } from "../config/rateLimitConfig";
 
 const router = express.Router();
 
@@ -26,10 +27,13 @@ router.get(
 
 router.post(
   "/",
+  strictLimiter,
   [
     body("docnro")
       .isInt({ allow_leading_zeroes: false })
-      .withMessage("El número de documento (docnro) es obligatorio y debe ser un número."),
+      .withMessage(
+        "El número de documento (docnro) es obligatorio y debe ser un número."
+      ),
     body("apellido")
       .optional()
       .isString()

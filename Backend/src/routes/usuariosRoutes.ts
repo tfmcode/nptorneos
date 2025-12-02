@@ -15,11 +15,13 @@ import {
   usuarioLoginSchema,
   usuarioCreateSchema,
 } from "../validators/usuarioSchema";
+import { authLimiter } from "../config/rateLimitConfig";
 
 const router = express.Router();
 
 router.post(
   "/login",
+  authLimiter,
   zodValidate(usuarioLoginSchema),
   asyncHandler(loginUsuario)
 );

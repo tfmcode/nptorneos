@@ -58,7 +58,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     direction: "asc" | "desc";
   } | null>(null);
 
-  // Estado para el popup de notificación
   const [popup, setPopup] = useState<{
     open: boolean;
     type: "success" | "error" | "warning";
@@ -69,7 +68,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     message: "",
   });
 
-  // ✅ NUEVO: Estado para modal de foto
   const [fotoModalOpen, setFotoModalOpen] = useState(false);
   const [jugadorSeleccionadoFoto, setJugadorSeleccionadoFoto] =
     useState<PartidoJugadorExtendido | null>(null);
@@ -85,7 +83,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     setPopup({ ...popup, open: false });
   };
 
-  // ✅ NUEVO: Funciones para manejar modal de foto
   const handleOpenFotoModal = (jugador: PartidoJugadorExtendido) => {
     setJugadorSeleccionadoFoto(jugador);
     setFotoModalOpen(true);
@@ -99,7 +96,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   const handleFotoUploadSuccess = (imageUrl: string) => {
     showPopup("success", "Foto actualizada correctamente");
 
-    // Actualizar la foto en el estado local
     if (jugadorSeleccionadoFoto) {
       setJugadoresPartido((prev) =>
         prev.map((j) =>
@@ -114,7 +110,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   const handleFotoDeleteSuccess = () => {
     showPopup("success", "Foto eliminada correctamente");
 
-    // Actualizar el estado local
     if (jugadorSeleccionadoFoto) {
       setJugadoresPartido((prev) =>
         prev.map((j) =>
@@ -236,9 +231,44 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     valor: string
   ) => {
     if (jugador.listanegra === 1) return;
-    const parsed =
-      campo === "camiseta" ? valor : valor === "" ? 0 : Number(valor);
-    handleUpdate(jugador, campo, parsed);
+
+    let valorCorregido: string | number | boolean;
+
+    if (campo === "camiseta") {
+      const numero = valor.trim();
+
+      if (numero === "-") {
+        // El usuario tipeó el guion para borrar
+        valorCorregido = "";
+      } else if (numero === "") {
+        // El usuario borró el contenido del input
+        valorCorregido = "";
+      } else {
+        const numValue = Number(numero);
+
+        // Permite solo números válidos entre 0 y 999
+        if (isNaN(numValue) || numValue < 0 || numValue > 999) {
+          // Si el input no es un número válido, salimos.
+          // Esto evita que se guarden letras o números muy grandes.
+          return;
+        }
+
+        // Si es un número válido, lo guardamos como string para el campo camiseta
+        valorCorregido = numero;
+      }
+    } else {
+      // Lógica para estadísticas (Goles, Tarjetas)
+      const numValue = valor === "" ? 0 : Number(valor);
+      if (isNaN(numValue) || numValue < 0) return;
+
+      if (campo === "goles" && numValue > 50) return;
+      if (campo === "amarilla" && numValue > 2) return;
+      if ((campo === "azul" || campo === "roja") && numValue > 1) return;
+
+      valorCorregido = numValue;
+    }
+
+    handleUpdate(jugador, campo, valorCorregido);
   };
 
   const handleDeleteJugador = async (jugador: PartidoJugadorExtendido) => {
@@ -493,7 +523,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     </button>
   );
 
-  // ✅ NUEVO: Función para verificar si una camiseta está duplicada
   const isCamisetaDuplicada = (
     camiseta: string,
     idJugadorActual: number
@@ -507,7 +536,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     );
   };
 
-  // ✅ NUEVO: Renderizar miniatura de foto
   const renderFotoThumbnail = (jugador: PartidoJugadorExtendido) => {
     const fotoUrl = jugador.foto ? getImageUrl(jugador.foto, "jugador") : null;
 
@@ -541,9 +569,18 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     );
   };
 
+  const isStatsDisabled = (jugador: PartidoJugadorExtendido): boolean => {
+    if (jugador.listanegra === 1) return true;
+    if (!jugador.jugo) return true;
+    return false;
+  };
+
+  const golesOptions = Array.from({ length: 51 }, (_, i) => i.toString());
+  const amarillaOptions = Array.from({ length: 3 }, (_, i) => i.toString());
+  const tarjetaOptions = Array.from({ length: 2 }, (_, i) => i.toString());
+
   return (
     <div className="w-full">
-      {/* Popup de notificaciones */}
       <PopupNotificacion
         open={popup.open}
         type={popup.type}
@@ -551,7 +588,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         onClose={closePopup}
       />
 
-      {/* ✅ NUEVO: Modal para gestionar foto */}
       <Modal
         isOpen={fotoModalOpen}
         onClose={handleCloseFotoModal}
@@ -590,7 +626,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         </div>
       </Modal>
 
-      {/* Header con nombre del equipo y botones */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         <h3 className="text-lg font-semibold text-gray-800">
           {nombreEquipo || `Equipo ${idequipo}`}
@@ -625,7 +660,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         </div>
       </div>
 
-      {/* Formulario para agregar jugador existente */}
       {showAddPlayer && (
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
           <h4 className="font-semibold mb-2">Agregar Jugador Existente</h4>
@@ -661,7 +695,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         </div>
       )}
 
-      {/* Formulario para crear nuevo jugador */}
       {showCreatePlayer && (
         <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <h4 className="font-semibold mb-3">Crear Nuevo Jugador</h4>
@@ -764,7 +797,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
 
       {!loading && (
         <>
-          {/* ✅ VISTA DESKTOP - Tabla con columna de Foto */}
           <div className="hidden lg:block overflow-auto max-h-[60vh] border border-gray-300 rounded-lg">
             <div className="min-w-max">
               <table className="w-full text-sm">
@@ -814,6 +846,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                 <tbody>
                   {sortedJugadores.map((j) => {
                     const isDisabled = j.listanegra === 1;
+                    const statsDisabled = isStatsDisabled(j);
 
                     return (
                       <tr
@@ -864,32 +897,33 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                           {j.docnro}
                         </td>
                         <td className="px-2 py-2">
-                          <select
-                            value={j.camiseta || ""}
+                          {/* CAMISETA CORREGIDA (Desktop) */}
+                          <input
+                            type="text"
+                            value={j.camiseta}
+                            placeholder="-"
                             onChange={(e) =>
                               handleInputChange(j, "camiseta", e.target.value)
                             }
                             disabled={isDisabled || loading}
-                            className={`w-16 border rounded px-1 text-xs ${
+                            maxLength={3}
+                            className={`w-16 border rounded px-1 text-xs text-center ${
                               isDisabled
                                 ? "bg-gray-300 cursor-not-allowed"
-                                : isCamisetaDuplicada(j.camiseta, j.idjugador)
+                                : isCamisetaDuplicada(
+                                    j.camiseta,
+                                    j.idjugador
+                                  ) && j.camiseta.trim() !== ""
                                 ? "border-yellow-500 bg-yellow-50"
                                 : ""
                             }`}
                             title={
-                              isCamisetaDuplicada(j.camiseta, j.idjugador)
+                              isCamisetaDuplicada(j.camiseta, j.idjugador) &&
+                              j.camiseta.trim() !== ""
                                 ? "⚠️ Número duplicado"
-                                : ""
+                                : "Acepta '-' o 0-999"
                             }
-                          >
-                            <option value="">-</option>
-                            {Array.from({ length: 100 }, (_, i) => (
-                              <option key={i} value={i.toString()}>
-                                {i}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </td>
                         <td className="px-2 py-2">
                           <span
@@ -903,60 +937,84 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                           </span>
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
+                          <select
                             value={j.goles}
                             onChange={(e) =>
                               handleInputChange(j, "goles", e.target.value)
                             }
-                            disabled={isDisabled || loading}
-                            className={`w-14 border rounded px-1 ${
-                              isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                            disabled={statsDisabled || loading}
+                            className={`w-16 border rounded px-1 text-xs ${
+                              statsDisabled
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : ""
                             }`}
-                            min="0"
-                          />
+                          >
+                            {golesOptions.map((v) => (
+                              <option key={v} value={v}>
+                                {v === "0" && j.goles === 0 ? "-" : v}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
+                          <select
                             value={j.amarilla}
                             onChange={(e) =>
                               handleInputChange(j, "amarilla", e.target.value)
                             }
-                            disabled={isDisabled || loading}
-                            className={`w-14 border rounded px-1 ${
-                              isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                            disabled={statsDisabled || loading}
+                            className={`w-16 border rounded px-1 text-xs ${
+                              statsDisabled
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : ""
                             }`}
-                            min="0"
-                          />
+                          >
+                            {amarillaOptions.map((v) => (
+                              <option key={v} value={v}>
+                                {v === "0" && j.amarilla === 0 ? "-" : v}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
+                          <select
                             value={j.azul}
                             onChange={(e) =>
                               handleInputChange(j, "azul", e.target.value)
                             }
-                            disabled={isDisabled || loading}
-                            className={`w-14 border rounded px-1 ${
-                              isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                            disabled={statsDisabled || loading}
+                            className={`w-16 border rounded px-1 text-xs ${
+                              statsDisabled
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : ""
                             }`}
-                            min="0"
-                          />
+                          >
+                            {tarjetaOptions.map((v) => (
+                              <option key={v} value={v}>
+                                {v === "0" && j.azul === 0 ? "-" : v}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
+                          <select
                             value={j.roja}
                             onChange={(e) =>
                               handleInputChange(j, "roja", e.target.value)
                             }
-                            disabled={isDisabled || loading}
-                            className={`w-14 border rounded px-1 ${
-                              isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                            disabled={statsDisabled || loading}
+                            className={`w-16 border rounded px-1 text-xs ${
+                              statsDisabled
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : ""
                             }`}
-                            min="0"
-                          />
+                          >
+                            {tarjetaOptions.map((v) => (
+                              <option key={v} value={v}>
+                                {v === "0" && j.roja === 0 ? "-" : v}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-2 py-2 text-center">
                           <button
@@ -980,10 +1038,10 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
             </div>
           </div>
 
-          {/* ✅ VISTA MOBILE - Cards con foto */}
           <div className="lg:hidden space-y-3 max-h-[60vh] overflow-y-auto pr-2">
             {sortedJugadores.map((j) => {
               const isDisabled = j.listanegra === 1;
+              const statsDisabled = isStatsDisabled(j);
 
               return (
                 <div
@@ -998,7 +1056,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                       : "bg-white"
                   }`}
                 >
-                  {/* Header del Card */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {renderFotoThumbnail(j)}
@@ -1030,7 +1087,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                     </button>
                   </div>
 
-                  {/* Info del Card */}
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <label className="text-xs font-medium block mb-1">
@@ -1051,32 +1107,31 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                       <label className="text-xs font-medium block mb-1">
                         N° Camiseta
                       </label>
-                      <select
-                        value={j.camiseta || ""}
+                      {/* CAMISETA CORREGIDA (Mobile) */}
+                      <input
+                        type="text"
+                        value={j.camiseta}
+                        placeholder="-"
                         onChange={(e) =>
                           handleInputChange(j, "camiseta", e.target.value)
                         }
                         disabled={isDisabled || loading}
-                        className={`w-full border rounded px-2 py-1 text-sm ${
+                        maxLength={3}
+                        className={`w-full border rounded px-2 py-1 text-sm text-center ${
                           isDisabled
                             ? "bg-gray-300 cursor-not-allowed"
-                            : isCamisetaDuplicada(j.camiseta, j.idjugador)
+                            : isCamisetaDuplicada(j.camiseta, j.idjugador) &&
+                              j.camiseta.trim() !== ""
                             ? "border-yellow-500 bg-yellow-50"
                             : ""
                         }`}
                         title={
-                          isCamisetaDuplicada(j.camiseta, j.idjugador)
+                          isCamisetaDuplicada(j.camiseta, j.idjugador) &&
+                          j.camiseta.trim() !== ""
                             ? "⚠️ Número duplicado"
-                            : ""
+                            : "Acepta '-' o 0-999"
                         }
-                      >
-                        <option value="">-</option>
-                        {Array.from({ length: 100 }, (_, i) => (
-                          <option key={i} value={i.toString()}>
-                            {i}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     <div className="col-span-2 flex items-center gap-4">
@@ -1106,72 +1161,88 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                       <label className="text-xs font-medium block mb-1">
                         Goles
                       </label>
-                      <input
-                        type="number"
+                      <select
                         value={j.goles}
                         onChange={(e) =>
                           handleInputChange(j, "goles", e.target.value)
                         }
-                        disabled={isDisabled || loading}
-                        className={`w-full border rounded px-2 py-1 ${
-                          isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                        disabled={statsDisabled || loading}
+                        className={`w-full border rounded px-2 py-1 text-sm ${
+                          statsDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
-                        min="0"
-                      />
+                      >
+                        {golesOptions.map((v) => (
+                          <option key={v} value={v}>
+                            {v === "0" && j.goles === 0 ? "-" : v}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
                       <label className="text-xs font-medium block mb-1">
                         Amarilla
                       </label>
-                      <input
-                        type="number"
+                      <select
                         value={j.amarilla}
                         onChange={(e) =>
                           handleInputChange(j, "amarilla", e.target.value)
                         }
-                        disabled={isDisabled || loading}
-                        className={`w-full border rounded px-2 py-1 ${
-                          isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                        disabled={statsDisabled || loading}
+                        className={`w-full border rounded px-2 py-1 text-sm ${
+                          statsDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
-                        min="0"
-                      />
+                      >
+                        {amarillaOptions.map((v) => (
+                          <option key={v} value={v}>
+                            {v === "0" && j.amarilla === 0 ? "-" : v}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
                       <label className="text-xs font-medium block mb-1">
                         Azul
                       </label>
-                      <input
-                        type="number"
+                      <select
                         value={j.azul}
                         onChange={(e) =>
                           handleInputChange(j, "azul", e.target.value)
                         }
-                        disabled={isDisabled || loading}
-                        className={`w-full border rounded px-2 py-1 ${
-                          isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                        disabled={statsDisabled || loading}
+                        className={`w-full border rounded px-2 py-1 text-sm ${
+                          statsDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
-                        min="0"
-                      />
+                      >
+                        {tarjetaOptions.map((v) => (
+                          <option key={v} value={v}>
+                            {v === "0" && j.azul === 0 ? "-" : v}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
                       <label className="text-xs font-medium block mb-1">
                         Roja
                       </label>
-                      <input
-                        type="number"
+                      <select
                         value={j.roja}
                         onChange={(e) =>
                           handleInputChange(j, "roja", e.target.value)
                         }
-                        disabled={isDisabled || loading}
-                        className={`w-full border rounded px-2 py-1 ${
-                          isDisabled ? "bg-gray-300 cursor-not-allowed" : ""
+                        disabled={statsDisabled || loading}
+                        className={`w-full border rounded px-2 py-1 text-sm ${
+                          statsDisabled ? "bg-gray-300 cursor-not-allowed" : ""
                         }`}
-                        min="0"
-                      />
+                      >
+                        {tarjetaOptions.map((v) => (
+                          <option key={v} value={v}>
+                            {v === "0" && j.roja === 0 ? "-" : v}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -1181,7 +1252,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
         </>
       )}
 
-      {/* Estadísticas */}
       <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
         <div className="flex flex-wrap gap-4">
           <div>

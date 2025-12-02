@@ -99,7 +99,7 @@ export const InscripcionForm: React.FC = () => {
     });
 
     if (errores.length > 0) {
-      showPopup("warning", errores.join("<br />")); // <-- reemplazo clave
+      showPopup("warning", errores.join("<br />"));
       return;
     }
 
@@ -180,9 +180,13 @@ export const InscripcionForm: React.FC = () => {
               setForm({ ...form, idtorneo: Number(e.target.value) })
             }
           >
-            <option value={0}>Seleccionar Torneo</option>
-            <option value={265}>Torneo 5</option>
-            <option value={266}>Torneo 17</option>
+            <option value={0}>Seleccionar Categoría</option>
+            <option value={265}>Fútbol 5</option>
+            <option value={268}>Fútbol 8</option>
+            <option value={270}>Fútbol 11</option>
+            <option value={265}>Infantil</option>
+            <option value={265}>Juvenil</option>
+            <option value={271}>Femenino</option>
           </select>
         </div>
 

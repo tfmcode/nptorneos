@@ -1,5 +1,13 @@
 import { Request, Response } from "express";
 import { pool } from "../config/db";
+import { enviarMailInscripcion } from "../utils/mailService";
+
+const TORNEO_CONFIG: Record<number, { nombre: string; cantmin: number }> = {
+  265: { nombre: "Fútbol 5", cantmin: 5 },
+  268: { nombre: "Fútbol 8", cantmin: 8 },
+  270: { nombre: "Fútbol 11", cantmin: 11 },
+  271: { nombre: "Femenino", cantmin: 5 },
+};
 
 export const createInscripcionPublicController = async (
   req: Request,
@@ -14,7 +22,6 @@ export const createInscripcionPublicController = async (
       return res.status(400).json({ error: "Faltan datos obligatorios." });
     }
 
-    // Validar duplicado: mismo email + equipo + torneo en el día
     const { rows: duplicados } = await client.query(
       `SELECT id FROM inscripciones 
        WHERE email = $1 AND equipo = $2 AND idtorneo = $3 
@@ -27,17 +34,12 @@ export const createInscripcionPublicController = async (
         .json({ error: "Ya existe una inscripción con estos datos hoy." });
     }
 
-    // Obtener cantmin desde torneo válido
-    const { rows: torneoRows } = await client.query(
-      `SELECT cantmin FROM wtorneos 
-       WHERE id = $1 AND fhbaja IS NULL AND codtipoestado = 3`,
-      [idtorneo]
-    );
-    if (torneoRows.length === 0) {
-      return res.status(400).json({ error: "Torneo no válido o inactivo." });
+    const torneoConfig = TORNEO_CONFIG[idtorneo];
+    if (!torneoConfig) {
+      return res.status(400).json({ error: "Torneo no válido." });
     }
 
-    const cantmin = torneoRows[0].cantmin;
+    const { cantmin, nombre: tipoTorneo } = torneoConfig;
     let cantmax = 0;
     if ([5, 6].includes(cantmin)) cantmax = 10;
     else if ([8, 9].includes(cantmin)) cantmax = 16;
@@ -53,7 +55,6 @@ export const createInscripcionPublicController = async (
         .status(400)
         .json({ error: `Debe ingresar como máximo ${cantmax} jugadores.` });
 
-    // Insertar inscripción
     await client.query("BEGIN");
 
     const { rows: inscRows } = await client.query(
@@ -63,7 +64,6 @@ export const createInscripcionPublicController = async (
     );
     const idinscrip = inscRows[0].id;
 
-    // Insertar jugadores
     for (const [i, j] of jugadores.entries()) {
       await client.query(
         `INSERT INTO inscripciones_jug (
@@ -88,6 +88,20 @@ export const createInscripcionPublicController = async (
     }
 
     await client.query("COMMIT");
+
+    await enviarMailInscripcion({
+      emailEquipo: email,
+      nombreEquipo: equipo,
+      tipoTorneo,
+      jugadores: jugadores.map((j: any) => ({
+        apellido: j.apellido,
+        nombres: j.nombres,
+        docnro: j.docnro,
+        posicion: j.posicion,
+        capitan: j.capitan,
+        subcapitan: j.subcapitan,
+      })),
+    });
 
     return res.status(201).json({
       message: "Inscripción realizada exitosamente.",

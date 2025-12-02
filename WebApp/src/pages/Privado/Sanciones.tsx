@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store/index";
 import { Sancion } from "../../types/sanciones";
@@ -21,12 +21,11 @@ import { sancionColumns } from "../../components/tables";
 import DateRangePicker from "../../components/common/DateRangePicker";
 import { DynamicForm } from "../../components";
 import { Equipo } from "../../types/equipos";
-import { Torneo } from "../../types/torneos";
-import { getTorneosByEquipoID } from "../../api/torneosService";
-import { getEquiposByJugador } from "../../api/equiposService";
 import JugadorAutocomplete from "../../components/forms/JugadorAutocomplete";
 import { Jugador } from "../../types/jugadores";
 import { getJugadorById } from "../../api/jugadoresService";
+import { fetchTorneos } from "../../store/slices/torneoSlice";
+import { getEquiposByJugador } from "../../api/equiposService";
 
 const Sanciones: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -34,9 +33,12 @@ const Sanciones: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { sanciones, loading, error, page, limit, total, totalPages } =
     useSelector((state: RootState) => state.sanciones);
+  const { torneos } = useSelector((state: RootState) => state.torneos);
 
   const [equipos, setEquipos] = useState<Equipo[]>([]);
-  const [torneos, setTorneos] = useState<Torneo[]>([]);
+  const [jugadorSeleccionado, setJugadorSeleccionado] =
+    useState<Jugador | null>(null);
+  const jugadorCargadoRef = useRef<number | null>(null);
 
   const [popup, setPopup] = useState({
     open: false,
@@ -70,8 +72,6 @@ const Sanciones: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("2025-01-01");
   const [endDate, setEndDate] = useState("2025-12-31");
-  const [jugadorSeleccionado, setJugadorSeleccionado] =
-    useState<Jugador | null>(null);
 
   const showPopup = (
     type: "success" | "error" | "warning",
@@ -93,101 +93,62 @@ const Sanciones: React.FC = () => {
     );
   }, [dispatch, page, limit, searchTerm, startDate, endDate]);
 
-  const setFieldManualmente = useCallback(
-    (campo: string, valor: string | number | boolean) => {
-      const syntheticEvent = {
-        target: { name: campo, value: valor },
-      } as React.ChangeEvent<HTMLInputElement>;
-      handleInputChange(syntheticEvent);
-    },
-    [handleInputChange]
-  );
-
-  const setTitulo = useCallback(
-    (jugador?: Jugador, equipo?: Equipo) => {
-      setFieldManualmente(
-        "titulo",
-        `SANCIÓN JUGADOR: ${jugador?.nombres} ${jugador?.apellido} ${
-          equipo ? `- EQUIPO: ${equipo?.nombre}` : ""
-        }`
-      );
-    },
-    [setFieldManualmente]
-  );
+  useEffect(() => {
+    dispatch(fetchTorneos({ page: 1, limit: 100, searchTerm: "" }));
+  }, [dispatch]);
 
   useEffect(() => {
-    const cargarJugador = async () => {
-      if (formData.idjugador) {
-        const jugador = await getJugadorById(formData.idjugador);
+    if (!isModalOpen) {
+      setJugadorSeleccionado(null);
+      setEquipos([]);
+      jugadorCargadoRef.current = null;
+      return;
+    }
+
+    if (!formData.idjugador) {
+      setJugadorSeleccionado(null);
+      setEquipos([]);
+      jugadorCargadoRef.current = null;
+      return;
+    }
+
+    if (jugadorCargadoRef.current === formData.idjugador) {
+      return;
+    }
+
+    const cargarDatosJugador = async () => {
+      jugadorCargadoRef.current = formData.idjugador!;
+
+      try {
+        const jugador = await getJugadorById(formData.idjugador!);
         if (jugador) {
           setJugadorSeleccionado(jugador);
-          if (!formData.id) {
-            setTitulo(jugador, undefined);
-          }
         }
 
-        try {
-          const equiposByJugador = await getEquiposByJugador(
-            formData.idjugador
-          );
-          setEquipos(equiposByJugador);
-          if (equiposByJugador.length > 0) {
-            if (!formData.id) {
-              setFieldManualmente("idequipo", equiposByJugador[0].id!);
-            }
+        const equiposData = await getEquiposByJugador(formData.idjugador!);
+        setEquipos(equiposData);
 
-            const torneosByEquipo = await getTorneosByEquipoID(
-              equiposByJugador[0].id!
-            );
-            if (torneosByEquipo.length > 0) {
-              if (!formData.id) {
-                setFieldManualmente("idtorneo", torneosByEquipo[0].id!);
-              }
-              setTorneos(torneosByEquipo);
-
-              if (!formData.id) {
-                setTitulo(jugador, equiposByJugador[0]);
-              }
-            } else {
-              setTorneos([]);
-            }
-          } else {
-            setEquipos([]);
-          }
-        } catch (error) {
-          console.error("Error al obtener equipos y torneos:", error);
+        if (equiposData.length > 0 && !formData.id) {
+          setFormData((prev) => ({
+            ...prev,
+            idequipo: equiposData[0].id!,
+            titulo: `SANCIÓN JUGADOR: ${jugador?.nombres} ${jugador?.apellido} - EQUIPO: ${equiposData[0].nombre}`,
+          }));
         }
-      } else {
-        setFieldManualmente("idequipo", 0);
-        setFieldManualmente("idtorneo", 0);
-        setFieldManualmente("titulo", "");
-        setEquipos([]);
-        setTorneos([]);
+      } catch (error) {
+        console.error("Error al cargar datos del jugador:", error);
+        jugadorCargadoRef.current = null;
       }
     };
-    if (isModalOpen) {
-      cargarJugador();
-    } else {
-      setJugadorSeleccionado(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.id, formData.idjugador, isModalOpen]);
 
-  useEffect(() => {
-    if (formData.idequipo) {
-      const cargarTorneos = async () => {
-        const torneos = await getTorneosByEquipoID(formData.idequipo!);
-        setTorneos(torneos);
-      };
-      cargarTorneos();
-    }
-  }, [formData.idequipo]);
+    cargarDatosJugador();
+  }, [formData.idjugador, isModalOpen, formData.id]);
 
   const handleManualCloseModal = () => {
     handleCloseModal();
     setJugadorSeleccionado(null);
     setEquipos([]);
-    setTorneos([]);
+    jugadorCargadoRef.current = null;
   };
 
   const handleSearch = () => {
@@ -226,6 +187,8 @@ const Sanciones: React.FC = () => {
       errores.push("• Ingresar una fecha de fin de sanción");
     if (!formData.titulo?.trim()) errores.push("• Ingresar un título");
     if (!formData.idjugador) errores.push("• Ingresar el nombre del jugador");
+    if (!formData.idequipo) errores.push("• Seleccionar un equipo");
+    if (!formData.idtorneo) errores.push("• Seleccionar un torneo");
 
     if (errores.length > 0) {
       showPopup("warning", errores.join("<br />"));
@@ -251,6 +214,8 @@ const Sanciones: React.FC = () => {
           sancion.descripcion?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+
+  const torneosActivos = torneos.filter((t) => t.codestado === 1);
 
   return (
     <div className="flex justify-center items-center">
@@ -333,9 +298,7 @@ const Sanciones: React.FC = () => {
           onClose={handleManualCloseModal}
           title={formData.id ? "Editar Sanción" : "Crear Sanción"}
         >
-          {/* ---- JUGADOR ---- */}
           {formData.id ? (
-            /* Modo EDICIÓN – nombre readonly */
             <>
               <div className="mb-4">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -366,17 +329,19 @@ const Sanciones: React.FC = () => {
               </div>
             </>
           ) : (
-            /* Modo ALTA – autocomplete */
             <div className="mb-4">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Jugador
+                Jugador *
               </label>
               <JugadorAutocomplete
                 value={formData.idjugador ?? 0}
                 onChange={(jugador) => {
                   if (jugador && jugador.id) {
-                    setFieldManualmente("idjugador", jugador.id);
-                    setJugadorSeleccionado(jugador as Jugador);
+                    setFormData({
+                      ...formData,
+                      idjugador: jugador.id,
+                    });
+                    setJugadorSeleccionado(jugador);
                   }
                 }}
               />
@@ -387,39 +352,50 @@ const Sanciones: React.FC = () => {
               {
                 name: "idequipo",
                 type: "select",
-                placeholder: "Equipo",
-                options: equipos.map((equipo) => ({
-                  label: equipo.nombre,
-                  value: equipo.id ?? "",
-                })),
-                value: formData.idequipo ?? "",
+                placeholder: "Equipo *",
+                label: "Equipo *",
+                options: [
+                  { label: "Seleccionar equipo", value: 0 },
+                  ...equipos.map((equipo) => ({
+                    label: equipo.nombre,
+                    value: equipo.id ?? 0,
+                  })),
+                ],
+                value: formData.idequipo ?? 0,
               },
               {
                 name: "idtorneo",
                 type: "select",
-                placeholder: "Torneo",
-                options: torneos.map((torneo) => ({
-                  label: torneo.nombre,
-                  value: torneo.id ?? "",
-                })),
-                value: formData.idtorneo ?? "",
+                placeholder: "Torneo *",
+                label: "Torneo *",
+                options: [
+                  { label: "Seleccionar torneo", value: 0 },
+                  ...torneosActivos.map((torneo) => ({
+                    label: torneo.nombre,
+                    value: torneo.id ?? 0,
+                  })),
+                ],
+                value: formData.idtorneo ?? 0,
               },
               {
                 name: "fecha",
                 type: "date",
-                placeholder: "Fecha inicio",
+                placeholder: "Fecha inicio *",
+                label: "Fecha inicio *",
                 value: formData.fecha ?? "",
               },
               {
                 name: "fechafin",
                 type: "date",
-                placeholder: "Fecha fin",
+                placeholder: "Fecha fin *",
+                label: "Fecha fin *",
                 value: formData.fechafin ?? "",
               },
               {
                 name: "titulo",
                 type: "text",
-                placeholder: "Título",
+                placeholder: "Título *",
+                label: "Título *",
                 value: formData.titulo ?? "",
                 colSpan: 2,
               },
@@ -427,6 +403,7 @@ const Sanciones: React.FC = () => {
                 name: "descripcion",
                 type: "richtext",
                 placeholder: "Descripción",
+                label: "Descripción",
                 value: formData.descripcion ?? "",
                 onChange: (e) =>
                   setFormData({

@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import DOMPurify from "dompurify";
 
 interface Props {
   open: boolean;
@@ -38,7 +39,6 @@ export const PopupNotificacion: React.FC<Props> = ({
 
   return (
     <>
-      {/* Overlay para centrar el popup */}
       <div className="fixed inset-0 flex justify-center items-center z-50 pointer-events-none p-4">
         <div className={`${baseStyle} ${typeStyles[type]} pointer-events-auto`}>
           <div className="text-xl">{icon}</div>
@@ -48,10 +48,13 @@ export const PopupNotificacion: React.FC<Props> = ({
               {type === "error" && "Error"}
               {type === "warning" && "Atención"}
             </p>
-            <p dangerouslySetInnerHTML={{ __html: message }} />
+            <p
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(message),
+              }}
+            />
           </div>
 
-          {/* Botón de cerrar opcional */}
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 ml-2 text-lg leading-none"

@@ -1,25 +1,10 @@
 import React from "react";
 import { Sancion } from "../../../../types";
+import DOMPurify from "dompurify";
 
 interface SanctionsProps {
   sanciones: Sancion[];
 }
-
-// Función para limpiar HTML y extraer solo el texto
-const stripHTML = (html: string): string => {
-  if (!html) return "";
-
-  return html
-    .replace(/<[^>]*>/g, "") // Remover tags HTML
-    .replace(/&nbsp;/g, " ") // Reemplazar &nbsp; con espacios
-    .replace(/&amp;/g, "&") // Reemplazar &amp; con &
-    .replace(/&lt;/g, "<") // Reemplazar &lt; con <
-    .replace(/&gt;/g, ">") // Reemplazar &gt; con >
-    .replace(/&quot;/g, '"') // Reemplazar &quot; con "
-    .replace(/&#039;/g, "'") // Reemplazar &#039; con '
-    .replace(/\s+/g, " ") // Normalizar espacios
-    .trim();
-};
 
 const Sanctions: React.FC<SanctionsProps> = ({ sanciones }) => {
   return (
@@ -57,9 +42,12 @@ const Sanctions: React.FC<SanctionsProps> = ({ sanciones }) => {
                 )}
                 {sancion.descripcion && (
                   <div className="text-gray-700 bg-white p-3 rounded border-l-4 border-yellow-500 mt-2">
-                    <div className="whitespace-pre-wrap break-words text-sm">
-                      {stripHTML(sancion.descripcion)}
-                    </div>
+                    <div
+                      className="whitespace-pre-wrap break-words text-sm"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(sancion.descripcion),
+                      }}
+                    />
                   </div>
                 )}
                 {sancion.fechafin && (

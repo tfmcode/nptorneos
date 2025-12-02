@@ -89,19 +89,27 @@ export const createInscripcionPublicController = async (
 
     await client.query("COMMIT");
 
-    await enviarMailInscripcion({
-      emailEquipo: email,
-      nombreEquipo: equipo,
-      tipoTorneo,
-      jugadores: jugadores.map((j: any) => ({
-        apellido: j.apellido,
-        nombres: j.nombres,
-        docnro: j.docnro,
-        posicion: j.posicion,
-        capitan: j.capitan,
-        subcapitan: j.subcapitan,
-      })),
-    });
+    // Enviar mails SIN afectar la respuesta al usuario
+    try {
+      await enviarMailInscripcion({
+        emailEquipo: email,
+        nombreEquipo: equipo,
+        tipoTorneo,
+        jugadores: jugadores.map((j: any) => ({
+          apellido: j.apellido,
+          nombres: j.nombres,
+          docnro: j.docnro,
+          posicion: j.posicion,
+          capitan: j.capitan,
+          subcapitan: j.subcapitan,
+        })),
+      });
+    } catch (mailError) {
+      console.error(
+        "⚠️ Error enviando mail (inscripción guardada OK):",
+        mailError
+      );
+    }
 
     return res.status(201).json({
       message: "Inscripción realizada exitosamente.",

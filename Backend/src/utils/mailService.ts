@@ -107,5 +107,12 @@ export const enviarMailInscripcion = async ({
   };
 
   await transporter.sendMail(mailEquipo);
-  await transporter.sendMail(mailAdmin);
+
+  try {
+    if (ADMIN_EMAIL) {
+      await transporter.sendMail(mailAdmin);
+    }
+  } catch (adminMailError) {
+    console.error("⚠️ No se pudo enviar mail al admin:", adminMailError);
+  }
 };

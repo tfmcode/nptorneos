@@ -47,11 +47,11 @@ function Partidos({ idtorneo }: PartidosProps) {
   const initialFormData: Partido = {
     id: undefined,
     idzona: 0,
-    nrofecha: 1, // Valor por defecto más lógico
+    nrofecha: 1,
     fecha: "",
     horario: "",
     idsede: 0,
-    codtipo: 9, // "Zona" por defecto
+    codtipo: 9,
     idequipo1: 0,
     idequipo2: 0,
     codestado: 1,
@@ -81,7 +81,6 @@ function Partidos({ idtorneo }: PartidosProps) {
 
   const [equiposPartido, setEquiposPartido] = useState<ZonaEquipo[]>([]);
   const [horario, setHorario] = useState<string>("00:00");
-  // ✅ Estados para mantener los filtros persistentes
   const [persistentFilters, setPersistentFilters] = useState({
     idzona: 0,
     nrofecha: 1,
@@ -92,7 +91,7 @@ function Partidos({ idtorneo }: PartidosProps) {
 
   const { formData, setFormData, handleInputChange } = useCrudForm<Partido>({
     ...initialFormData,
-    ...persistentFilters, // ✅ Inicializar con filtros persistentes
+    ...persistentFilters,
   });
 
   useEffect(() => {
@@ -111,11 +110,17 @@ function Partidos({ idtorneo }: PartidosProps) {
     }
   }, [formData.fecha]);
 
-  // ✅ Función para validar duplicados
+  const partidosFiltradosPorZona = Array.isArray(partidos)
+    ? partidos.filter((partido) => partido.idzona === formData.idzona)
+    : [];
+
+  const partidosFiltradosPorFecha = partidosFiltradosPorZona.filter(
+    (partido) => partido.nrofecha === formData.nrofecha
+  );
+
   const validatePartido = (): string[] => {
     const errores: string[] = [];
 
-    // Validación básica
     if (!formData.idzona || formData.idzona === 0) {
       errores.push("• Seleccionar una zona");
     }
@@ -135,21 +140,16 @@ function Partidos({ idtorneo }: PartidosProps) {
       errores.push("• Seleccionar equipo visitante");
     }
 
-    // ✅ Validación: mismo equipo
     if (formData.idequipo1 === formData.idequipo2 && formData.idequipo1 !== 0) {
       errores.push("• No se puede crear un partido entre el mismo equipo");
     }
 
-    // ✅ Validación: equipo ya tiene partido en esa fecha
-    const partidosExistentes = partidos.filter(
-      (p) =>
-        p.nrofecha === formData.nrofecha &&
-        p.idzona === formData.idzona &&
-        p.id !== formData.id // Excluir el partido actual si estamos editando
+    const partidosEnFecha = partidosFiltradosPorZona.filter(
+      (p) => p.nrofecha === formData.nrofecha && p.id !== formData.id
     );
 
     const equiposOcupados = new Set<number>();
-    partidosExistentes.forEach((p) => {
+    partidosEnFecha.forEach((p) => {
       if (p.idequipo1) equiposOcupados.add(p.idequipo1);
       if (p.idequipo2) equiposOcupados.add(p.idequipo2);
     });
@@ -178,7 +178,6 @@ function Partidos({ idtorneo }: PartidosProps) {
   const handleSubmitPartido = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ Validar antes de enviar
     const errores = validatePartido();
     if (errores.length > 0) {
       dispatch(setZonasError(errores.join("\n")));
@@ -194,22 +193,19 @@ function Partidos({ idtorneo }: PartidosProps) {
       await dispatch(savePartidoThunk(id ? formData : partidoData)).unwrap();
       dispatch(fetchPartidosByZona(formData.idzona ?? 0));
 
-      // ✅ Mantener filtros persistentes, solo resetear equipos
       const newFormData = {
         ...initialFormData,
         idzona: formData.idzona,
         nrofecha: formData.nrofecha,
-        fecha: formData.fecha ? formData.fecha.split(" ")[0] : "", // Mantener fecha sin hora
+        fecha: formData.fecha ? formData.fecha.split(" ")[0] : "",
         idsede: formData.idsede,
         codtipo: formData.codtipo,
-        // Solo resetear equipos
         idequipo1: 0,
         idequipo2: 0,
       };
 
       setFormData(newFormData);
 
-      // ✅ Actualizar filtros persistentes
       setPersistentFilters({
         idzona: formData.idzona ?? 0,
         nrofecha: formData.nrofecha ?? 1,
@@ -227,15 +223,11 @@ function Partidos({ idtorneo }: PartidosProps) {
     dispatch(fetchPartidosByZona(formData.idzona ?? 0));
   };
 
-  // ✅ Filtrar equipos disponibles (excluir los que ya tienen partido en esa fecha)
   const getEquiposDisponibles = (): ZonaEquipo[] => {
     if (!formData.nrofecha || !formData.idzona) return equiposPartido;
 
-    const partidosEnFecha = partidos.filter(
-      (p) =>
-        p.nrofecha === formData.nrofecha &&
-        p.idzona === formData.idzona &&
-        p.id !== formData.id // Excluir el partido actual si estamos editando
+    const partidosEnFecha = partidosFiltradosPorZona.filter(
+      (p) => p.nrofecha === formData.nrofecha && p.id !== formData.id
     );
 
     const equiposOcupados = new Set<number>();
@@ -250,10 +242,6 @@ function Partidos({ idtorneo }: PartidosProps) {
   };
 
   const equiposDisponibles = getEquiposDisponibles();
-
-  const filteredPartidos = Array.isArray(partidos)
-    ? partidos.filter((partido) => partido.idzona === formData.idzona)
-    : [];
 
   return (
     <div>
@@ -271,9 +259,13 @@ function Partidos({ idtorneo }: PartidosProps) {
           },
           {
             name: "nrofecha",
-            type: "number",
-            value: formData.nrofecha ?? 0,
+            type: "select",
+            value: formData.nrofecha ?? 1,
             label: "Nro. Fecha",
+            options: Array.from({ length: 20 }, (_, i) => ({
+              value: i + 1,
+              label: `Fecha ${i + 1}`,
+            })),
           },
           {
             name: "fecha",
@@ -345,28 +337,30 @@ function Partidos({ idtorneo }: PartidosProps) {
 
       <StatusMessage loading={loading} error={error} />
 
-      <DataTable<Partido>
-        columns={partidosColumns}
-        data={Array.isArray(filteredPartidos) ? filteredPartidos : []}
-        onEdit={(row) => setFormData(row as Partido)}
-        onDelete={(row) => handleDeletePartido(row as Partido)}
-      />
-
-      {/* ✅ Mostrar información útil sobre equipos disponibles */}
-      {formData.nrofecha && formData.idzona && (
+      {formData.nrofecha && formData.idzona !== 0 && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-sm text-blue-700">
             <strong>Fecha {formData.nrofecha}:</strong>{" "}
             {equiposDisponibles.length} equipos disponibles
             {equiposDisponibles.length < equiposPartido.length && (
               <span className="text-orange-600 ml-2">
-                ({equiposPartido.length - equiposDisponibles.length} equipos ya
-                tienen partido programado)
+                ({equiposPartido.length - equiposDisponibles.length} ya tienen
+                partido)
               </span>
             )}
+            {" • "}
+            <strong>{partidosFiltradosPorFecha.length}</strong> partidos
+            programados
           </div>
         </div>
       )}
+
+      <DataTable<Partido>
+        columns={partidosColumns}
+        data={partidosFiltradosPorFecha}
+        onEdit={(row) => setFormData(row as Partido)}
+        onDelete={(row) => handleDeletePartido(row as Partido)}
+      />
     </div>
   );
 }

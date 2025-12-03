@@ -46,7 +46,6 @@ const TorneoPublic: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Zona global (default + controlada por tabs arriba)
   const [activeZone, setActiveZone] = useState<string>("");
 
   useEffect(() => {
@@ -55,7 +54,6 @@ const TorneoPublic: React.FC = () => {
       try {
         setLoading(true);
 
-        // ✅ Obtener datos del torneo, posiciones y sanciones
         const [data, posicionesData, sancionesData] = await Promise.all([
           getPublicTorneoById(Number(id)),
           getPosicionesByTorneoId(Number(id)),
@@ -64,17 +62,13 @@ const TorneoPublic: React.FC = () => {
 
         setTorneo(data.torneo ?? null);
 
-        // ✅ Las zonas ya vienen filtradas desde el backend (sin amistosas)
         const allZonas: Zona[] = data.zonas ?? [];
         setZonas(allZonas);
 
-        // ✅ Los partidos también vienen filtrados desde el backend
         setPartidos(data.partidos ?? []);
 
-        // ✅ Las sanciones
         setSanciones(sancionesData || []);
 
-        // ✅ POSICIONES por zona - ya vienen filtradas desde el backend
         const posicionesByZona: Record<string, Posicion[]> = {};
         posicionesData.forEach((pos) => {
           const zonaNombre = pos.zona_nombre ?? "SIN ZONA";
@@ -82,12 +76,11 @@ const TorneoPublic: React.FC = () => {
           posicionesByZona[zonaNombre].push(pos);
         });
 
-        // ✅ GOLEADORES (solo zonas públicas que ya vienen filtradas)
         const goleadoresByZona: Record<string, Goleador[]> = {};
         for (const zona of allZonas) {
           if (typeof zona.id === "number") {
             const goleadores = await getGoleadoresByZonaId(zona.id);
-            const key = zona.abrev ?? zona.nombre;
+            const key = zona.nombre ?? "SIN ZONA";
             goleadoresByZona[key] = goleadores.map((g, idx) => ({
               ...g,
               pos: idx + 1,
@@ -95,12 +88,11 @@ const TorneoPublic: React.FC = () => {
           }
         }
 
-        // ✅ TARJETAS (solo zonas públicas que ya vienen filtradas)
         const tarjetasByZona: Record<string, Card[]> = {};
         for (const zona of allZonas) {
           if (typeof zona.id === "number") {
             const sancionesTarjetas = await getSancionesPorZona(zona.id);
-            const key = zona.abrev ?? zona.nombre;
+            const key = zona.nombre ?? "SIN ZONA";
             tarjetasByZona[key] = sancionesTarjetas.map((s, idx) => ({
               pos: idx + 1,
               jugador: s.jugador,
@@ -116,7 +108,6 @@ const TorneoPublic: React.FC = () => {
         setScorers(goleadoresByZona);
         setCards(tarjetasByZona);
 
-        // ✅ Zona por defecto GLOBAL (preferimos ZONA/GRUPO A; si no, la primera)
         const posKeys = Object.keys(posicionesByZona).sort();
         const scKeys = Object.keys(goleadoresByZona).sort();
         const crKeys = Object.keys(tarjetasByZona).sort();
@@ -154,7 +145,7 @@ const TorneoPublic: React.FC = () => {
 
     return {
       id: p.id ?? 0,
-      zona: zonas.find((z) => z.id === p.idzona)?.abrev ?? "SIN ZONA",
+      zona: zonas.find((z) => z.id === p.idzona)?.nombre ?? "SIN ZONA",
       local:
         typeof p.nombre_equipo1 === "string" && p.nombre_equipo1.trim() !== ""
           ? p.nombre_equipo1
@@ -187,13 +178,11 @@ const TorneoPublic: React.FC = () => {
           ? p.nombre_sede
           : "SIN SEDE",
       nrofecha: p.nrofecha,
-      // ✅ AGREGADO: Fotos de los equipos desde el backend
       fotoLocal: p.foto_equipo1 ?? null,
       fotoVisitante: p.foto_equipo2 ?? null,
     };
   });
 
-  // ✅ CORREGIDO: Usar pos, sc, cr en lugar de posKeys, scKeys, crKeys
   const allZonesTabs = useMemo(() => {
     const pos = Object.keys(positions);
     const sc = Object.keys(scorers);
@@ -211,7 +200,6 @@ const TorneoPublic: React.FC = () => {
 
       <StatusMessage loading={loading} error={error} />
 
-      {/* 1) POSICIONES */}
       {allZonesTabs.length > 0 && Object.keys(positions).length > 0 && (
         <div className="mb-10">
           <h2 className="text-lg font-bold mb-4 text-center">POSICIONES</h2>
@@ -219,7 +207,6 @@ const TorneoPublic: React.FC = () => {
         </div>
       )}
 
-      {/* 2) FIXTURE */}
       {matchesFormateados.length > 0 && (
         <div className="mb-10">
           <h2 className="text-lg font-bold text-center mb-4">
@@ -237,7 +224,6 @@ const TorneoPublic: React.FC = () => {
         </div>
       )}
 
-      {/* 3) TARJETAS y GOLEADORES */}
       {(Object.keys(cards).length > 0 || Object.keys(scorers).length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           {Object.keys(cards).length > 0 && (
@@ -259,10 +245,8 @@ const TorneoPublic: React.FC = () => {
         </div>
       )}
 
-      {/* 4) SANCIONES */}
       <Sanctions sanciones={sanciones} />
 
-      {/* Sede / Mapa */}
       {torneo?.latitud && torneo?.longitud ? (
         <div className="border border-gray-300 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold mb-4">

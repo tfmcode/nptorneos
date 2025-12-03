@@ -15,6 +15,7 @@ import { equipoColumns } from "../../components/tables";
 import { Accordion, AccordionItem } from "../../components/common/Accordion";
 import DatosBasicos from "../../components/equipos/DatosBasicos";
 import Jugadores from "../../components/equipos/Jugadores";
+import TorneosEquipo from "../../components/equipos/TorneosEquipo";
 import { PlusCircleIcon } from "@heroicons/react/20/solid";
 
 const Equipos: React.FC = () => {
@@ -138,6 +139,11 @@ const Equipos: React.FC = () => {
             <AccordionItem title="Jugadores" defaultOpen={false}>
               <Jugadores idequipo={formData.id ?? 0} />
             </AccordionItem>
+            {formData.id && (
+              <AccordionItem title="Torneos" defaultOpen={false}>
+                <TorneosEquipo idequipo={formData.id} />
+              </AccordionItem>
+            )}
           </Accordion>
         </Modal>
       </div>

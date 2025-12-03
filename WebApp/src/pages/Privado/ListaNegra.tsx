@@ -146,7 +146,7 @@ const ListaNegraPage: React.FC = () => {
         />
 
         <SearchField
-          placeholder="Buscar por nombre o apellido"
+          placeholder="Buscar por nombre o dni"
           value={pendingSearchTerm}
           onChange={(e) => setPendingSearchTerm(e.target.value)}
           onSearch={handleSearch}

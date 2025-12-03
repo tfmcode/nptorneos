@@ -49,6 +49,9 @@ export const getAllJugadores = async (
   let params: any[];
 
   if (searchTerm) {
+    const normalizedSearch = searchTerm.trim().replace(/\s+/g, " ");
+    const searchPattern = `%${normalizedSearch}%`;
+
     totalQuery = `
       SELECT COUNT(*) 
       FROM jugadores 
@@ -56,7 +59,10 @@ export const getAllJugadores = async (
       AND (
         LOWER(nombres) LIKE LOWER($1) 
         OR LOWER(apellido) LIKE LOWER($1)
+        OR LOWER(CONCAT(apellido, ' ', nombres)) LIKE LOWER($1)
+        OR LOWER(CONCAT(nombres, ' ', apellido)) LIKE LOWER($1)
         OR CAST(docnro AS TEXT) LIKE $1
+        OR COALESCE(telefono, '') LIKE $1
       );`;
 
     jugadoresQuery = `
@@ -70,12 +76,15 @@ export const getAllJugadores = async (
       AND (
         LOWER(nombres) LIKE LOWER($1) 
         OR LOWER(apellido) LIKE LOWER($1)
+        OR LOWER(CONCAT(apellido, ' ', nombres)) LIKE LOWER($1)
+        OR LOWER(CONCAT(nombres, ' ', apellido)) LIKE LOWER($1)
         OR CAST(docnro AS TEXT) LIKE $1
+        OR COALESCE(telefono, '') LIKE $1
       )
-      ORDER BY fhcarga DESC 
+      ORDER BY apellido ASC, nombres ASC 
       LIMIT $2 OFFSET $3;`;
 
-    params = [`%${searchTerm}%`, limit, offset];
+    params = [searchPattern, limit, offset];
   } else {
     totalQuery = `SELECT COUNT(*) FROM jugadores WHERE fhbaja IS NULL;`;
     jugadoresQuery = `
@@ -93,7 +102,7 @@ export const getAllJugadores = async (
 
   const totalResult = await pool.query(
     totalQuery,
-    searchTerm ? [`%${searchTerm}%`] : []
+    searchTerm ? [`%${searchTerm.trim().replace(/\s+/g, " ")}%`] : []
   );
   const { rows } = await pool.query(jugadoresQuery, params);
 

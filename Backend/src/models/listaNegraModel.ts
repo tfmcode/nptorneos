@@ -19,15 +19,25 @@ export const getAllListaNegra = async (
 ): Promise<{ registros: IListaNegra[]; total: number }> => {
   const offset = (page - 1) * limit;
   const params: any[] = [];
+
   let baseQuery = `
-    SELECT ln.*, j.nombres, j.apellido
+    SELECT ln.*, j.nombres, j.apellido, j.docnro
     FROM listanegra ln
     INNER JOIN jugadores j ON j.id = ln.idjugador
     WHERE ln.fhbaja IS NULL`;
 
   if (searchTerm) {
-    baseQuery += ` AND (LOWER(j.nombres) LIKE LOWER($1) OR LOWER(j.apellido) LIKE LOWER($1))`;
-    params.push(`%${searchTerm}%`);
+    const normalizedSearch = searchTerm.trim().replace(/\s+/g, " ");
+    const likeParam = `%${normalizedSearch.toLowerCase()}%`;
+
+    baseQuery += ` AND (
+      LOWER(j.nombres) LIKE LOWER($1)
+      OR LOWER(j.apellido) LIKE LOWER($1)
+      OR LOWER(CONCAT(j.apellido, ' ', j.nombres)) LIKE LOWER($1)
+      OR LOWER(CONCAT(j.nombres, ' ', j.apellido)) LIKE LOWER($1)
+      OR CAST(j.docnro AS TEXT) LIKE $1
+    )`;
+    params.push(likeParam);
   }
 
   const totalQuery = `SELECT COUNT(*) FROM (${baseQuery}) AS countsub;`;

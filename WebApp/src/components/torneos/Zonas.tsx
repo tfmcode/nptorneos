@@ -174,7 +174,7 @@ function Zonas({ idtorneo }: ZonasProps) {
             value: formData.codfechaactual ?? 0,
             label: "Fecha Actual",
             options: [
-              ...Array.from({ length: 20 }, (_, i) => ({
+              ...Array.from({ length: formData.codcantfechas || 1 }, (_, i) => ({
                 value: i + 1,
                 label: (i + 1).toString(),
               })),

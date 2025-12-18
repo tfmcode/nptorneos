@@ -1,7 +1,5 @@
 import { pool } from "../config/db";
-import { createEquipo, getEquipoById } from "./equiposModel";
 import { IInscripcionJugador } from "./inscripcionesJugadoresModel";
-import { getTorneoById } from "./torneosModel";
 
 export interface IInscripcion {
   id?: number;
@@ -113,7 +111,6 @@ export const updateInscripcion = async (
   const values: any[] = [];
   let index = 1;
 
-  // Exclude computed fields that are not actual database columns
   const excludedFields = ["torneo"];
 
   for (const key in inscripcion) {
@@ -154,22 +151,141 @@ export const deleteInscripcion = async (id: number): Promise<boolean> => {
   }
 };
 
-/* export const procesarEquipo = async (
+const procesarJugadorPorDNI = async (
+  client: any,
+  jugador: IInscripcionJugador,
+  sigequipo: number
+): Promise<number> => {
+  const {
+    apellido,
+    nombres,
+    docnro,
+    fhnacimiento,
+    telefono,
+    email,
+    posicion,
+    facebook,
+    capitan,
+    subcapitan,
+  } = jugador;
+
+  const { rows: jugadorExistente } = await client.query(
+    `SELECT id, fhbaja FROM jugadores WHERE docnro = $1`,
+    [docnro]
+  );
+
+  let idjugador: number;
+
+  if (jugadorExistente.length > 0) {
+    idjugador = jugadorExistente[0].id;
+    const estaEliminado = jugadorExistente[0].fhbaja !== null;
+
+    if (estaEliminado) {
+      await client.query(
+        `UPDATE jugadores
+         SET telefono = COALESCE(NULLIF($1, ''), telefono),
+             email = COALESCE(NULLIF($2, ''), email),
+             facebook = COALESCE(NULLIF($3, ''), facebook),
+             fhbaja = NULL,
+             codestado = 1,
+             fhultmod = NOW()
+         WHERE id = $4`,
+        [telefono, email, facebook, idjugador]
+      );
+    } else {
+      await client.query(
+        `UPDATE jugadores
+         SET telefono = COALESCE(NULLIF($1, ''), telefono),
+             email = COALESCE(NULLIF($2, ''), email),
+             facebook = COALESCE(NULLIF($3, ''), facebook),
+             fhultmod = NOW()
+         WHERE id = $4`,
+        [telefono, email, facebook, idjugador]
+      );
+    }
+  } else {
+    const { rows: nuevoJugador } = await client.query(
+      `INSERT INTO jugadores (
+        nombres, apellido, docnro, fhnacimiento, telefono, 
+        email, facebook, posicion, codestado, fhcarga, fhultmod
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, NOW(), NOW())
+      RETURNING id`,
+      [
+        nombres,
+        apellido,
+        docnro,
+        fhnacimiento,
+        telefono,
+        email,
+        facebook,
+        posicion,
+      ]
+    );
+
+    idjugador = nuevoJugador[0].id;
+  }
+
+  if (capitan === 1) {
+    await client.query(
+      `UPDATE wequipos 
+       SET contacto = UPPER(CONCAT($1::text, ' ', $2::text)), 
+           emailcto = $3, 
+           telefonocto = $4
+       WHERE id = $5`,
+      [nombres, apellido, email, telefono, sigequipo]
+    );
+  }
+
+  if (subcapitan === 1) {
+    await client.query(`UPDATE wequipos SET celularcto = $1 WHERE id = $2`, [
+      telefono,
+      sigequipo,
+    ]);
+  }
+
+  const { rows: relacionExistente } = await client.query(
+    `SELECT id FROM wequipos_jugadores 
+     WHERE idequipo = $1 AND idjugador = $2 AND fhbaja IS NULL`,
+    [sigequipo, idjugador]
+  );
+
+  if (relacionExistente.length === 0) {
+    const camiseta = posicion && !isNaN(Number(posicion)) ? Number(posicion) : null;
+
+    await client.query(
+      `INSERT INTO wequipos_jugadores (
+        idjugador, idequipo, camiseta, capitan, subcapitan,
+        codtipo, codestado, fhcarga, idusuario
+      )
+      VALUES ($1, $2, $3, $4, $5, 1, 1, NOW(), 0)`,
+      [idjugador, sigequipo, camiseta, capitan, subcapitan]
+    );
+  }
+
+  return idjugador;
+};
+
+export const procesarEquipo = async (
   inscripcion: IInscripcion,
   jugadores: IInscripcionJugador[]
 ): Promise<{
   inscripcion: IInscripcion | null;
   jugadores: IInscripcionJugador[];
 }> => {
-  // VALIDACIÓN INICIAL: Verificar que el ID existe
   if (!inscripcion.id) {
     throw new Error("ID de inscripción requerido para procesar el equipo.");
   }
 
-  // VALIDACIÓN: Verificar que la inscripción no está ya procesada
+  const inscripcionId = inscripcion.id;
+
+  if (!jugadores || jugadores.length === 0) {
+    throw new Error("Se requiere al menos un jugador para procesar el equipo.");
+  }
+
   const { rows: inscripcionExistente } = await pool.query(
     `SELECT id, codestado FROM inscripciones WHERE id = $1 AND fhbaja IS NULL`,
-    [inscripcion.id]
+    [inscripcionId]
   );
 
   if (inscripcionExistente.length === 0) {
@@ -180,52 +296,40 @@ export const deleteInscripcion = async (id: number): Promise<boolean> => {
     throw new Error("Esta inscripción ya fue procesada anteriormente.");
   }
 
-  let sigequipo = 0;
-  let sigjugador = 0;
-  let nvalor_inscrip = 0;
-  let nvalor_fecha = 0;
-
-  // USAR TRANSACCIONES para evitar estados inconsistentes
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    // Update inscription with tournament and zone data
     await client.query(
       `UPDATE inscripciones SET idtorneo = $1, idzona = $2 WHERE id = $3`,
-      [
-        inscripcion.idtorneo || null,
-        inscripcion.idzona || null,
-        inscripcion.id, // ✅ Ahora sabemos que existe
-      ]
+      [inscripcion.idtorneo || null, inscripcion.idzona || null, inscripcionId]
     );
 
-    // Use photo from inscription object
     const txfoto = inscripcion.foto || "";
+    let sigequipo = 0;
 
-    // Add Team if not associated with any
-    if ((inscripcion.idequipoasoc || 0) === 0) {
-      // Create new team and get the auto-generated ID
+    if (!inscripcion.idequipoasoc || inscripcion.idequipoasoc === 0) {
       const { rows: newTeamRows } = await client.query(
-        `INSERT INTO wequipos (nombre, abrev, contacto, emailcto, telefonocto, celularcto, contrasenia, 
-         buenafe, codcateg, coddeporte, iniciales, codestado, archivoubic, archivosize, archivonom, 
-         idsede, fhcarga, fhbaja, idusuario, foto, observ, saldodeposito)
-         VALUES ($1, $2, '', '', '', '', '', 1, 1, 4, '', 1, '', 0, '', 1, NOW(), NULL, 0, $3, '', 0)
-         RETURNING id`,
+        `INSERT INTO wequipos (
+          nombre, abrev, contacto, emailcto, telefonocto, celularcto, 
+          contrasenia, buenafe, codcateg, coddeporte, iniciales, 
+          codestado, archivoubic, archivosize, archivonom, idsede, 
+          fhcarga, idusuario, foto, observ, saldodeposito
+        )
+        VALUES ($1, $2, '', '', '', '', '', 1, 1, 4, '', 1, '', 0, '', 1, NOW(), 0, $3, '', 0)
+        RETURNING id`,
         [inscripcion.equipo || null, inscripcion.equipo || null, txfoto]
       );
       sigequipo = newTeamRows[0].id;
     } else {
-      sigequipo = inscripcion.idequipoasoc || 0;
+      sigequipo = inscripcion.idequipoasoc;
 
-      // Update inscription with associated team
       await client.query(
         `UPDATE inscripciones SET idequipoasoc = $1 WHERE id = $2`,
-        [inscripcion.idequipoasoc || null, inscripcion.id]
+        [inscripcion.idequipoasoc, inscripcionId]
       );
 
-      // Update team photo if exists
       if (txfoto !== "") {
         await client.query(`UPDATE wequipos SET foto = $1 WHERE id = $2`, [
           txfoto,
@@ -234,27 +338,28 @@ export const deleteInscripcion = async (id: number): Promise<boolean> => {
       }
     }
 
-    // Add team to zone if not already inscribed
     const { rows: existingZoneEquipo } = await client.query(
-      `SELECT * FROM zonas_equipos 
+      `SELECT id FROM zonas_equipos 
        WHERE idtorneo = $1 AND idzona = $2 AND idequipo = $3 AND fhbaja IS NULL`,
       [inscripcion.idtorneo || null, inscripcion.idzona || null, sigequipo]
     );
 
     if (existingZoneEquipo.length === 0) {
-      // Get tournament values
       const { rows: torneoRows } = await client.query(
         `SELECT valor_insc, valor_fecha FROM wtorneos WHERE id = $1`,
         [inscripcion.idtorneo || null]
       );
 
-      nvalor_inscrip = torneoRows.length > 0 ? torneoRows[0].valor_insc : 0;
-      nvalor_fecha = torneoRows.length > 0 ? torneoRows[0].valor_fecha : 0;
+      const nvalor_inscrip =
+        torneoRows.length > 0 ? torneoRows[0].valor_insc : 0;
+      const nvalor_fecha =
+        torneoRows.length > 0 ? torneoRows[0].valor_fecha : 0;
 
-      // Insert into zonas_equipos
       await client.query(
-        `INSERT INTO zonas_equipos (idtorneo, idzona, idequipo, codestado, fhcarga, fhbaja, idusuario, valor_insc, valor_fecha)
-         VALUES ($1, $2, $3, 1, NOW(), NULL, 0, $4, $5)`,
+        `INSERT INTO zonas_equipos (
+          idtorneo, idzona, idequipo, codestado, fhcarga, idusuario, valor_insc, valor_fecha
+        )
+        VALUES ($1, $2, $3, 1, NOW(), 0, $4, $5)`,
         [
           inscripcion.idtorneo || null,
           inscripcion.idzona || null,
@@ -265,386 +370,13 @@ export const deleteInscripcion = async (id: number): Promise<boolean> => {
       );
     }
 
-    // Update existing inscription players data
     for (const jugador of jugadores) {
-      await client.query(
-        `UPDATE inscripciones_jug 
-         SET apellido = $1, nombres = $2, docnro = $3, fhnacimiento = $4, 
-             telefono = $5, email = $6, posicion = $7, facebook = $8
-         WHERE idinscrip = $9 AND orden = $10`,
-        [
-          jugador.apellido,
-          jugador.nombres,
-          jugador.docnro,
-          jugador.fhnacimiento,
-          jugador.telefono,
-          jugador.email,
-          jugador.posicion,
-          jugador.facebook,
-          inscripcion.id, // ✅ Ahora sabemos que existe
-          jugador.orden,
-        ]
-      );
+      await procesarJugadorPorDNI(client, jugador, sigequipo);
     }
 
-    // Process each player
-    for (const jugador of jugadores) {
-      const {
-        apellido,
-        nombres,
-        docnro,
-        fhnacimiento,
-        telefono,
-        email,
-        posicion,
-        facebook,
-        capitan,
-        subcapitan,
-      } = jugador;
-
-      // Add player if doesn't exist
-      const { rows: existingPlayerRows } = await client.query(
-        `SELECT id FROM jugadores WHERE docnro = $1 AND fhbaja IS NULL`,
-        [docnro]
-      );
-
-      if (existingPlayerRows.length === 0) {
-        // Create new player and get auto-generated ID
-        const { rows: newPlayerRows } = await client.query(
-          `INSERT INTO jugadores (nombres, apellido, fhnacimiento, docnro, telefono, email, facebook,
-           twitter, peso, altura, apodo, posicion, categoria, piernahabil, codestado, fhcarga, fhbaja, fhultmod, usrultmod, foto)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, '', '', '', '', '', '', '', 1, NOW(), NULL, NOW(), 0, '')
-           RETURNING id`,
-          [nombres, apellido, fhnacimiento, docnro, telefono, email, facebook]
-        );
-        sigjugador = newPlayerRows[0].id;
-      } else {
-        sigjugador = existingPlayerRows[0].id;
-      }
-
-      // Update team contact info if captain
-      if (capitan === 1) {
-        await client.query(
-          `UPDATE wequipos 
-           SET contacto = UPPER(CONCAT($1::text, ' ', $2::text)), emailcto = $3::text, telefonocto = $4::text
-           WHERE id = $5::integer`,
-          [
-            String(nombres || ""),
-            String(apellido || ""),
-            String(inscripcion.email || ""),
-            String(telefono || ""),
-            Number(sigequipo || 0),
-          ]
-        );
-      }
-
-      // Update team mobile if sub-captain
-      if (subcapitan === 1) {
-        await client.query(
-          `UPDATE wequipos SET celularcto = $1 WHERE id = $2`,
-          [telefono, sigequipo]
-        );
-      }
-
-      // Add team/player relationship if doesn't exist
-      const { rows: existingTeamPlayerRows } = await client.query(
-        `SELECT * FROM wequipos_jugadores 
-         WHERE idequipo = $1 AND idjugador = $2 AND fhbaja IS NULL`,
-        [sigequipo, sigjugador]
-      );
-
-      if (existingTeamPlayerRows.length === 0) {
-        // Create team-player relationship with auto-generated ID
-        await client.query(
-          `INSERT INTO wequipos_jugadores (idjugador, idequipo, camiseta, capitan, subcapitan, codtipo, codestado, fhcarga, fhbaja, idusuario)
-           VALUES ($1, $2, $3, $4, $5, 1, 1, NOW(), NULL, 0)`,
-          [sigjugador, sigequipo, posicion || null, capitan, subcapitan]
-        );
-      }
-    }
-
-    // 🔥 CRÍTICO: Actualizar codestado a 1 y verificar que se actualizó
-    const { rows: updatedInscripcion } = await client.query(
-      `UPDATE inscripciones SET codestado = 1 WHERE id = $1 RETURNING codestado`,
-      [inscripcion.id]
-    );
-
-    if (
-      updatedInscripcion.length === 0 ||
-      updatedInscripcion[0].codestado !== 1
-    ) {
-      throw new Error(
-        "No se pudo actualizar el estado de la inscripción a 'procesado'."
-      );
-    }
-
-    // ✅ Confirmar todas las operaciones
-    await client.query("COMMIT");
-
-    // Get final inscription data
-    const inscripcionResult = await getInscripcionById(inscripcion.id);
-
-    return {
-      inscripcion: inscripcionResult,
-      jugadores,
-    };
-  } catch (error) {
-    // 🚨 Revertir TODAS las operaciones si algo falla
-    await client.query("ROLLBACK");
-    const errorMessage =
-      error instanceof Error ? error.message : "Error desconocido";
-    throw new Error(errorMessage);
-  } finally {
-    // Siempre liberar la conexión
-    client.release();
-  }
-};
- */
-
-// ===== AGREGAR AL ARCHIVO: Backend/src/models/inscripcionesModel.ts =====
-// Agregar estas funciones antes de procesarEquipo()
-
-// Función auxiliar para validar jugadores
-const validarJugadores = (jugadores: IInscripcionJugador[]): string[] => {
-  const errores: string[] = [];
-  const dnis = new Set<number>();
-  let capitanes = 0;
-
-  jugadores.forEach((jugador, index) => {
-    // Validar campos obligatorios
-    if (!jugador.apellido?.trim()) {
-      errores.push(`Jugador ${index + 1}: Apellido es obligatorio`);
-    }
-    if (!jugador.nombres?.trim()) {
-      errores.push(`Jugador ${index + 1}: Nombres es obligatorio`);
-    }
-    if (!jugador.docnro) {
-      errores.push(`Jugador ${index + 1}: DNI es obligatorio`);
-    }
-    if (!jugador.fhnacimiento) {
-      errores.push(`Jugador ${index + 1}: Fecha de nacimiento es obligatoria`);
-    }
-    if (!jugador.telefono?.trim()) {
-      errores.push(`Jugador ${index + 1}: Teléfono es obligatorio`);
-    }
-
-    // Validar DNI único
-    if (jugador.docnro) {
-      if (dnis.has(jugador.docnro)) {
-        errores.push(
-          `Jugador ${index + 1}: DNI ${jugador.docnro} está duplicado`
-        );
-      } else {
-        dnis.add(jugador.docnro);
-      }
-    }
-
-    // Contar capitanes
-    if (jugador.capitan === 1) {
-      capitanes++;
-    }
-  });
-
-  // Validar capitán único
-  if (capitanes === 0) {
-    errores.push("Debe asignar exactamente un capitán");
-  } else if (capitanes > 1) {
-    errores.push("Solo puede haber un capitán por equipo");
-  }
-
-  return errores;
-};
-
-// Función para procesar jugador existente
-const procesarJugadorExistente = async (
-  client: any,
-  jugador: IInscripcionJugador,
-  inscripcionId: number
-): Promise<{
-  idjugador: number;
-  jugadorexistente: boolean;
-  sancion: boolean;
-  listanegra: boolean;
-}> => {
-  // Verificar si el jugador ya existe por DNI
-  const { rows: jugadorExistente } = await client.query(
-    "SELECT * FROM jugadores WHERE docnro = $1 AND fhbaja IS NULL",
-    [jugador.docnro]
-  );
-
-  let idjugador: number;
-  let jugadorexistente = false;
-  let sancion = false;
-  let listanegra = false;
-
-  if (jugadorExistente.length > 0) {
-    const jugadorDB = jugadorExistente[0];
-    idjugador = jugadorDB.id;
-    jugadorexistente = true;
-
-    // Verificar sanciones activas
-    const { rows: sancionRows } = await client.query(
-      `
-      SELECT COUNT(*) as count 
-      FROM sanciones 
-      WHERE idjugador = $1 AND fhbaja IS NULL 
-      AND (fechafin IS NULL OR fechafin > NOW())
-    `,
-      [jugadorDB.id]
-    );
-
-    sancion = parseInt(sancionRows[0].count) > 0;
-
-    // Verificar lista negra
-    const { rows: listanegraRows } = await client.query(
-      `
-      SELECT COUNT(*) as count 
-      FROM listanegra 
-      WHERE idjugador = $1 AND fhbaja IS NULL
-    `,
-      [jugadorDB.id]
-    );
-
-    listanegra = parseInt(listanegraRows[0].count) > 0;
-
-    // Actualizar solo los datos de contacto del jugador existente
-    await client.query(
-      `
-      UPDATE jugadores 
-      SET telefono = COALESCE(NULLIF($1, ''), telefono),
-          email = COALESCE(NULLIF($2, ''), email),
-          facebook = COALESCE(NULLIF($3, ''), facebook),
-          fhultmod = NOW()
-      WHERE id = $4
-    `,
-      [jugador.telefono, jugador.email, jugador.facebook, jugadorDB.id]
-    );
-
-    // Actualizar inscripciones_jug con datos del jugador existente pero info de contacto nueva
-    await client.query(
-      `
-      UPDATE inscripciones_jug 
-      SET apellido = $1,
-          nombres = $2,
-          telefono = COALESCE(NULLIF($3, ''), $1),
-          email = COALESCE(NULLIF($4, ''), email),
-          facebook = COALESCE(NULLIF($5, ''), facebook),
-          jugadorexistente = true,
-          sancion = $6,
-          listanegra = $7,
-          idjugador = $8
-      WHERE idinscrip = $9 AND docnro = $10
-    `,
-      [
-        jugadorDB.apellido, // Mantener apellido original
-        jugadorDB.nombres, // Mantener nombres original
-        jugador.telefono, // Actualizar teléfono
-        jugador.email, // Actualizar email
-        jugador.facebook, // Actualizar facebook
-        sancion,
-        listanegra,
-        jugadorDB.id,
-        inscripcionId,
-        jugador.docnro,
-      ]
-    );
-  } else {
-    // Crear nuevo jugador
-    const { rows: nuevoJugador } = await client.query(
-      `
-      INSERT INTO jugadores (
-        nombres, apellido, docnro, fhnacimiento, telefono, 
-        email, facebook, codestado, fhcarga, fhultmod
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW(), NOW())
-      RETURNING id
-    `,
-      [
-        jugador.nombres,
-        jugador.apellido,
-        jugador.docnro,
-        jugador.fhnacimiento,
-        jugador.telefono,
-        jugador.email,
-        jugador.facebook,
-      ]
-    );
-
-    idjugador = nuevoJugador[0].id;
-
-    // Actualizar inscripciones_jug
-    await client.query(
-      `
-      UPDATE inscripciones_jug 
-      SET jugadorexistente = false,
-          sancion = false,
-          listanegra = false,
-          idjugador = $1
-      WHERE idinscrip = $2 AND docnro = $3
-    `,
-      [idjugador, inscripcionId, jugador.docnro]
-    );
-  }
-
-  return { idjugador, jugadorexistente, sancion, listanegra };
-};
-
-// ===== ACTUALIZAR LA FUNCIÓN procesarEquipo() =====
-// Reemplazar la función procesarEquipo existente con esta versión mejorada:
-
-export const procesarEquipo = async (
-  inscripcion: IInscripcion,
-  jugadores: IInscripcionJugador[]
-): Promise<{
-  inscripcion: IInscripcion | null;
-  jugadores: IInscripcionJugador[];
-}> => {
-  // VALIDACIONES INICIALES
-  if (!inscripcion.id) {
-    throw new Error("ID de inscripción requerido para procesar el equipo.");
-  }
-
-  if (!jugadores || jugadores.length === 0) {
-    throw new Error("Se requiere al menos un jugador para procesar el equipo.");
-  }
-
-  // Validar jugadores
-  const erroresValidacion = validarJugadores(jugadores);
-  if (erroresValidacion.length > 0) {
-    throw new Error(`Errores de validación: ${erroresValidacion.join(". ")}`);
-  }
-
-  // Verificar que la inscripción existe y no está procesada
-  const { rows: inscripcionExistente } = await pool.query(
-    `SELECT id, codestado FROM inscripciones WHERE id = $1 AND fhbaja IS NULL`,
-    [inscripcion.id]
-  );
-
-  if (inscripcionExistente.length === 0) {
-    throw new Error("La inscripción no existe o fue eliminada.");
-  }
-
-  if (inscripcionExistente[0].codestado === 1) {
-    throw new Error("Esta inscripción ya fue procesada anteriormente.");
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    // Procesar cada jugador y verificar si existe
-    for (const jugador of jugadores) {
-      await procesarJugadorExistente(client, jugador, inscripcion.id);
-    }
-
-    // Resto de la lógica existente...
-    // [Mantener toda la lógica de equipos, zonas, etc. que ya tienes]
-
-    // Actualizar estado de la inscripción
     const { rows: inscripcionActualizada } = await client.query(
-      `UPDATE inscripciones SET codestado = 1, fhultmod = NOW() WHERE id = $1 RETURNING *`,
-      [inscripcion.id]
+      `UPDATE inscripciones SET codestado = 1 WHERE id = $1 RETURNING *`,
+      [inscripcionId]
     );
 
     if (
@@ -658,15 +390,20 @@ export const procesarEquipo = async (
 
     await client.query("COMMIT");
 
-    // Obtener datos finales
-    const inscripcionFinal = await getInscripcionById(inscripcion.id);
-    const { rows: jugadoresFinales } = await client.query(
-      `
-      SELECT * FROM inscripciones_jug 
-      WHERE idinscrip = $1 AND fhbaja IS NULL 
-      ORDER BY orden ASC
-    `,
-      [inscripcion.id]
+    const inscripcionFinal = await getInscripcionById(inscripcionId);
+
+    const { rows: jugadoresFinales } = await pool.query(
+      `SELECT ij.*,
+        CASE WHEN j.id IS NOT NULL THEN TRUE ELSE FALSE END AS jugadorexistente,
+        CASE WHEN s.id IS NOT NULL AND s.fechafin > NOW() THEN TRUE ELSE FALSE END AS sancion,
+        CASE WHEN ln.id IS NOT NULL THEN TRUE ELSE FALSE END AS listanegra
+       FROM inscripciones_jug ij
+       LEFT JOIN jugadores j ON ij.docnro = j.docnro AND j.fhbaja IS NULL
+       LEFT JOIN sanciones s ON j.id = s.idjugador AND s.fhbaja IS NULL
+       LEFT JOIN listanegra ln ON j.id = ln.idjugador AND ln.fhbaja IS NULL
+       WHERE ij.idinscrip = $1 AND ij.fhbaja IS NULL
+       ORDER BY ij.orden ASC`,
+      [inscripcionId]
     );
 
     return {

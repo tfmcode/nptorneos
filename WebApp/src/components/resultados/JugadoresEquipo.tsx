@@ -35,9 +35,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   idequipo,
   nombreEquipo,
 }) => {
-  const [jugadoresPartido, setJugadoresPartido] = useState<
-    PartidoJugadorExtendido[]
-  >([]);
+  const [jugadoresPartido, setJugadoresPartido] = useState<PartidoJugadorExtendido[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddPlayer, setShowAddPlayer] = useState<boolean>(false);
@@ -195,15 +193,15 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
   const handleCheckboxChange = (jugador: PartidoJugadorExtendido) => {
     if (jugador.listanegra === 1) return;
 
-    if (!jugador.jugo) {
-      if (!jugador.camiseta || jugador.camiseta.trim() === "") {
-        showPopup(
-          "warning",
-          "Debe asignar un número de camiseta antes de marcar que jugó"
-        );
-        return;
-      }
+    if (!jugador.jugo && (!jugador.camiseta || jugador.camiseta.trim() === "")) {
+      showPopup(
+        "warning",
+        "Debe asignar un número de camiseta antes de marcar que jugó"
+      );
+      return;
+    }
 
+    if (!jugador.jugo && jugador.camiseta && jugador.camiseta.trim() !== "") {
       const jugadoresConMismaCamiseta = jugadoresPartido.filter(
         (j) =>
           j.camiseta === jugador.camiseta &&
@@ -225,7 +223,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     handleUpdate(jugador, "jugo", !jugador.jugo);
   };
 
-  const handleInputChange = (
+  const handleInputChange = async (
     jugador: PartidoJugadorExtendido,
     campo: keyof PartidoJugadorInput,
     valor: string
@@ -238,26 +236,58 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
       const numero = valor.trim();
 
       if (numero === "-") {
-        // El usuario tipeó el guion para borrar
         valorCorregido = "";
       } else if (numero === "") {
-        // El usuario borró el contenido del input
         valorCorregido = "";
       } else {
         const numValue = Number(numero);
 
-        // Permite solo números válidos entre 0 y 999
         if (isNaN(numValue) || numValue < 0 || numValue > 999) {
-          // Si el input no es un número válido, salimos.
-          // Esto evita que se guarden letras o números muy grandes.
           return;
         }
 
-        // Si es un número válido, lo guardamos como string para el campo camiseta
         valorCorregido = numero;
       }
+
+      if (valorCorregido === "" && jugador.camiseta && jugador.camiseta.trim() !== "") {
+        try {
+          setError(null);
+
+          const input: PartidoJugadorInput = {
+            idjugador: jugador.idjugador,
+            jugo: false,
+            camiseta: "",
+            goles: 0,
+            amarilla: 0,
+            azul: 0,
+            roja: 0,
+            fhcarga: new Date().toISOString(),
+            idusuario: 1,
+          };
+
+          await savePartidoJugador(idpartido, idequipo, input);
+
+          setJugadoresPartido((prev) =>
+            prev.map((j) =>
+              j.idjugador === jugador.idjugador ? { ...j, ...input } : j
+            )
+          );
+
+          showPopup(
+            "warning",
+            "Se borró la camiseta. Se desmarcó 'Jugó' y se resetearon las estadísticas."
+          );
+        } catch (err) {
+          console.error("Error al resetear jugador:", err);
+          setError(
+            `Error al resetear jugador: ${
+              err instanceof Error ? err.message : "Error desconocido"
+            }`
+          );
+        }
+        return;
+      }
     } else {
-      // Lógica para estadísticas (Goles, Tarjetas)
       const numValue = valor === "" ? 0 : Number(valor);
       if (isNaN(numValue) || numValue < 0) return;
 
@@ -569,6 +599,11 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
     );
   };
 
+  const isJugoEnabled = (jugador: PartidoJugadorExtendido): boolean => {
+    if (jugador.listanegra === 1) return false;
+    return jugador.camiseta !== undefined && jugador.camiseta.trim() !== "";
+  };
+
   const isStatsDisabled = (jugador: PartidoJugadorExtendido): boolean => {
     if (jugador.listanegra === 1) return true;
     if (!jugador.jugo) return true;
@@ -847,6 +882,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                   {sortedJugadores.map((j) => {
                     const isDisabled = j.listanegra === 1;
                     const statsDisabled = isStatsDisabled(j);
+                    const jugoEnabled = isJugoEnabled(j);
 
                     return (
                       <tr
@@ -866,10 +902,15 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                             type="checkbox"
                             checked={j.jugo && !isDisabled}
                             onChange={() => handleCheckboxChange(j)}
-                            disabled={isDisabled || loading}
+                            disabled={isDisabled || loading || !jugoEnabled}
                             className={`${
-                              isDisabled ? "cursor-not-allowed" : ""
+                              isDisabled || !jugoEnabled ? "cursor-not-allowed opacity-50" : ""
                             }`}
+                            title={
+                              !jugoEnabled && !isDisabled
+                                ? "Primero debe asignar un número de camiseta"
+                                : ""
+                            }
                           />
                         </td>
                         <td className="px-2 py-2 text-center">
@@ -897,7 +938,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                           {j.docnro}
                         </td>
                         <td className="px-2 py-2">
-                          {/* CAMISETA CORREGIDA (Desktop) */}
                           <input
                             type="text"
                             value={j.camiseta}
@@ -1042,6 +1082,7 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
             {sortedJugadores.map((j) => {
               const isDisabled = j.listanegra === 1;
               const statsDisabled = isStatsDisabled(j);
+              const jugoEnabled = isJugoEnabled(j);
 
               return (
                 <div
@@ -1107,7 +1148,6 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                       <label className="text-xs font-medium block mb-1">
                         N° Camiseta
                       </label>
-                      {/* CAMISETA CORREGIDA (Mobile) */}
                       <input
                         type="text"
                         value={j.camiseta}
@@ -1140,8 +1180,13 @@ const JugadoresEquipo: React.FC<JugadoresEquipoProps> = ({
                           type="checkbox"
                           checked={j.jugo && !isDisabled}
                           onChange={() => handleCheckboxChange(j)}
-                          disabled={isDisabled || loading}
-                          className={isDisabled ? "cursor-not-allowed" : ""}
+                          disabled={isDisabled || loading || !jugoEnabled}
+                          className={isDisabled || !jugoEnabled ? "cursor-not-allowed opacity-50" : ""}
+                          title={
+                            !jugoEnabled && !isDisabled
+                              ? "Primero debe asignar un número de camiseta"
+                              : ""
+                          }
                         />
                         <span className="text-xs font-medium">Jugó</span>
                       </label>

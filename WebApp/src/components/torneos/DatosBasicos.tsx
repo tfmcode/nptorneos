@@ -3,7 +3,6 @@ import {
   fetchCampeonatos,
   fetchCampeonatosGaleria,
 } from "../../store/slices/campeonatoSlice";
-import { fetchCodificadores } from "../../store/slices/codificadorSlice";
 import { fetchSedes } from "../../store/slices/sedeSlice";
 import { Torneo } from "../../types/torneos";
 import DynamicForm from "../forms/DynamicForm";
@@ -31,9 +30,6 @@ function DatosBasicos({
     (state: RootState) => state.campeonatos
   );
   const { sedes } = useSelector((state: RootState) => state.sedes);
-  const { codificadores } = useSelector(
-    (state: RootState) => state.codificadores
-  );
 
   const [torneosPadre, setTorneosPadre] = useState<Torneo[]>([]);
 
@@ -80,7 +76,6 @@ function DatosBasicos({
     dispatch(fetchCampeonatos());
     dispatch(fetchCampeonatosGaleria());
     dispatch(fetchSedes());
-    dispatch(fetchCodificadores());
   }, [dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -202,12 +197,15 @@ function DatosBasicos({
           {
             name: "idpadre",
             type: "select",
-            options: (Array.isArray(torneosPadre) ? torneosPadre : []).map(
-              (torneo) => ({
-                label: torneo.nombre,
-                value: torneo.id ?? 1,
-              })
-            ),
+            options: [
+              { label: "Sin torneo padre", value: 0 },
+              ...(Array.isArray(torneosPadre) ? torneosPadre : []).map(
+                (torneo) => ({
+                  label: torneo.nombre,
+                  value: torneo.id ?? 1,
+                })
+              ),
+            ],
             value: formData.idpadre ?? 0,
             label: "Torneo Padre",
           },
@@ -230,16 +228,14 @@ function DatosBasicos({
           {
             name: "codtipo",
             type: "select",
-            options: codificadores
-              .filter(
-                (codificador) =>
-                  codificador.habilitado === "1" &&
-                  codificador.idcodificador === 3
-              )
-              .map((codificador) => ({
-                label: codificador.descripcion ?? "",
-                value: codificador.id ?? 1,
-              })),
+            options: [
+              { label: "Seleccionar tipo", value: 0 },
+              { label: "Futbol 5", value: 5 },
+              { label: "Futbol 8", value: 8 },
+              { label: "Futbol 9", value: 9 },
+              { label: "Futbol 11", value: 11 },
+              { label: "Femenino", value: 6 },
+            ],
             value: formData.codtipo ?? 0,
             label: "Tipo de Torneo",
           },

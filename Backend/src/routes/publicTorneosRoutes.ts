@@ -27,7 +27,35 @@ router.get(
       return res.status(404).json({ message: "Torneo no encontrado." });
     }
 
-    res.json(result);
+    // ✅ Buscar torneos hijos
+    const { rows: torneosHijos } = await pool.query(
+      `SELECT id FROM wtorneos 
+       WHERE idpadre = $1 
+         AND fhbaja IS NULL 
+         AND codestado = 1
+       ORDER BY nombre ASC`,
+      [id]
+    );
+
+    // ✅ Para cada hijo, traer sus datos completos
+    const hijosData = [];
+    for (const hijo of torneosHijos) {
+      const { rows: hijoRows } = await pool.query(
+        `SELECT get_torneo_publico($1) AS data`,
+        [hijo.id]
+      );
+      if (hijoRows[0]?.data) {
+        hijosData.push({
+          ...hijoRows[0].data,
+          es_hijo: true,
+        });
+      }
+    }
+
+    res.json({
+      ...result,
+      torneos_hijos: hijosData,
+    });
   })
 );
 
@@ -90,7 +118,6 @@ router.get(
   })
 );
 
-// ✅ ENDPOINT CORREGIDO - Usa la nueva función que filtra zonas amistosas
 router.get(
   "/:id/posiciones",
   [
@@ -102,7 +129,6 @@ router.get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    // ✅ Usar la nueva función que ya filtra zonas amistosas
     const { rows } = await pool.query(
       `SELECT * FROM get_posiciones_por_torneo($1)`,
       [id]

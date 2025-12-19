@@ -12,7 +12,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "https://nptorneos.com.ar";
 
-interface PublicTorneo extends Torneo {
+export interface PublicTorneo extends Torneo {
   sede_nombre: string | null;
   domicilio: string | null;
   localidad: string | null;
@@ -21,11 +21,12 @@ interface PublicTorneo extends Torneo {
   longitud: string | null;
 }
 
-interface PublicTorneoResponse {
+export interface PublicTorneoResponse {
   torneo: PublicTorneo;
   zonas: Zona[];
   partidos: Partido[];
   sanciones: Sancion[];
+  torneos_hijos?: PublicTorneoResponse[];
 }
 
 export const getPublicTorneoById = async (

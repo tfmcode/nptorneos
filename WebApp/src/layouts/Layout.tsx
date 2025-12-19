@@ -2,7 +2,8 @@ import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Navbar } from "./navbar/Navbar";
 import { Footer } from "./footer/Footer";
-import { EPublicRoutes } from "../models"; // Asegúrate de que este enum esté correctamente definido
+import { EPublicRoutes } from "../models";
+import WhatsAppButton from "../components/common/WhatsAppButton";
 
 const Layout: React.FC = () => {
   const location = useLocation();
@@ -13,8 +14,8 @@ const Layout: React.FC = () => {
       <div>
         <Outlet />
       </div>
-      {/* Condicional para ocultar el Footer en la ruta específica */}
       {location.pathname !== EPublicRoutes.CONCENTS && <Footer />}
+      <WhatsAppButton />
     </>
   );
 };

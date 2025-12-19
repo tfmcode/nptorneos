@@ -39,9 +39,9 @@ export const resultadoColumns = [
   },
   {
     header: "Fecha",
-    accessor: "fhcarga" as keyof Partido,
+    accessor: "fecha" as keyof Partido,
     render: (partido: Partido) =>
-      partido.fhcarga ? new Date(partido.fhcarga).toLocaleDateString() : "",
+      partido.fecha ? new Date(partido.fecha).toLocaleDateString() : "",
   },
   {
     header: "Sede",

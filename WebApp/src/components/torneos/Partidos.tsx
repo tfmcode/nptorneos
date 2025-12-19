@@ -110,6 +110,9 @@ function Partidos({ idtorneo }: PartidosProps) {
     }
   }, [formData.fecha]);
 
+  const zonaSeleccionada = zonas.find((z) => z.id === formData.idzona);
+  const cantidadFechasZona = zonaSeleccionada?.codcantfechas ?? 20;
+
   const partidosFiltradosPorZona = Array.isArray(partidos)
     ? partidos.filter((partido) => partido.idzona === formData.idzona)
     : [];
@@ -126,6 +129,11 @@ function Partidos({ idtorneo }: PartidosProps) {
     }
     if (!formData.nrofecha || formData.nrofecha === 0) {
       errores.push("• Ingresar el número de fecha");
+    }
+    if (formData.nrofecha && formData.nrofecha > cantidadFechasZona) {
+      errores.push(
+        `• El número de fecha no puede ser mayor a ${cantidadFechasZona} (total de fechas de la zona)`
+      );
     }
     if (!formData.fecha) {
       errores.push("• Ingresar la fecha del partido");
@@ -262,7 +270,7 @@ function Partidos({ idtorneo }: PartidosProps) {
             type: "select",
             value: formData.nrofecha ?? 1,
             label: "Nro. Fecha",
-            options: Array.from({ length: 20 }, (_, i) => ({
+            options: Array.from({ length: cantidadFechasZona }, (_, i) => ({
               value: i + 1,
               label: `Fecha ${i + 1}`,
             })),
@@ -340,6 +348,10 @@ function Partidos({ idtorneo }: PartidosProps) {
       {formData.nrofecha && formData.idzona !== 0 && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-sm text-blue-700">
+            <strong>Zona:</strong> {zonaSeleccionada?.nombre}
+            {" • "}
+            <strong>Total de fechas:</strong> {cantidadFechasZona}
+            {" • "}
             <strong>Fecha {formData.nrofecha}:</strong>{" "}
             {equiposDisponibles.length} equipos disponibles
             {equiposDisponibles.length < equiposPartido.length && (

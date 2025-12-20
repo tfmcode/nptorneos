@@ -1,4 +1,3 @@
-import React from "react";
 import { Factura } from "../../../types/factura";
 
 const formatCurrency = (value: number) => {

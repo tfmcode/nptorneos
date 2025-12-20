@@ -43,7 +43,17 @@ export const saveCajaMovimientoThunk = createAsyncThunk(
   "cajamovimientos/saveCajaMovimiento",
   async (cajamovimientoData: CajaMovimiento & { id?: number }, { rejectWithValue }) => {
     try {
-      return await saveCajaMovimiento(cajamovimientoData);
+      // Convert Date fields to strings for the API
+      const apiData = {
+        ...cajamovimientoData,
+        fechaorigen: cajamovimientoData.fechaorigen instanceof Date
+          ? cajamovimientoData.fechaorigen.toISOString().split('T')[0]
+          : cajamovimientoData.fechaorigen,
+        fechavencimiento: cajamovimientoData.fechavencimiento instanceof Date
+          ? cajamovimientoData.fechavencimiento.toISOString().split('T')[0]
+          : cajamovimientoData.fechavencimiento,
+      };
+      return await saveCajaMovimiento(apiData);
     } catch (error: unknown) {
       return rejectWithValue(
         (error as Error).message || "Error al guardar movimiento de caja."

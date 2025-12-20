@@ -1,12 +1,13 @@
 import { pool } from "../config/db";
 import { dateToSqlValue } from "../helpers/dateHelpers";
 import { FiltroCondicion } from "../utils/filtroModel";
-import { IFactura, crFactura } from "./facturasModel"; // o el path correcto si está en otra carpeta
+import { IFactura, crFactura } from "./facturasModel";
 
 export interface ICajaMovimiento {
   id: number;
   fechaorigen: Date;
-  proveedor: string;
+  proveedor: number;
+  proveedornombre?: string;
   comprobante: string;
   desccomprobante?: string;
   nrocomprobante: number;
@@ -15,6 +16,7 @@ export interface ICajaMovimiento {
   importecheque: number;
   importeafectado: number;
   importeneto: number;
+  dc?: number;
   estado: string;
   cajaafectacion: ICajaAfectacion[];
 }
@@ -28,18 +30,25 @@ export interface ICajaAfectacion {
   afedesccomprobante: string;
 }
 
-const crCajaMovimiento = `id, fechaorigen, proveedor, comprobante, nrocomprobante, fechavencimiento, importeefectivo, 
-                        importecheque, importeafectado, importeneto, estado`;
-
+const crCajaMovimiento = `CM.id, CM.fechaorigen, CM.proveedor, CM.comprobante, CM.nrocomprobante, CM.fechavencimiento, CM.importeefectivo, 
+                        CM.importecheque, CM.importeafectado, CM.importeneto, CM.dc, CM.estado`;
 
 export const getAllCajaMovimiento = async (): Promise<ICajaMovimiento[]> => {
   const { rows } = await pool.query(
-    `SELECT ${crCajaMovimiento} FROM CajaMovimiento ORDER BY id DESC;`
+    `SELECT ${crCajaMovimiento}, C.descripcion AS desccomprobante, P.nombre AS proveedornombre
+     FROM CajaMovimiento CM
+     LEFT OUTER JOIN comprobante C ON C.codigo = CM.comprobante
+     LEFT OUTER JOIN proveedores P ON P.id = CM.proveedor
+     ORDER BY CM.id DESC;`
   );
 
   for (const row of rows) {
     const { rows: afectaciones } = await pool.query(
-      `SELECT id, cajamovimiento, factura, importeafectado FROM CajaAfectacion WHERE cajamovimiento = $1`,
+      `SELECT CA.id, CA.cajamovimiento, CA.factura, CA.importeafectado, C.descripcion AS afedesccomprobante, F.nrocomprobante AS afenrocomprobante
+       FROM CajaAfectacion AS CA
+       LEFT OUTER JOIN WFACTURA AS F ON F.id = CA.factura
+       LEFT OUTER JOIN COMPROBANTE AS C ON C.codigo = F.Comprobante
+       WHERE cajamovimiento = $1`,
       [row.id]
     );
     row.cajaafectacion = afectaciones;
@@ -47,9 +56,15 @@ export const getAllCajaMovimiento = async (): Promise<ICajaMovimiento[]> => {
   return rows;
 };
 
-export const getCajaMovimientoById = async (id: number): Promise<ICajaMovimiento | null> => {
+export const getCajaMovimientoById = async (
+  id: number
+): Promise<ICajaMovimiento | null> => {
   const { rows } = await pool.query(
-    `SELECT ${crCajaMovimiento} FROM CajaMovimiento WHERE id = $1;`,
+    `SELECT ${crCajaMovimiento}, C.descripcion AS desccomprobante, P.nombre AS proveedornombre
+     FROM CajaMovimiento CM
+     LEFT OUTER JOIN comprobante C ON C.codigo = CM.comprobante
+     LEFT OUTER JOIN proveedores P ON P.id = CM.proveedor
+     WHERE CM.id = $1;`,
     [id]
   );
 
@@ -59,10 +74,10 @@ export const getCajaMovimientoById = async (id: number): Promise<ICajaMovimiento
 
   const { rows: afectaciones } = await pool.query(
     `SELECT CA.id, CA.cajamovimiento, CA.factura, CA.importeafectado, C.descripcion AS afedesccomprobante, F.nrocomprobante AS afenrocomprobante
-      FROM CajaAfectacion AS CA
-      LEFT OUTER JOIN WFACTURA  AS F ON F.id = CA.factura
-      LEFT OUTER JOIN COMPROBANTE AS C ON C.codigo = F.Comprobante
-    WHERE cajamovimiento = $1`,
+     FROM CajaAfectacion AS CA
+     LEFT OUTER JOIN WFACTURA AS F ON F.id = CA.factura
+     LEFT OUTER JOIN COMPROBANTE AS C ON C.codigo = F.Comprobante
+     WHERE cajamovimiento = $1`,
     [id]
   );
 
@@ -88,35 +103,36 @@ export const getCajaMovimientos = async ({
 
   let totalQuery: string;
   let query: string;
-  const filtros = 
-    [
-      { campo: "nrocomprobante", operador: "=", valor: searchTerm != "" ? parseInt(searchTerm) : searchTerm  },
-      { campo: "fechaorigen", operador: "BETWEEN", valor: dateToSqlValue(fechaDesde), valorExtra: dateToSqlValue(fechaHasta) },
-    ];
+  const filtros = [
+    {
+      campo: "CM.nrocomprobante",
+      operador: "=",
+      valor: searchTerm != "" ? parseInt(searchTerm) : searchTerm,
+    },
+    {
+      campo: "CM.fechaorigen",
+      operador: "BETWEEN",
+      valor: dateToSqlValue(fechaDesde),
+      valorExtra: dateToSqlValue(fechaHasta),
+    },
+  ];
   const { where, values } = FiltroCondicion(filtros);
   const totalValues = values.slice();
 
-  totalQuery = `SELECT COUNT(0) FROM CajaMovimiento ${where}`
+  totalQuery = `SELECT COUNT(0) FROM CajaMovimiento CM ${where}`;
   query = `
-    SELECT ${crCajaMovimiento}, C.Descripcion AS desccomprobante
-    FROM CajaMovimiento AS F
-    LEFT OUTER JOIN comprobante AS C ON C.codigo = F.comprobante
+    SELECT ${crCajaMovimiento}, C.descripcion AS desccomprobante, P.nombre AS proveedornombre
+    FROM CajaMovimiento AS CM
+    LEFT OUTER JOIN comprobante AS C ON C.codigo = CM.comprobante
+    LEFT OUTER JOIN proveedores AS P ON P.id = CM.proveedor
     ${where}
-    ORDER BY fechaorigen
+    ORDER BY CM.fechaorigen DESC
     LIMIT $${values.length + 1}
     OFFSET $${values.length + 2}
   `;
 
-  // limit y offset al final
   values.push(limit);
   values.push(offset);
-
-  
-  // console.log("Filtros: ", "searchTerm: ", searchTerm, "fechaDesde: ", fechaDesde, "fechaHasta: ", fechaHasta, "limit: ", limit, "page: ", page, "offset: ", offset);
-  // console.log("Query: ", query);
-  // console.log("values: ", values);
-  // console.log("Total Query: ", totalQuery);
-  // console.log("Total values: ", totalValues);
 
   const totalResult = await pool.query(totalQuery, totalValues);
   const { rows } = await pool.query(query, values);
@@ -124,17 +140,14 @@ export const getCajaMovimientos = async ({
   for (const row of rows) {
     const { rows: afectaciones } = await pool.query(
       `SELECT CA.id, CA.cajamovimiento, CA.factura, CA.importeafectado, C.descripcion AS afedesccomprobante, F.nrocomprobante AS afenrocomprobante
-      FROM CajaAfectacion AS CA
-      LEFT OUTER JOIN WFACTURA  AS F ON F.id = CA.factura
-      LEFT OUTER JOIN COMPROBANTE AS C ON C.codigo = F.Comprobante
-      WHERE cajamovimiento = $1`,
+       FROM CajaAfectacion AS CA
+       LEFT OUTER JOIN WFACTURA AS F ON F.id = CA.factura
+       LEFT OUTER JOIN COMPROBANTE AS C ON C.codigo = F.Comprobante
+       WHERE cajamovimiento = $1`,
       [row.id]
     );
     row.cajaafectacion = afectaciones;
   }
-
-  // console.log("total result:" , totalResult.rows[0].count);
-  // console.log("rows: ", rows);
 
   return {
     cajamovimientos: rows,
@@ -142,41 +155,57 @@ export const getCajaMovimientos = async ({
   };
 };
 
-export const createCajaMovimiento = async (cajamovimiento: ICajaMovimiento): Promise<ICajaMovimiento> => {
-  const camposCajaMovimiento = `fechaorigen, proveedor, comprobante, nrocomprobante, fechavencimiento, importeefectivo,
-                        importecheque, importeafectado, importeneto, estado`
-
+export const createCajaMovimiento = async (
+  cajamovimiento: ICajaMovimiento
+): Promise<ICajaMovimiento> => {
   const client = await pool.connect();
 
-  try
-  {
+  try {
     console.log("Caja movimiento front: ", cajamovimiento);
-
 
     await client.query("BEGIN");
 
-    const { rows } = await pool.query(
+    const { rows: compRows } = await client.query(
+      `SELECT dc FROM comprobante WHERE codigo = $1`,
+      [cajamovimiento.comprobante]
+    );
+
+    if (compRows.length === 0) {
+      throw new Error("Comprobante no encontrado");
+    }
+
+    const dc = compRows[0].dc;
+
+    const importeEfectivoConDC = (cajamovimiento.importeefectivo || 0) * dc;
+    const importeChequeConDC = (cajamovimiento.importecheque || 0) * dc;
+    const importeAfectadoConDC = (cajamovimiento.importeafectado || 0) * dc;
+    const importeNetoConDC = (cajamovimiento.importeneto || 0) * dc;
+
+    const camposCajaMovimiento = `fechaorigen, proveedor, comprobante, nrocomprobante, fechavencimiento, importeefectivo,
+                                  importecheque, importeafectado, importeneto, dc, estado`;
+
+    const { rows } = await client.query(
       `INSERT INTO CajaMovimiento (${camposCajaMovimiento}) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-      RETURNING *;`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+       RETURNING *;`,
       [
         cajamovimiento.fechaorigen,
         cajamovimiento.proveedor,
         cajamovimiento.comprobante,
         cajamovimiento.nrocomprobante,
         cajamovimiento.fechavencimiento,
-        cajamovimiento.importeefectivo,
-        cajamovimiento.importecheque,
-        cajamovimiento.importeafectado,
-        cajamovimiento.importeneto,
-        cajamovimiento.estado
+        importeEfectivoConDC,
+        importeChequeConDC,
+        importeAfectadoConDC,
+        importeNetoConDC,
+        dc,
+        cajamovimiento.estado || "PE",
       ]
     );
 
     const NewCajaMovimientoID = rows[0].id;
     console.log("id nuevo:", NewCajaMovimientoID);
 
-    // Insertar en CajaAfectacion si existe
     if (Array.isArray(cajamovimiento.cajaafectacion)) {
       for (const afectacion of cajamovimiento.cajaafectacion) {
         await client.query(
@@ -188,30 +217,31 @@ export const createCajaMovimiento = async (cajamovimiento: ICajaMovimiento): Pro
             afectacion.importeafectado ?? 0,
           ]
         );
-        
-        console.log("Importe  pend afectar - importeafectado:", afectacion.importeafectado);
 
         await client.query(
           `UPDATE wFactura
-          SET importependafectar = importependafectar - $2,
-              afecta = CASE WHEN importependafectar - $2 = 0 THEN 2 ELSE 1 END
-          WHERE id = $1;`,
-          [afectacion.factura, afectacion.importeafectado ?? 0]
+           SET importependafectar = importependafectar - ($2 * $3),
+               afecta = CASE 
+                 WHEN ABS(importependafectar - ($2 * $3)) < 0.01 THEN 2 
+                 ELSE 1 
+               END,
+               estado = CASE 
+                 WHEN ABS(importependafectar - ($2 * $3)) < 0.01 THEN 'PA' 
+                 ELSE estado 
+               END
+           WHERE id = $1;`,
+          [afectacion.factura, afectacion.importeafectado ?? 0, dc]
         );
       }
     }
 
     await client.query("COMMIT");
     return rows[0];
-  }
-  catch (error) 
-  {
+  } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error en createCajaMovimiento:", error);
     throw error;
-  }
-  finally
-  {
+  } finally {
     client.release();
   }
 };
@@ -224,6 +254,37 @@ export const updateCajaMovimiento = async (
 
   try {
     await client.query("BEGIN");
+
+    const { rows: oldAfectaciones } = await client.query(
+      `SELECT factura, importeafectado FROM CajaAfectacion WHERE cajamovimiento = $1`,
+      [id]
+    );
+
+    const { rows: oldMovRows } = await client.query(
+      `SELECT dc FROM CajaMovimiento WHERE id = $1`,
+      [id]
+    );
+
+    if (oldMovRows.length > 0) {
+      const oldDc = oldMovRows[0].dc;
+
+      for (const afectacion of oldAfectaciones) {
+        await client.query(
+          `UPDATE wFactura
+           SET importependafectar = importependafectar + ($2 * $3),
+               afecta = CASE 
+                 WHEN ABS(importependafectar + ($2 * $3)) < 0.01 THEN 2 
+                 ELSE 1 
+               END,
+               estado = CASE 
+                 WHEN ABS(importependafectar + ($2 * $3)) < 0.01 THEN 'PA' 
+                 ELSE 'PE' 
+               END
+           WHERE id = $1;`,
+          [afectacion.factura, afectacion.importeafectado, oldDc]
+        );
+      }
+    }
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -240,40 +301,57 @@ export const updateCajaMovimiento = async (
       }
     }
 
-    if (updates.length === 0) {
-      throw new Error("No hay datos para actualizar.");
+    if (updates.length > 0) {
+      values.push(id);
+      const query = `UPDATE CajaMovimiento SET ${updates.join(
+        ", "
+      )} WHERE id = $${index} RETURNING *;`;
+      await client.query(query, values);
     }
 
-    values.push(id);
-    const query = `UPDATE CajaMovimiento SET ${updates.join(
-      ", "
-    )} WHERE id = $${index} RETURNING *;`;
+    await client.query(`DELETE FROM CajaAfectacion WHERE cajamovimiento = $1`, [
+      id,
+    ]);
 
-    const { rows } = await client.query(query, values);
-
-    // 2. Eliminar afectaciones anteriores
-    await client.query(`DELETE FROM CajaAfectacion WHERE cajamovimiento = $1`, [id]);
-
-    // 3. Insertar nuevas afectaciones si las hay
     if (
       Array.isArray(cajamovimiento.cajaafectacion) &&
       cajamovimiento.cajaafectacion.length > 0
     ) {
+      const { rows: compRows } = await client.query(
+        `SELECT dc FROM CajaMovimiento WHERE id = $1`,
+        [id]
+      );
+
+      const dc = compRows[0]?.dc || 1;
+
       for (const afectacion of cajamovimiento.cajaafectacion) {
         await client.query(
           `INSERT INTO CajaAfectacion (cajamovimiento, factura, importeafectado)
            VALUES ($1, $2, $3)`,
-          [
-            id,
-            afectacion.factura,
-            afectacion.importeafectado ?? 0,
-          ]
+          [id, afectacion.factura, afectacion.importeafectado ?? 0]
+        );
+
+        await client.query(
+          `UPDATE wFactura
+           SET importependafectar = importependafectar - ($2 * $3),
+               afecta = CASE 
+                 WHEN ABS(importependafectar - ($2 * $3)) < 0.01 THEN 2 
+                 ELSE 1 
+               END,
+               estado = CASE 
+                 WHEN ABS(importependafectar - ($2 * $3)) < 0.01 THEN 'PA' 
+                 ELSE estado 
+               END
+           WHERE id = $1;`,
+          [afectacion.factura, afectacion.importeafectado ?? 0, dc]
         );
       }
     }
 
     await client.query("COMMIT");
-    return rows.length > 0 ? rows[0] : null;
+
+    const result = await getCajaMovimientoById(id);
+    return result;
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("❌ Error en updateCajaMovimiento:", error);
@@ -289,18 +367,46 @@ export const deleteCajaMovimiento = async (id: number): Promise<boolean> => {
   try {
     await client.query("BEGIN");
 
-    await client.query(`DELETE FROM CajaAfectacion WHERE cajamovimiento = $1`, [id]);
+    const { rows: afectaciones } = await client.query(
+      `SELECT factura, importeafectado FROM CajaAfectacion WHERE cajamovimiento = $1`,
+      [id]
+    );
+
+    const { rows: movRows } = await client.query(
+      `SELECT dc FROM CajaMovimiento WHERE id = $1`,
+      [id]
+    );
+
+    if (movRows.length > 0) {
+      const dc = movRows[0].dc;
+
+      for (const afectacion of afectaciones) {
+        await client.query(
+          `UPDATE wFactura
+           SET importependafectar = importependafectar + ($2 * $3),
+               afecta = CASE 
+                 WHEN ABS(importependafectar) < 0.01 THEN 2 
+                 ELSE 1 
+               END,
+               estado = CASE 
+                 WHEN ABS(importependafectar) < 0.01 THEN 'PA' 
+                 ELSE 'PE' 
+               END
+           WHERE id = $1;`,
+          [afectacion.factura, afectacion.importeafectado, dc]
+        );
+      }
+    }
+
+    await client.query(`DELETE FROM CajaAfectacion WHERE cajamovimiento = $1`, [
+      id,
+    ]);
 
     const result = await client.query(
       "DELETE FROM CajaMovimiento WHERE id = $1;",
       [id]
     );
 
-    // Marcar el movimiento como anulado
-    // const result = await client.query(
-    //   "UPDATE CajaMovimiento SET estado = 'AN' WHERE id = $1;",
-    //   [id]
-    // );
     await client.query("COMMIT");
 
     return (result.rowCount ?? 0) > 0;
@@ -313,29 +419,29 @@ export const deleteCajaMovimiento = async (id: number): Promise<boolean> => {
   }
 };
 
-
 export const getCajaMovimientoFacturasPendientes = async (
   proveedor: string,
   dc?: number
 ): Promise<IFactura[]> => {
   try {
     let query = `
-      SELECT ${crFactura}, C.Descripcion AS desccomprobante
+      SELECT ${crFactura}, C.descripcion AS desccomprobante, P.nombre AS proveedornombre
       FROM wFactura AS F
       LEFT OUTER JOIN COMPROBANTE AS C ON C.Codigo = F.Comprobante
-      WHERE proveedor = $1
-        AND afecta = 1
-        AND importependafectar <> 0
+      LEFT OUTER JOIN proveedores AS P ON P.id = F.proveedor
+      WHERE F.proveedor = $1
+        AND F.afecta = 1
+        AND ABS(F.importependafectar) > 0.01
     `;
 
     const values: any[] = [proveedor];
 
     if (dc !== undefined) {
-      query += ` AND dc = $2`;
+      query += ` AND F.dc = $2`;
       values.push(dc);
     }
 
-    query += ` ORDER BY fechaorigen`;
+    query += ` ORDER BY F.fechaorigen`;
 
     const { rows } = await pool.query(query, values);
     return rows;

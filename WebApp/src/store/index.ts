@@ -24,6 +24,7 @@ import partidoSlice from "./slices/partidoSlice";
 import partidosJugadoresSlice from "./slices/partidosJugadoresSlice";
 import cajamovimientoSlice from "./slices/cajamovimientosSlice";
 import planillasPagoSlice from "./slices/planillasPagosSlice";
+import cuentasCorrientesSlice from "./slices/cuentasCorrientesSlice";
 
 export const store = configureStore({
   reducer: {
@@ -52,6 +53,7 @@ export const store = configureStore({
     partidosJugadores: partidosJugadoresSlice,
     cajamovimientos: cajamovimientoSlice,
     planillasPagos: planillasPagoSlice,
+    cuentasCorrientes: cuentasCorrientesSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

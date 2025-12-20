@@ -1,5 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { getFacturas, saveFactura, deleteFactura } from "../../api/facturasService";
+import {
+  getFacturas,
+  saveFactura,
+  deleteFactura,
+} from "../../api/facturasService";
 import { Factura, FacturaInput } from "../../types/factura";
 
 const initialState = {
@@ -28,7 +32,8 @@ export const fetchFacturas = createAsyncThunk(
       fechaDesde: Date;
       fechaHasta: Date;
     },
-    { rejectWithValue }) => {
+    { rejectWithValue }
+  ) => {
     try {
       return await getFacturas(page, limit, searchTerm, fechaDesde, fechaHasta);
     } catch (error: unknown) {
@@ -66,7 +71,6 @@ export const removeFactura = createAsyncThunk(
   }
 );
 
-// 🏗 Slice de facturas
 const facturaSlice = createSlice({
   name: "facturas",
   initialState,
@@ -95,7 +99,9 @@ const facturaSlice = createSlice({
         const updatedFactura = action.payload;
         if (!updatedFactura || !updatedFactura.id) return;
 
-        const index = state.facturas.findIndex((s) => s.id === updatedFactura.id);
+        const index = state.facturas.findIndex(
+          (s) => s.id === updatedFactura.id
+        );
         if (index !== -1) {
           state.facturas[index] = updatedFactura;
         } else {
@@ -113,7 +119,9 @@ const facturaSlice = createSlice({
 
       .addCase(removeFactura.fulfilled, (state, action) => {
         state.loading = false;
-        state.facturas = state.facturas.filter((factura) => factura.id !== action.payload);
+        state.facturas = state.facturas.filter(
+          (factura) => factura.id !== action.payload
+        );
       })
       .addCase(removeFactura.pending, (state) => {
         state.loading = true;

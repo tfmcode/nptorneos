@@ -5,7 +5,7 @@ import {
   updateComprobanteController,
   deleteComprobanteController,
   getComprobantesController,
-  getComprobanteModulo
+  getComprobanteModulo,
 } from "../controllers/comprobantesController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -14,8 +14,15 @@ import { adminMiddleware } from "../middlewares/adminMiddleware";
 const router = express.Router();
 
 router.get("/", authMiddleware, asyncHandler(getComprobantesController));
+
+// ⚠️ IMPORTANTE: Ruta específica ANTES de la ruta con parámetro dinámico
+router.get(
+  "/modulo/:modulo",
+  authMiddleware,
+  asyncHandler(getComprobanteModulo)
+);
+
 router.get("/:codigo", authMiddleware, asyncHandler(getComprobante));
-router.get("/modulo/:modulo", authMiddleware, asyncHandler(getComprobanteModulo));
 
 router.post(
   "/",

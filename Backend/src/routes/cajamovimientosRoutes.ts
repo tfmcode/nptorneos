@@ -35,7 +35,7 @@ router.delete(
   asyncHandler(deleteCajaMovimientoController)
 );
 router.get(
-  "/facturaspendientes/:proveedor",
+  "/facturas-pendientes/:proveedor",
   authMiddleware,
   adminMiddleware,
   asyncHandler(getCajaMovimientoFacturasPendientesController)

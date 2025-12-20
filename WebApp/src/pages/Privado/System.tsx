@@ -20,6 +20,7 @@ import Facturas from "./Facturas";
 import Inscripciones from "./Inscripciones";
 import Resultados from "./Resultados";
 import CajaMovimientos from "./CajaMovimientos";
+import CuentasCorrientes from "./CuentasCorrientes";
 /* import PlanillaPagos from "./PlanillaPagos";
  */
 const System: React.FC = () => {
@@ -142,7 +143,9 @@ const System: React.FC = () => {
         return <Resultados />;
       case "Pagos":
         return <CajaMovimientos />;
-/*       case "Caja":
+      case "C.Corriente":
+        return <CuentasCorrientes />;
+      /*       case "Caja":
         return <PlanillaPagos />; */
       default:
         return (

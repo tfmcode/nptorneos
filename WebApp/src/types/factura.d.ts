@@ -1,36 +1,42 @@
 export interface Factura {
+  [key: string]: unknown; // Signatura de índice para compatibilidad con DataTable
   id?: number;
-  fechaorigen: string;
-  proveedor: string;
-  comprobante: string;
+  comprobante?: string;
   desccomprobante?: string;
-  tipo: string;
-  nrocomprobante: number;
-  fechavencimiento: string;
-  formapago: string;
-  pagoautomatico: boolean;
-  importesubtotal: number;
-  importeingrbru: number;
-  importeiva: number;
-  alicuotaingrbru: number;
-  alicuotaiva: number;
-  importetotal: number;
-  [key: string]: unknown;
+  proveedor: number;
+  proveedornombre?: string;
+  fechaorigen?: Date | string;
+  fechavencimiento?: Date | string;
+  formapago?: number;
+  pagoautomatico?: boolean;
+  nrocomprobante?: number;
+  tipo?: string;
+  importesubtotal?: number;
+  importeingrbru?: number;
+  alicuotaingrbru?: number;
+  importeiva?: number;
+  alicuotaiva?: number;
+  importetotal?: number;
+  importependafectar?: number;
+  dc?: number;
+  afecta?: number;
+  estado?: string;
 }
 
 export interface FacturaInput {
-  fechaorigen: string;
-  proveedor?: string;
+  [key: string]: unknown; // Signatura de índice para compatibilidad con useCrudForm
   comprobante?: string;
-  tipo?: string;
-  nrocomprobante?: number;
+  proveedor: number;
+  fechaorigen?: string;
   fechavencimiento?: string;
-  formapago?: string;
+  formapago?: number;
   pagoautomatico?: boolean;
+  nrocomprobante?: number;
+  tipo?: string;
   importesubtotal?: number;
   importeingrbru?: number;
-  importeiva?: number;
   alicuotaingrbru?: number;
+  importeiva?: number;
   alicuotaiva?: number;
   importetotal?: number;
 }

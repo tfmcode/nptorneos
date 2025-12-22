@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { PlanillaCompleta } from "../../types/planillasPago";
 import { PlanillaHeader } from "./shared/PlanillaHeader";
 import { TabNavigation, Tab } from "./shared/TabNavigation";
-import { DatosTab, TotalesTab } from "./tabs/DatosTab";
+import { DatosTab } from "./tabs/DatosTab";
+import { TotalesTab } from "./tabs/TotalesTab"; // ✅ CORREGIDO: Import desde su propio archivo
 import { EquiposTab } from "./tabs/EquiposTab";
 import { ArbitrosTab } from "./tabs/ArbitrosTab";
 import { CanchasTab } from "./tabs/CanchasTab";

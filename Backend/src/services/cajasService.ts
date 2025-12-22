@@ -17,7 +17,9 @@ interface CajaData extends CajaKey {
 }
 
 /**
- * Crea los registros iniciales en wfechas_equipos para los dos equipos del partido
+ * ✅ ACTUALIZADO: Agrega los equipos de un partido a wfechas_equipos
+ * Si los equipos ya existen, no los duplica
+ * Si son nuevos, los agrega con el siguiente orden disponible
  */
 const createEquiposInCaja = async (
   client: any,
@@ -33,56 +35,63 @@ const createEquiposInCaja = async (
   }
 
   try {
-    // Verificar si ya existen registros para esta caja
-    const checkQuery = `
-      SELECT COUNT(*) as count 
-      FROM wfechas_equipos 
+    // ✅ Obtener todos los equipos que ya existen en la caja
+    const existingQuery = `
+      SELECT idequipo, orden
+      FROM wfechas_equipos
       WHERE idfecha = $1
+      ORDER BY orden
     `;
-    const checkResult = await client.query(checkQuery, [idfecha]);
+    const existingResult = await client.query(existingQuery, [idfecha]);
+    const existingEquipos = new Set(existingResult.rows.map((r: any) => r.idequipo));
 
-    if (checkResult.rows[0].count > 0) {
-      console.log(
-        `ℹ️ Ya existen registros en wfechas_equipos para idfecha=${idfecha}`
-      );
-      return;
-    }
+    // Calcular el siguiente orden disponible
+    let nextOrden = existingResult.rows.length > 0
+      ? Math.max(...existingResult.rows.map((r: any) => r.orden)) + 1
+      : 1;
 
-    // Crear registro para equipo 1 (orden 1)
-    const insertEquipo1Query = `
+    const insertQuery = `
       INSERT INTO wfechas_equipos (
-        idfecha, 
-        orden, 
-        idequipo, 
-        tipopago, 
-        importe, 
+        idfecha,
+        orden,
+        idequipo,
+        tipopago,
+        importe,
         iddeposito,
         fhcarga
       ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
     `;
 
-    await client.query(insertEquipo1Query, [
-      idfecha,
-      1, // orden 1 para el primer equipo
-      idequipo1,
-      1, // tipopago 1 = efectivo por defecto
-      0, // importe 0 inicial
-      0, // sin depósito
-    ]);
+    // ✅ Agregar equipo1 solo si NO existe
+    if (!existingEquipos.has(idequipo1)) {
+      await client.query(insertQuery, [
+        idfecha,
+        nextOrden++,
+        idequipo1,
+        1, // tipopago 1 = efectivo por defecto
+        0, // importe 0 inicial
+        0, // sin depósito
+      ]);
+      console.log(`✅ Agregado equipo ${idequipo1} a caja ${idfecha} (orden ${nextOrden - 1})`);
+    } else {
+      console.log(`ℹ️ Equipo ${idequipo1} ya existe en caja ${idfecha}`);
+    }
 
-    // Crear registro para equipo 2 (orden 2)
-    await client.query(insertEquipo1Query, [
-      idfecha,
-      2, // orden 2 para el segundo equipo
-      idequipo2,
-      1, // tipopago 1 = efectivo por defecto
-      0, // importe 0 inicial
-      0, // sin depósito
-    ]);
+    // ✅ Agregar equipo2 solo si NO existe
+    if (!existingEquipos.has(idequipo2)) {
+      await client.query(insertQuery, [
+        idfecha,
+        nextOrden++,
+        idequipo2,
+        1, // tipopago 1 = efectivo por defecto
+        0, // importe 0 inicial
+        0, // sin depósito
+      ]);
+      console.log(`✅ Agregado equipo ${idequipo2} a caja ${idfecha} (orden ${nextOrden - 1})`);
+    } else {
+      console.log(`ℹ️ Equipo ${idequipo2} ya existe en caja ${idfecha}`);
+    }
 
-    console.log(
-      `✅ Creados registros en wfechas_equipos para idfecha=${idfecha}: equipo1=${idequipo1}, equipo2=${idequipo2}`
-    );
   } catch (error) {
     console.error(
       `❌ Error al crear equipos en wfechas_equipos para idfecha=${idfecha}:`,
@@ -132,13 +141,18 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
       data.idsede,
     ]);
 
-    // Si existe, retornar ese ID
+    // Si existe, agregar los equipos del partido a esa caja y retornar el ID
     if (findResult.rows.length > 0) {
+      const existingId = findResult.rows[0].id;
+
+      // ✅ CRÍTICO: Agregar los equipos del nuevo partido a la caja existente
+      await createEquiposInCaja(client, existingId, data.idequipo1, data.idequipo2);
+
       await client.query("COMMIT");
       console.log(
-        `✅ Caja existente encontrada: idfecha=${findResult.rows[0].id} (profesor=${data.idprofesor}, fecha=${fechaNormalizada}, sede=${data.idsede})`
+        `✅ Caja existente encontrada: idfecha=${existingId} (profesor=${data.idprofesor}, fecha=${fechaNormalizada}, sede=${data.idsede})`
       );
-      return findResult.rows[0].id;
+      return existingId;
     }
 
     // 2. No existe: crear nueva caja

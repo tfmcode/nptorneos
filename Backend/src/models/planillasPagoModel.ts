@@ -247,24 +247,15 @@ export const getPlanillaByIdFecha = async (
 
     const row = planillaResult.rows[0];
 
-    // Obtener partidos asociados a esta caja
+    // ✅ SIMPLIFICADO: Solo obtener zona de los partidos (para contexto)
+    // La información deportiva (goles, árbitro, estado) NO es relevante en planillas de pago
     const partidosQuery = `
-      SELECT 
-        p.id,
-        p.idequipo1,
-        p.idequipo2,
-        p.goles1,
-        p.goles2,
-        p.codestado,
-        p.arbitro,
-        e1.nombre as nombre_equipo1,
-        e2.nombre as nombre_equipo2,
+      SELECT
         z.nombre as zona_nombre
       FROM partidos p
-      LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
-      LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
       LEFT JOIN zonas z ON p.idzona = z.id
       WHERE p.idfecha = $1 AND p.fhbaja IS NULL
+      LIMIT 1
     `;
     const partidosResult = await pool.query(partidosQuery, [idfecha]);
 
@@ -294,29 +285,14 @@ export const getPlanillaByIdFecha = async (
       totefectivo: parseFloat(row.totefectivo || "0"),
       torneo: row.torneo_nombre,
       torneo_nombre: row.torneo_nombre,
-      // Zona del primer partido
+      // ✅ Solo zona para contexto (información deportiva eliminada)
       zona: partidosResult.rows[0]?.zona_nombre,
       zona_nombre: partidosResult.rows[0]?.zona_nombre,
-      // Info del primer partido (para mostrar en el header)
-      partido_info:
-        partidosResult.rows.length > 0
-          ? {
-              nombre1: partidosResult.rows[0].nombre_equipo1,
-              nombre2: partidosResult.rows[0].nombre_equipo2,
-              goles1: partidosResult.rows[0].goles1,
-              goles2: partidosResult.rows[0].goles2,
-              codestado: partidosResult.rows[0].codestado,
-              arbitro: partidosResult.rows[0].arbitro,
-            }
-          : undefined,
     };
 
     // Obtener todos los detalles usando servicios modulares
-    const equipos = await equiposService.getEquiposByPlanilla(
-      idfecha,
-      partidosResult.rows[0]?.nombre_equipo1,
-      partidosResult.rows[0]?.nombre_equipo2
-    );
+    // ✅ ACTUALIZADO: getEquiposByPlanilla ahora obtiene automáticamente TODOS los equipos de TODOS los partidos
+    const equipos = await equiposService.getEquiposByPlanilla(idfecha);
     const arbitros = await arbitrosService.getArbitrosByPlanilla(idfecha);
     const canchas = await canchasService.getCanchasByPlanilla(idfecha);
     const profesores = await profesoresService.getProfesoresByPlanilla(idfecha);

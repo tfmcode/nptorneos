@@ -58,7 +58,8 @@ export const calcularTotales = (
 
   // TOTALES FINALES
   const total_caja = total_ingresos - total_egresos;
-  const total_efectivo = ingreso_fecha - total_egresos;
+  // ✅ CORREGIDO: Total efectivo = solo ingresos en efectivo (tipopago=1) menos egresos
+  const total_efectivo = ingreso_inscripciones - total_egresos;
   const diferencia_caja = total_efectivo - total_caja;
 
   return {

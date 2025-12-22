@@ -97,7 +97,8 @@ export const CanchasTab: React.FC<CanchasTabProps> = ({
       return;
     }
 
-    handleAdd();
+    // ✅ CORREGIDO: Pasar los datos del formulario al agregar
+    handleAdd(formData);
     setFormData(resetearFormulario(formData));
   };
 

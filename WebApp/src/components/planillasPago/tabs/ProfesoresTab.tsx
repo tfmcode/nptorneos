@@ -133,7 +133,8 @@ export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
       return;
     }
 
-    handleAdd();
+    // ✅ CORREGIDO: Pasar los datos del formulario al agregar
+    handleAdd(formData);
     setFormData(resetearFormulario(formData));
   };
 

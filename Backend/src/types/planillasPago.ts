@@ -31,15 +31,7 @@ export interface PlanillaPago {
   zona?: string;
   zona_nombre?: string;
   estado?: "abierta" | "cerrada" | "contabilizada";
-  cantidad_partidos?: number; // ✅ AGREGADO: Cantidad de partidos en la caja
-  partido_info?: {
-    nombre1?: string;
-    nombre2?: string;
-    goles1?: number;
-    goles2?: number;
-    codestado?: number;
-    arbitro?: string;
-  };
+  cantidad_partidos?: number; // ✅ Cantidad de partidos en la caja
   [key: string]: unknown;
 }
 

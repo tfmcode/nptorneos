@@ -21,8 +21,8 @@ import Inscripciones from "./Inscripciones";
 import Resultados from "./Resultados";
 import CajaMovimientos from "./CajaMovimientos";
 import CuentasCorrientes from "./CuentasCorrientes";
-/* import PlanillaPagos from "./PlanillaPagos";
- */
+ import PlanillaPagos from "./PlanillaPagos";
+ 
 const System: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const user = useSelector((state: RootState) => state.auth.user);
@@ -145,8 +145,8 @@ const System: React.FC = () => {
         return <CajaMovimientos />;
       case "C.Corriente":
         return <CuentasCorrientes />;
-      /*       case "Caja":
-        return <PlanillaPagos />; */
+            case "Caja":
+        return <PlanillaPagos />; 
       default:
         return (
           <div className="text-center text-white">

@@ -161,7 +161,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
             data={equipos}
             columns={columns}
             onUpdate={handleUpdate}
-            isEditing={!isEditable}
+            isEditing={isEditable}
             showActions={false}
             emptyMessage="No hay equipos registrados"
           />

@@ -223,7 +223,7 @@ export const updatePartido = async (
     // 2. Verificar si cambió algún campo clave de la caja
     const needsNewCaja = await shouldUpdateCaja(id, {
       idprofesor: partido.idprofesor,
-      codfecha: partido.nrofecha,
+      fecha: partido.fecha, // ✅ CORREGIDO: usar fecha en lugar de codfecha
       idsede: partido.idsede,
     });
 

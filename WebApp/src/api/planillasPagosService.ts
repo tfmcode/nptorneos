@@ -52,33 +52,10 @@ export const getPlanillaCompleta = async (
     const response = await API.get(`/api/planillas-pago/${idfecha}`);
     const planillaCompleta = response.data;
 
-    try {
-      const partidoResponse = await API.get(`/api/partidos/${idfecha}`);
-      const partido = partidoResponse.data;
-
-      if (planillaCompleta.equipos && planillaCompleta.equipos.length > 0) {
-        planillaCompleta.equipos = planillaCompleta.equipos.map(
-          (equipo: PlanillaEquipo, index: number) => {
-            if (index === 0 && partido.nombre1) {
-              return { ...equipo, nombre_equipo: partido.nombre1 };
-            } else if (index === 1 && partido.nombre2) {
-              return { ...equipo, nombre_equipo: partido.nombre2 };
-            }
-            return equipo;
-          }
-        );
-      }
-
-      planillaCompleta.planilla.partido_info = {
-        nombre1: partido.nombre1,
-        nombre2: partido.nombre2,
-        goles1: partido.goles1,
-        goles2: partido.goles2,
-        codestado: partido.codestado,
-      };
-    } catch (partidoError) {
-      console.warn("No se pudo obtener info del partido:", partidoError);
-    }
+    // ✅ SIMPLIFICADO: Ya no necesitamos llamar a /api/partidos porque:
+    // 1. getEquiposByPlanilla trae los nombres de los equipos con JOIN
+    // 2. El backend ya retorna partido_info completo
+    // 3. Una caja puede tener MÚLTIPLES partidos, no solo uno
 
     return planillaCompleta;
   } catch (error) {

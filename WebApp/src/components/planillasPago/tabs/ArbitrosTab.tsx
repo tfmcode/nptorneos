@@ -133,7 +133,8 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
       return;
     }
 
-    handleAdd();
+    // ✅ CORREGIDO: Pasar los datos del formulario al agregar
+    handleAdd(formData);
     setFormData(resetearFormulario(formData));
   };
 

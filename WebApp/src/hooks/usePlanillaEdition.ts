@@ -59,7 +59,7 @@ interface UsePlanillaEditionProps<T extends PlanillaEntity> {
 interface UsePlanillaEditionReturn<T extends PlanillaEntity> {
   data: T[];
   isEditing: boolean;
-  handleAdd: () => void;
+  handleAdd: (newItem?: Partial<T>) => void;
   handleUpdate: (index: number, field: keyof T, value: unknown) => void;
   handleDelete: (index: number) => void;
   handleSave: () => Promise<void>;
@@ -155,9 +155,10 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
   };
 
   // Agregar nueva entidad
-  const handleAdd = () => {
-    const newEntity = createEmptyEntity();
-    setData([...data, newEntity]);
+  const handleAdd = (newItem?: Partial<T>) => {
+    const baseEntity = createEmptyEntity();
+    const newEntity = newItem ? { ...baseEntity, ...newItem } : baseEntity;
+    setData([...data, newEntity as T]);
   };
 
   // Actualizar campo de una entidad

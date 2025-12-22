@@ -66,7 +66,7 @@ export function EditableTable<T>({
               onUpdate?.(index, column.accessor as keyof T, newValue);
             }}
             className="w-full px-2 py-1 border rounded text-sm"
-            disabled={isEditing}
+            disabled={!isEditing}
           >
             <option value="">Seleccionar...</option>
             {column.options?.map((opt) => (
@@ -90,7 +90,7 @@ export function EditableTable<T>({
               )
             }
             className="w-full px-2 py-1 border rounded text-sm"
-            disabled={isEditing}
+            disabled={!isEditing}
           />
         );
 
@@ -104,7 +104,7 @@ export function EditableTable<T>({
               onUpdate?.(index, column.accessor as keyof T, e.target.value)
             }
             className="w-full px-2 py-1 border rounded text-sm"
-            disabled={isEditing}
+            disabled={!isEditing}
           />
         );
     }
@@ -117,7 +117,7 @@ export function EditableTable<T>({
         <div className="flex justify-end">
           <button
             onClick={onAdd}
-            disabled={isEditing}
+            disabled={!isEditing}
             className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {addButtonLabel}
@@ -166,7 +166,7 @@ export function EditableTable<T>({
                     <td className="px-3 py-2 text-center">
                       <button
                         onClick={() => onDelete(index)}
-                        disabled={isEditing}
+                        disabled={!isEditing}
                         className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Eliminar"
                       >

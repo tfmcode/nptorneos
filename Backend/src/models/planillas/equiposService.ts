@@ -9,14 +9,13 @@ import { PlanillaEquipo } from "../../types/planillasPago";
  * Obtener equipos de una planilla
  */
 export const getEquiposByPlanilla = async (
-  idfecha: number,
-  nombreEquipo1?: string,
-  nombreEquipo2?: string
+  idfecha: number
 ): Promise<PlanillaEquipo[]> => {
   try {
-    // ✅ CORREGIDO: Usar p.idfecha en lugar de p.id
-    const partidoQuery = `
-      SELECT 
+    // ✅ NUEVA LÓGICA: Obtener TODOS los partidos de la caja
+    const partidosQuery = `
+      SELECT
+        p.id as partido_id,
         p.idequipo1,
         p.idequipo2,
         e1.nombre as nombre_equipo1,
@@ -25,16 +24,13 @@ export const getEquiposByPlanilla = async (
       LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
       LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
       WHERE p.idfecha = $1
+      ORDER BY p.id
     `;
-    const partidoResult = await pool.query(partidoQuery, [idfecha]);
+    const partidosResult = await pool.query(partidosQuery, [idfecha]);
 
-    if (partidoResult.rows.length === 0) {
+    if (partidosResult.rows.length === 0) {
       return [];
     }
-
-    const { idequipo1, idequipo2 } = partidoResult.rows[0];
-    const nombre1 = nombreEquipo1 || partidoResult.rows[0].nombre_equipo1;
-    const nombre2 = nombreEquipo2 || partidoResult.rows[0].nombre_equipo2;
 
     // Verificar si existe la planilla en wtorneos_fechas
     const planillaQuery = `SELECT id FROM wtorneos_fechas WHERE id = $1`;
@@ -46,14 +42,26 @@ export const getEquiposByPlanilla = async (
 
     // Buscar registros de pago en wfechas_equipos
     const equiposQuery = `
-      SELECT * FROM wfechas_equipos 
-      WHERE idfecha = $1 
+      SELECT * FROM wfechas_equipos
+      WHERE idfecha = $1
       ORDER BY orden
     `;
     const equiposResult = await pool.query(equiposQuery, [idfecha]);
 
+    // Crear un mapa de todos los equipos únicos de todos los partidos
+    const equiposMap = new Map<number, string>();
+    partidosResult.rows.forEach((partido: any) => {
+      if (partido.idequipo1) {
+        equiposMap.set(partido.idequipo1, partido.nombre_equipo1 || `Equipo ${partido.idequipo1}`);
+      }
+      if (partido.idequipo2) {
+        equiposMap.set(partido.idequipo2, partido.nombre_equipo2 || `Equipo ${partido.idequipo2}`);
+      }
+    });
+
+    // Si ya existen registros en wfechas_equipos, usarlos
     if (equiposResult.rows.length > 0) {
-      return equiposResult.rows.map((row: any, index: number) => ({
+      return equiposResult.rows.map((row: any) => ({
         idfecha: row.idfecha,
         orden: row.orden,
         idequipo: row.idequipo,
@@ -61,29 +69,24 @@ export const getEquiposByPlanilla = async (
         importe: parseFloat(row.importe || "0"),
         iddeposito: row.iddeposito,
         fhcarga: row.fhcarga,
-        nombre_equipo: index === 0 ? nombre1 : nombre2,
+        nombre_equipo: equiposMap.get(row.idequipo) || `Equipo ${row.idequipo}`,
       }));
     }
 
-    // Si no hay registros, crear estructura por defecto
-    const equiposDefault: PlanillaEquipo[] = [
-      {
+    // Si no hay registros, crear estructura por defecto con TODOS los equipos
+    const equiposDefault: PlanillaEquipo[] = [];
+    let orden = 1;
+
+    equiposMap.forEach((nombre, idequipo) => {
+      equiposDefault.push({
         idfecha,
-        orden: 1,
-        idequipo: idequipo1,
+        orden: orden++,
+        idequipo,
         tipopago: 1, // Efectivo por defecto
         importe: 0,
-        nombre_equipo: nombre1 || "Equipo Local",
-      },
-      {
-        idfecha,
-        orden: 2,
-        idequipo: idequipo2,
-        tipopago: 1,
-        importe: 0,
-        nombre_equipo: nombre2 || "Equipo Visitante",
-      },
-    ];
+        nombre_equipo: nombre,
+      });
+    });
 
     return equiposDefault;
   } catch (error) {

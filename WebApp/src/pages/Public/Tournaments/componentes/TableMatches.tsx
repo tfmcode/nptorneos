@@ -16,6 +16,7 @@ export interface Match {
   fecha: string;
   sede: string;
   nrofecha?: number;
+  codtipo?: number;
   // ✅ NUEVO: URLs de los logos
   fotoLocal?: string | null;
   fotoVisitante?: string | null;
@@ -25,6 +26,22 @@ interface TableMatchesProps {
   matches: Match[];
   onSelectMatch?: (idpartido: number) => void;
 }
+
+// Función helper para obtener la etiqueta del tipo de partido
+const getTipoPartidoLabel = (codtipo?: number): string => {
+  const tiposPartido: Record<number, string> = {
+    1: "32vos De Final",
+    2: "16vos De Final",
+    3: "Octavos De Final",
+    4: "Cuartos De Final",
+    5: "Semifinal",
+    6: "Final",
+    7: "Tercer Puesto",
+    8: "Repechaje",
+    9: "Zona",
+  };
+  return tiposPartido[codtipo ?? 9] || `Tipo ${codtipo}`;
+};
 
 // ✅ Componente para mostrar equipo con logo
 const EquipoConLogo: React.FC<{
@@ -62,27 +79,48 @@ const TableMatches: React.FC<TableMatchesProps> = ({
   matches,
   onSelectMatch,
 }) => {
-  // Obtener todas las fechas únicas y ordenarlas
-  const fechasDisponibles = useMemo(() => {
-    const fechas = Array.from(
-      new Set(
-        matches
-          .map((m) => m.nrofecha)
-          .filter((fecha): fecha is number => fecha !== undefined)
-      )
-    ).sort((a, b) => a - b);
-    return fechas;
+  // Determinar si usar codtipo o nrofecha
+  const usarCodtipo = useMemo(() => {
+    // Si al menos un partido tiene codtipo definido y diferente de 9 (zona), usar codtipo
+    return matches.some((m) => m.codtipo !== undefined && m.codtipo !== 9);
   }, [matches]);
+
+  // Obtener todas las fechas/tipos únicos y ordenarlos
+  const fechasDisponibles = useMemo(() => {
+    if (usarCodtipo) {
+      const tipos = Array.from(
+        new Set(
+          matches
+            .map((m) => m.codtipo)
+            .filter((tipo): tipo is number => tipo !== undefined)
+        )
+      ).sort((a, b) => a - b);
+      return tipos;
+    } else {
+      const fechas = Array.from(
+        new Set(
+          matches
+            .map((m) => m.nrofecha)
+            .filter((fecha): fecha is number => fecha !== undefined)
+        )
+      ).sort((a, b) => a - b);
+      return fechas;
+    }
+  }, [matches, usarCodtipo]);
 
   // Estado para la fecha activa (por defecto la primera)
   const [fechaActiva, setFechaActiva] = useState<number>(
     fechasDisponibles[0] || 1
   );
 
-  // Filtrar partidos por fecha seleccionada
+  // Filtrar partidos por fecha/tipo seleccionado
   const partidosFecha = useMemo(() => {
-    return matches.filter((m) => m.nrofecha === fechaActiva);
-  }, [matches, fechaActiva]);
+    if (usarCodtipo) {
+      return matches.filter((m) => m.codtipo === fechaActiva);
+    } else {
+      return matches.filter((m) => m.nrofecha === fechaActiva);
+    }
+  }, [matches, fechaActiva, usarCodtipo]);
 
   // Agrupar por zona
   const zonas = Array.from(new Set(partidosFecha.map((m) => m.zona))).sort();
@@ -156,17 +194,17 @@ const TableMatches: React.FC<TableMatchesProps> = ({
       {/* Paginado por fechas - Ahora ARRIBA */}
       <div className="mb-6">
         <div className="flex flex-wrap justify-center gap-2 mb-4">
-          {fechasDisponibles.map((nroFecha) => (
+          {fechasDisponibles.map((valor) => (
             <button
-              key={nroFecha}
-              onClick={() => setFechaActiva(nroFecha)}
+              key={valor}
+              onClick={() => setFechaActiva(valor)}
               className={`px-4 py-2 rounded font-semibold transition-colors ${
-                fechaActiva === nroFecha
+                fechaActiva === valor
                   ? "bg-blue-600 text-white"
                   : "bg-gray-200 hover:bg-gray-300 text-gray-700"
               }`}
             >
-              Fecha {nroFecha}
+              {usarCodtipo ? getTipoPartidoLabel(valor) : `Fecha ${valor}`}
             </button>
           ))}
         </div>
@@ -177,7 +215,8 @@ const TableMatches: React.FC<TableMatchesProps> = ({
         <TournamentsTable data={data} />
       ) : (
         <div className="text-center text-gray-500 py-8 bg-gray-50 rounded-lg">
-          No hay partidos programados para la Fecha {fechaActiva}
+          No hay partidos programados para{" "}
+          {usarCodtipo ? getTipoPartidoLabel(fechaActiva) : `la Fecha ${fechaActiva}`}
         </div>
       )}
     </div>

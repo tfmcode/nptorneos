@@ -2,9 +2,12 @@ import React from "react";
 import "./WhatsAppButton.css";
 
 const WhatsAppButton: React.FC = () => {
-  const phoneNumber = "5491167507198"; // Formato internacional: 54 (Argentina) + 9 + 11 + número
-  const message = "Hola, me comunico desde la web de NpTorneos para solicitar más información.";
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+  const phoneNumber = "5491131065166";
+  const message =
+    "Hola, me comunico desde la web de NpTorneos para solicitar más información.";
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+    message
+  )}`;
 
   return (
     <a

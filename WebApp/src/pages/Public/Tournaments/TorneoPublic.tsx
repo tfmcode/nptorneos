@@ -94,6 +94,7 @@ const TorneoSection = ({
           ? p.nombre_sede
           : "SIN SEDE",
       nrofecha: p.nrofecha,
+      codtipo: p.codtipo,
       fotoLocal: p.foto_equipo1 ?? null,
       fotoVisitante: p.foto_equipo2 ?? null,
     };
@@ -107,7 +108,7 @@ const TorneoSection = ({
             <span className="text-3xl">🏆</span>
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide opacity-90">
-                Torneo Asociado - Playoff/Fase Final
+                Torneo Asociado 
               </p>
               <h2 className="text-2xl font-bold">
                 {typeof torneo?.nombre === "string"
@@ -127,7 +128,7 @@ const TorneoSection = ({
         </h1>
       )}
 
-      {Object.keys(positions).length > 0 && (
+      {Object.keys(positions).length > 0 && torneo?.codmodelo !== 2 && (
         <div className="mb-10">
           <h2 className="text-lg font-bold mb-4 text-center">POSICIONES</h2>
           <TablePosition positions={positions} initialZone={activeZone} />
@@ -155,6 +156,7 @@ const TorneoSection = ({
                 cards={cards}
                 tabs={Object.keys(cards).sort()}
                 initialZone={activeZone}
+                codtipo={torneo?.codtipo}
               />
             </div>
           )}
@@ -168,29 +170,6 @@ const TorneoSection = ({
       )}
 
       <Sanctions sanciones={sanciones} />
-
-      {!esHijo && torneo?.latitud && torneo?.longitud && (
-        <div className="border border-gray-300 p-6 rounded-lg shadow-md mt-10">
-          <h2 className="text-xl font-bold mb-4">
-            SEDE:{" "}
-            {typeof torneo?.sede_nombre === "string" ? torneo.sede_nombre : ""}
-          </h2>
-          <p>
-            {typeof torneo?.domicilio === "string" ? torneo.domicilio : ""},{" "}
-            {typeof torneo?.localidad === "string" ? torneo.localidad : ""},{" "}
-            {typeof torneo?.provincia === "string" ? torneo.provincia : ""}
-          </p>
-
-          <iframe
-            src={`https://www.google.com/maps?q=${torneo.latitud},${torneo.longitud}&z=15&output=embed`}
-            width="100%"
-            height="300"
-            className="border rounded-md mt-4"
-            allowFullScreen
-            title="Mapa de ubicación"
-          ></iframe>
-        </div>
-      )}
     </div>
   );
 };
@@ -340,6 +319,29 @@ const TorneoPublic: React.FC = () => {
           onSelectMatch={fetchFicha}
         />
       ))}
+
+      {torneoData && torneoData.torneo?.latitud && torneoData.torneo?.longitud && (
+        <div className="border border-gray-300 p-6 rounded-lg shadow-md mt-10">
+          <h2 className="text-xl font-bold mb-4">
+            SEDE:{" "}
+            {typeof torneoData.torneo?.sede_nombre === "string" ? torneoData.torneo.sede_nombre : ""}
+          </h2>
+          <p>
+            {typeof torneoData.torneo?.domicilio === "string" ? torneoData.torneo.domicilio : ""},{" "}
+            {typeof torneoData.torneo?.localidad === "string" ? torneoData.torneo.localidad : ""},{" "}
+            {typeof torneoData.torneo?.provincia === "string" ? torneoData.torneo.provincia : ""}
+          </p>
+
+          <iframe
+            src={`https://www.google.com/maps?q=${torneoData.torneo.latitud},${torneoData.torneo.longitud}&z=15&output=embed`}
+            width="100%"
+            height="300"
+            className="border rounded-md mt-4"
+            allowFullScreen
+            title="Mapa de ubicación"
+          ></iframe>
+        </div>
+      )}
 
       <ModalFichaPartido
         open={modalOpen}

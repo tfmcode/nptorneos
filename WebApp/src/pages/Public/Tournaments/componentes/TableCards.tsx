@@ -13,13 +13,18 @@ interface TableCardsProps {
   cards: Record<string, Card[]>;
   tabs: string[];
   initialZone?: string;
+  codtipo?: number;
 }
 
 const TableCards: React.FC<TableCardsProps> = ({
   cards,
   tabs,
   initialZone,
+  codtipo,
 }) => {
+  // Ocultar tarjetas azules SOLO si es Fútbol 11 (codtipo === 11)
+  // Si codtipo es undefined o cualquier otro valor, mostrar
+  const mostrarAzules = codtipo === undefined || codtipo !== 11;
   const zonas = useMemo(() => tabs.slice().sort(), [tabs]);
 
   const computedDefault = useMemo(
@@ -75,7 +80,9 @@ const TableCards: React.FC<TableCardsProps> = ({
                 <th className="px-3 py-2 whitespace-nowrap">Equipo</th>
                 <th className="px-3 py-2 whitespace-nowrap">🔴</th>
                 <th className="px-3 py-2 whitespace-nowrap">🟡</th>
-                <th className="px-3 py-2 whitespace-nowrap">🔵</th>
+                {mostrarAzules && (
+                  <th className="px-3 py-2 whitespace-nowrap">🔵</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -104,18 +111,20 @@ const TableCards: React.FC<TableCardsProps> = ({
                         {card.amarillas}
                       </span>
                     </td>
-                    <td className="px-3 py-2 border-b border-gray-200 whitespace-nowrap">
-                      <span className="text-blue-500 font-bold">
-                        {card.azules}
-                      </span>
-                    </td>
+                    {mostrarAzules && (
+                      <td className="px-3 py-2 border-b border-gray-200 whitespace-nowrap">
+                        <span className="text-blue-500 font-bold">
+                          {card.azules}
+                        </span>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
                     className="px-3 py-6 text-center text-gray-500"
-                    colSpan={6}
+                    colSpan={mostrarAzules ? 6 : 5}
                   >
                     Sin tarjetas para esta zona.
                   </td>

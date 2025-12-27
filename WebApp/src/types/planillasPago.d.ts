@@ -41,11 +41,29 @@ export interface PlanillaEquipo {
   idfecha: number;
   orden: number;
   idequipo: number;
-  tipopago: number;
-  importe: number;
+  nombre_equipo?: string;
+  ausente: number; // 0 = presente, 1 = ausente
+  cantidad_partidos: number;
+
+  // Deudas
+  deuda_insc: number;
+  deuda_dep: number;
+  deuda_fecha: number;
+  total_pagar: number;
+
+  // Pagos
+  pago_ins: number;
+  pago_dep: number;
+  pago_fecha: number; // ← ÚNICO EDITABLE
+
+  // Total
+  deuda_total: number;
+
+  // Legacy (mantener por compatibilidad)
+  tipopago?: number;
+  importe?: number;
   iddeposito?: number;
   fhcarga?: string;
-  nombre_equipo?: string;
   [key: string]: unknown;
 }
 

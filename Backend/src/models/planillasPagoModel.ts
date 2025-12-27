@@ -28,6 +28,8 @@ export const getEquiposByPlanilla = equiposService.getEquiposByPlanilla;
 export const addEquipo = equiposService.addEquipo;
 export const updateEquipo = equiposService.updateEquipo;
 export const deleteEquipo = equiposService.deleteEquipo;
+export const toggleAusencia = equiposService.toggleAusencia;
+export const updatePagoFecha = equiposService.updatePagoFecha;
 
 export const getArbitrosByPlanilla = arbitrosService.getArbitrosByPlanilla;
 export const addArbitro = arbitrosService.addArbitro;
@@ -457,13 +459,30 @@ export const updateTurno = async (
 ): Promise<void> => {
   try {
     const query = `
-      UPDATE wtorneos_fechas 
+      UPDATE wtorneos_fechas
       SET idturno = $1
       WHERE id = $2
     `;
     await pool.query(query, [idturno, idfecha]);
   } catch (error) {
     console.error("Error en updateTurno:", error);
+    throw error;
+  }
+};
+
+export const updateEfectivoReal = async (
+  idfecha: number,
+  totefectivo: number
+): Promise<void> => {
+  try {
+    const query = `
+      UPDATE wtorneos_fechas
+      SET totefectivo = $1
+      WHERE id = $2
+    `;
+    await pool.query(query, [totefectivo, idfecha]);
+  } catch (error) {
+    console.error("Error en updateEfectivoReal:", error);
     throw error;
   }
 };

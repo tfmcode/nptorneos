@@ -28,6 +28,9 @@ import {
   updateOtroGastoController,
   deleteOtroGastoController,
   updateTurnoController,
+  toggleAusenciaController,
+  updatePagoFechaController,
+  updateEfectivoRealController,
 } from "../controllers/planillasPagoController";
 
 const router = express.Router();
@@ -405,6 +408,44 @@ router.put(
   ],
   validateRequest,
   asyncHandler(updateTurnoController)
+);
+
+// Actualizar ausencia de equipo
+router.put(
+  "/:idfecha/ausencia",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("idequipo").isInt().withMessage("ID de equipo inválido"),
+    body("ausente").isBoolean().withMessage("Valor de ausente inválido"),
+  ],
+  validateRequest,
+  asyncHandler(toggleAusenciaController)
+);
+
+// Actualizar pago de fecha
+router.put(
+  "/:idfecha/pago-fecha",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("idequipo").isInt().withMessage("ID de equipo inválido"),
+    body("importe").isNumeric().withMessage("Importe inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updatePagoFechaController)
+);
+
+// Actualizar efectivo real en caja
+router.put(
+  "/:idfecha/efectivo-real",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("totefectivo").isNumeric().withMessage("Total efectivo inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updateEfectivoRealController)
 );
 
 export default router;

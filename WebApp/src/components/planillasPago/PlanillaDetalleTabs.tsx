@@ -10,7 +10,7 @@ import { CanchasTab } from "./tabs/CanchasTab";
 import { ProfesoresTab } from "./tabs/ProfesoresTab";
 import { MedicoTab } from "./tabs/MedicoTab";
 import { OtrosGastosTab } from "./tabs/OtrosGastosTab";
-import { updateTurnoPlanilla } from "../../api/planillasPagosService";
+import { updateTurnoPlanilla, updateEfectivoRealPlanilla } from "../../api/planillasPagosService";
 
 type Props = {
   planillaCompleta: PlanillaCompleta;
@@ -36,6 +36,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<string>("datos");
   const [, setObserv] = useState(planilla.observ || "");
   const [observCaja, setObservCaja] = useState(planilla.observ_caja || "");
+  const [efectivoReal, setEfectivoReal] = useState(planilla.totefectivo || 0);
 
   const getEstado = (): string => {
     if (planilla.fhcierrecaja) return "Contabilizada";
@@ -80,6 +81,18 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
       );
     }
   };
+
+  const handleUpdateEfectivoReal = async (efectivo: number) => {
+    setEfectivoReal(efectivo);
+    try {
+      await updateEfectivoRealPlanilla(planilla.idfecha, efectivo);
+    } catch (error) {
+      handleError(
+        error instanceof Error ? error.message : "Error al actualizar efectivo real"
+      );
+    }
+  };
+
   const isEditable = !planilla.fhcierre && !planilla.fhcierrecaja;
 
   return (
@@ -161,7 +174,9 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
         {activeTab === "totales" && (
           <TotalesTab
             totales={totales}
+            efectivo_real={efectivoReal}
             observ_caja={observCaja}
+            onUpdateEfectivoReal={handleUpdateEfectivoReal}
             onUpdateObservCaja={setObservCaja}
           />
         )}

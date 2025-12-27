@@ -109,6 +109,17 @@ export const updateTurnoPlanilla = async (
   }
 };
 
+export const updateEfectivoRealPlanilla = async (
+  idfecha: number,
+  totefectivo: number
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/efectivo-real`, { totefectivo });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
 export const addEquipoPlanilla = async (
   data: PlanillaEquipoInput
 ): Promise<PlanillaEquipo | null> => {
@@ -332,6 +343,36 @@ export const deleteOtroGastoPlanilla = async (
 ): Promise<void> => {
   try {
     await API.delete(`/api/planillas-pago/otros-gastos/${idfecha}/${orden}`);
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const toggleAusenciaEquipo = async (
+  idfecha: number,
+  idequipo: number,
+  ausente: boolean
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/ausencia`, {
+      idequipo,
+      ausente,
+    });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const updatePagoFechaEquipo = async (
+  idfecha: number,
+  idequipo: number,
+  importe: number
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/pago-fecha`, {
+      idequipo,
+      importe,
+    });
   } catch (error) {
     return handleAxiosError(error);
   }

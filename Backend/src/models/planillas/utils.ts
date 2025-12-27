@@ -14,6 +14,7 @@ import {
 
 /**
  * Calcular totales de una planilla
+ * ✅ ACTUALIZADO: Usa pago_ins, pago_dep, pago_fecha de la nueva estructura
  */
 export const calcularTotales = (
   equipos: PlanillaEquipo[],
@@ -23,23 +24,30 @@ export const calcularTotales = (
   medico: PlanillaMedico[],
   otros_gastos: PlanillaOtroGasto[]
 ): TotalesPlanilla => {
+  // ========================================
   // INGRESOS
+  // ========================================
+
+  // ✅ CORREGIDO: Usar los nuevos campos pago_ins, pago_dep, pago_fecha
   const ingreso_inscripciones = equipos
-    .filter((e) => e.tipopago === 1)
-    .reduce((sum, e) => sum + (e.importe || 0), 0);
+    .filter((e) => e.ausente === 0) // Solo equipos presentes
+    .reduce((sum, e) => sum + (e.pago_ins || 0), 0);
 
   const ingreso_depositos = equipos
-    .filter((e) => e.tipopago === 2)
-    .reduce((sum, e) => sum + (e.importe || 0), 0);
+    .filter((e) => e.ausente === 0) // Solo equipos presentes
+    .reduce((sum, e) => sum + (e.pago_dep || 0), 0);
 
   const ingreso_fecha = equipos
-    .filter((e) => e.tipopago === 3)
-    .reduce((sum, e) => sum + (e.importe || 0), 0);
+    .filter((e) => e.ausente === 0) // Solo equipos presentes
+    .reduce((sum, e) => sum + (e.pago_fecha || 0), 0);
 
   const total_ingresos =
     ingreso_inscripciones + ingreso_depositos + ingreso_fecha;
 
+  // ========================================
   // EGRESOS
+  // ========================================
+
   const egreso_arbitros = arbitros.reduce((sum, a) => sum + (a.total || 0), 0);
   const egreso_canchas = canchas.reduce((sum, c) => sum + (c.total || 0), 0);
   const egreso_profesores = profesores.reduce(
@@ -56,11 +64,20 @@ export const calcularTotales = (
     egreso_medico +
     egreso_otros;
 
+  // ========================================
   // TOTALES FINALES
+  // ========================================
+
+  // Total Caja = Todos los ingresos - Todos los egresos
   const total_caja = total_ingresos - total_egresos;
-  // ✅ CORREGIDO: Total efectivo = solo ingresos en efectivo (tipopago=1) menos egresos
+
+  // ✅ CORREGIDO: Total Efectivo = Solo inscripciones (efectivo) - egresos
+  // Los depósitos y pagos de fecha pueden incluir transferencias/MP
   const total_efectivo = ingreso_inscripciones - total_egresos;
-  const diferencia_caja = total_efectivo - total_caja;
+
+  // ✅ CORREGIDO: Diferencia = Total Caja - Total Efectivo
+  // Esto muestra cuánto hay en transferencias/MP/etc
+  const diferencia_caja = total_caja - total_efectivo;
 
   return {
     ingreso_inscripciones,

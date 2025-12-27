@@ -472,3 +472,69 @@ export const deleteOtroGastoController = async (
     return res.status(500).json({ message: "Error al eliminar gasto.", error });
   }
 };
+
+export const toggleAusenciaController = async (req: Request, res: Response) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { idequipo, ausente } = req.body;
+
+    if (isNaN(idfecha) || !idequipo) {
+      return res.status(400).json({ message: "Parámetros inválidos." });
+    }
+
+    await planillasModel.toggleAusencia(idfecha, idequipo, ausente);
+
+    return res.status(200).json({
+      message: "Ausencia actualizada exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar ausencia:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar ausencia.", error });
+  }
+};
+
+export const updatePagoFechaController = async (req: Request, res: Response) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { idequipo, importe } = req.body;
+
+    if (isNaN(idfecha) || !idequipo || importe === undefined) {
+      return res.status(400).json({ message: "Parámetros inválidos." });
+    }
+
+    await planillasModel.updatePagoFecha(idfecha, idequipo, Number(importe));
+
+    return res.status(200).json({
+      message: "Pago de fecha actualizado exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar pago fecha:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar pago fecha.", error });
+  }
+};
+
+export const updateEfectivoRealController = async (req: Request, res: Response) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { totefectivo } = req.body;
+
+    if (isNaN(idfecha) || totefectivo === undefined) {
+      return res.status(400).json({ message: "Parámetros inválidos." });
+    }
+
+    await planillasModel.updateEfectivoReal(idfecha, Number(totefectivo));
+
+    return res.status(200).json({
+      message: "Efectivo real actualizado exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar efectivo real:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar efectivo real.", error });
+  }
+};

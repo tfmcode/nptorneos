@@ -67,19 +67,29 @@ const CuentasCorrientes: React.FC = () => {
     return "bg-gray-50 border-gray-200";
   };
 
-  // Filtrar resumenes
-  const resumeneFiltrados = resumenes.filter((resumen) => {
-    const matchSearch = resumen.nombre_equipo
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+  // Filtrar y ordenar resumenes
+  const resumeneFiltrados = resumenes
+    .filter((resumen) => {
+      const matchSearch = resumen.nombre_equipo
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
-    const matchSaldo =
-      filtroSaldo === "todos" ||
-      (filtroSaldo === "deudores" && resumen.saldo_actual < 0) ||
-      (filtroSaldo === "acreedores" && resumen.saldo_actual > 0);
+      const matchSaldo =
+        filtroSaldo === "todos" ||
+        (filtroSaldo === "deudores" && resumen.saldo_actual < 0) ||
+        (filtroSaldo === "acreedores" && resumen.saldo_actual > 0);
 
-    return matchSearch && matchSaldo;
-  });
+      return matchSearch && matchSaldo;
+    })
+    .sort((a, b) => {
+      // Ordenar por último movimiento, más reciente primero
+      // Si no hay movimiento, poner al final
+      if (!a.ultimo_movimiento && !b.ultimo_movimiento) return 0;
+      if (!a.ultimo_movimiento) return 1;
+      if (!b.ultimo_movimiento) return -1;
+
+      return new Date(b.ultimo_movimiento).getTime() - new Date(a.ultimo_movimiento).getTime();
+    });
 
   // Calcular paginación
   const totalPages = Math.ceil(resumeneFiltrados.length / itemsPerPage);

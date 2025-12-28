@@ -35,7 +35,6 @@ const navItems: NavItem[] = [
       { title: "Resultados" },
       { title: "Torneos" },
       { title: "Tribunal de Faltas" },
-      { title: "Cambios de Equipos" },
     ],
   },
   {
@@ -55,7 +54,6 @@ const navItems: NavItem[] = [
     ],
   },
   { name: "Caja", submenus: [{ title: "Caja" }] },
-  { name: "Reportes", submenus: [{ title: "Reportes" }] },
   { name: "Usuarios" },
 ];
 

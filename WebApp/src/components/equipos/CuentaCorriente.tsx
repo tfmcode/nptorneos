@@ -7,7 +7,6 @@ import {
 } from "../../store/slices/cuentasCorrientesSlice";
 import { StatusMessage } from "../common";
 import {
-  CurrencyDollarIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
 } from "@heroicons/react/24/outline";
@@ -37,6 +36,7 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
   // Calcular saldos acumulados cuando cambian los movimientos
   useEffect(() => {
     if (cuentaEquipo?.movimientos) {
+      // Primero calculamos los saldos en orden cronológico
       let saldo = 0;
       const saldos = cuentaEquipo.movimientos.map((mov) => {
         if (mov.debe > 0) {
@@ -47,7 +47,8 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
         }
         return saldo;
       });
-      setSaldosAcumulados(saldos);
+      // Invertimos para que coincida con el orden invertido de los movimientos
+      setSaldosAcumulados(saldos.reverse());
     }
   }, [cuentaEquipo]);
 
@@ -71,123 +72,16 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
 
       {!loading && cuentaEquipo && (
         <>
-          {/* Header con resumen */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <CurrencyDollarIcon className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {cuentaEquipo.nombre_equipo}
-                  </h3>
-                  <p className="text-sm text-gray-600">Cuenta Corriente</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Saldo Actual</p>
-                <p
-                  className={`text-2xl ${getSaldoColor(
-                    cuentaEquipo.saldo_final
-                  )}`}
-                >
-                  {formatCurrency(cuentaEquipo.saldo_final)}
-                </p>
-              </div>
-            </div>
+          {/* Título */}
+          <div className="mb-4">
+            <h3 className="text-2xl font-bold text-gray-800">
+              {cuentaEquipo.nombre_equipo}
+            </h3>
+            <p className="text-sm text-gray-600">Cuenta Corriente</p>
           </div>
 
-          {/* Tabla de movimientos */}
-          {cuentaEquipo.movimientos.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-lg">No hay movimientos registrados</p>
-              <p className="text-sm mt-2">
-                La cuenta corriente está sin movimientos
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Descripción
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Debe
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Haber
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Saldo
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {cuentaEquipo.movimientos.map((mov, index) => (
-                    <tr
-                      key={index}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
-                        {mov.txfecha}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          {mov.debe > 0 ? (
-                            <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
-                          ) : (
-                            <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
-                          )}
-                          {mov.descripcion}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600">
-                        {mov.debe > 0 ? formatCurrency(mov.debe) : "—"}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
-                        {mov.haber > 0 ? formatCurrency(mov.haber) : "—"}
-                      </td>
-                      <td
-                        className={`px-4 py-3 whitespace-nowrap text-sm text-right ${getSaldoColor(
-                          saldosAcumulados[index]
-                        )}`}
-                      >
-                        {formatCurrency(saldosAcumulados[index])}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-100">
-                  <tr>
-                    <td
-                      colSpan={2}
-                      className="px-4 py-3 text-right font-bold text-gray-700"
-                    >
-                      SALDO FINAL
-                    </td>
-                    <td className="px-4 py-3"></td>
-                    <td className="px-4 py-3"></td>
-                    <td
-                      className={`px-4 py-3 text-right text-lg ${getSaldoColor(
-                        cuentaEquipo.saldo_final
-                      )}`}
-                    >
-                      {formatCurrency(cuentaEquipo.saldo_final)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-
-          {/* Info adicional */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {/* Cajas de resumen: Debe, Haber y Saldo */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-sm text-red-600 font-medium">Total Debe</p>
               <p className="text-xl font-bold text-red-700">
@@ -243,6 +137,94 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
               </p>
             </div>
           </div>
+
+          {/* Tabla de movimientos */}
+          {cuentaEquipo.movimientos.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-lg">No hay movimientos registrados</p>
+              <p className="text-sm mt-2">
+                La cuenta corriente está sin movimientos
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fecha
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Descripción
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Debe
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Haber
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Saldo
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {[...cuentaEquipo.movimientos].reverse().map((mov, index) => (
+                    <tr
+                      key={index}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {mov.txfecha}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        <div className="flex items-center gap-2">
+                          {mov.debe > 0 ? (
+                            <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
+                          )}
+                          {mov.descripcion}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600">
+                        {mov.debe > 0 ? formatCurrency(mov.debe) : "—"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
+                        {mov.haber > 0 ? formatCurrency(mov.haber) : "—"}
+                      </td>
+                      <td
+                        className={`px-4 py-3 whitespace-nowrap text-sm text-right ${getSaldoColor(
+                          saldosAcumulados[index]
+                        )}`}
+                      >
+                        {formatCurrency(saldosAcumulados[index])}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-100">
+                  <tr>
+                    <td
+                      colSpan={2}
+                      className="px-4 py-3 text-right font-bold text-gray-700"
+                    >
+                      SALDO FINAL
+                    </td>
+                    <td className="px-4 py-3"></td>
+                    <td className="px-4 py-3"></td>
+                    <td
+                      className={`px-4 py-3 text-right text-lg ${getSaldoColor(
+                        cuentaEquipo.saldo_final
+                      )}`}
+                    >
+                      {formatCurrency(cuentaEquipo.saldo_final)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>

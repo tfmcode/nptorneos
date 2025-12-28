@@ -295,12 +295,6 @@ function DatosBasicos({
             label: "Galeria",
           },
           {
-            name: "valor_insc",
-            type: "money",
-            value: formData.valor_insc ?? 0,
-            label: "Inscripción",
-          },
-          {
             name: "valor_arbitro",
             type: "money",
             value: formData.valor_arbitro ?? 1,
@@ -311,12 +305,6 @@ function DatosBasicos({
             type: "money",
             value: formData.valor_cancha ?? 1,
             label: "Valor Cancha",
-          },
-          {
-            name: "valor_fecha",
-            type: "money",
-            value: formData.valor_fecha ?? 1,
-            label: "Valor Fecha",
           },
           {
             name: "valor_medico",

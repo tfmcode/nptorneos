@@ -1,5 +1,5 @@
 // Backend/src/models/planillas/equiposService.ts
-// ✅ VERSIÓN ACTUALIZADA CON DEUDAS Y AUSENCIAS
+// ✅ VERSIÓN CORREGIDA - Lee valores desde zonas_equipos
 
 import { pool } from "../../config/db";
 import { PlanillaEquipo } from "../../types/planillasPago";
@@ -8,7 +8,7 @@ export const getEquiposByPlanilla = async (
   idfecha: number
 ): Promise<PlanillaEquipo[]> => {
   try {
-    // 1️⃣ Obtener TODOS los partidos de la caja con info del torneo
+    // 1️⃣ Obtener TODOS los partidos de la caja con valores económicos ESPECÍFICOS de cada equipo
     const partidosQuery = `
       SELECT
         p.id as partido_id,
@@ -18,16 +18,36 @@ export const getEquiposByPlanilla = async (
         e1.nombre as nombre_equipo1,
         e2.nombre as nombre_equipo2,
         z.idtorneo,
-        t.valor_insc,
-        t.valor_fecha
+        
+        -- ✅ VALORES ESPECÍFICOS DEL EQUIPO 1
+        COALESCE(ze1.valor_insc, t.valor_insc, 0) as valor_insc_eq1,
+        COALESCE(ze1.valor_fecha, t.valor_fecha, 0) as valor_fecha_eq1,
+        
+        -- ✅ VALORES ESPECÍFICOS DEL EQUIPO 2
+        COALESCE(ze2.valor_insc, t.valor_insc, 0) as valor_insc_eq2,
+        COALESCE(ze2.valor_fecha, t.valor_fecha, 0) as valor_fecha_eq2
+        
       FROM partidos p
       LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
       LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
       LEFT JOIN zonas z ON p.idzona = z.id
       LEFT JOIN wtorneos t ON z.idtorneo = t.id
+      
+      -- ✅ JOIN CRÍTICO: Traer valores específicos de zonas_equipos
+      LEFT JOIN zonas_equipos ze1 
+        ON ze1.idzona = p.idzona 
+        AND ze1.idequipo = p.idequipo1
+        AND ze1.fhbaja IS NULL
+        
+      LEFT JOIN zonas_equipos ze2 
+        ON ze2.idzona = p.idzona 
+        AND ze2.idequipo = p.idequipo2
+        AND ze2.fhbaja IS NULL
+        
       WHERE p.idfecha = $1 AND p.fhbaja IS NULL
       ORDER BY p.id
     `;
+
     const partidosResult = await pool.query(partidosQuery, [idfecha]);
 
     if (partidosResult.rows.length === 0) {
@@ -41,38 +61,39 @@ export const getEquiposByPlanilla = async (
       return [];
     }
 
-    // 2️⃣ Crear mapa de equipos únicos con conteo de partidos
-    const equiposMap = new Map<number, {
-      nombre: string;
-      idtorneo: number;
-      valor_insc: number;
-      valor_fecha: number;
-      cantidad_partidos: number;
-    }>();
+    // 2️⃣ Crear mapa de equipos únicos con sus valores ESPECÍFICOS
+    const equiposMap = new Map<
+      number,
+      {
+        nombre: string;
+        idtorneo: number;
+        valor_insc: number;
+        valor_fecha: number;
+        cantidad_partidos: number;
+      }
+    >();
 
     partidosResult.rows.forEach((partido: any) => {
-      const torneo = {
-        idtorneo: partido.idtorneo,
-        valor_insc: parseFloat(partido.valor_insc || "0"),
-        valor_fecha: parseFloat(partido.valor_fecha || "0"),
-      };
-
-      // Equipo 1
+      // ✅ Equipo 1 con SUS valores específicos
       if (partido.idequipo1) {
         const existing = equiposMap.get(partido.idequipo1);
         equiposMap.set(partido.idequipo1, {
           nombre: partido.nombre_equipo1 || `Equipo ${partido.idequipo1}`,
-          ...torneo,
+          idtorneo: partido.idtorneo,
+          valor_insc: parseFloat(partido.valor_insc_eq1 || "0"), // ✅ Valor específico eq1
+          valor_fecha: parseFloat(partido.valor_fecha_eq1 || "0"), // ✅ Valor específico eq1
           cantidad_partidos: (existing?.cantidad_partidos || 0) + 1,
         });
       }
 
-      // Equipo 2
+      // ✅ Equipo 2 con SUS valores específicos
       if (partido.idequipo2) {
         const existing = equiposMap.get(partido.idequipo2);
         equiposMap.set(partido.idequipo2, {
           nombre: partido.nombre_equipo2 || `Equipo ${partido.idequipo2}`,
-          ...torneo,
+          idtorneo: partido.idtorneo,
+          valor_insc: parseFloat(partido.valor_insc_eq2 || "0"), // ✅ Valor específico eq2
+          valor_fecha: parseFloat(partido.valor_fecha_eq2 || "0"), // ✅ Valor específico eq2
           cantidad_partidos: (existing?.cantidad_partidos || 0) + 1,
         });
       }
@@ -84,7 +105,9 @@ export const getEquiposByPlanilla = async (
       WHERE idfecha = $1
     `;
     const ausenciasResult = await pool.query(ausenciasQuery, [idfecha]);
-    const equiposAusentes = new Set(ausenciasResult.rows.map((r: any) => r.idequipo));
+    const equiposAusentes = new Set(
+      ausenciasResult.rows.map((r: any) => r.idequipo)
+    );
 
     // 4️⃣ Obtener depósitos por equipo
     const idsEquipos = Array.from(equiposMap.keys());
@@ -98,7 +121,7 @@ export const getEquiposByPlanilla = async (
     const depositosMap = new Map(
       depositosResult.rows.map((r: any) => [
         r.idequipo,
-        parseFloat(r.total_depositos || "0")
+        parseFloat(r.total_depositos || "0"),
       ])
     );
 
@@ -114,33 +137,46 @@ export const getEquiposByPlanilla = async (
     `;
     const pagosResult = await pool.query(pagosQuery, [idfecha]);
 
-    const pagosMap = new Map<number, { pago_ins: number; pago_dep: number; pago_fecha: number }>();
+    const pagosMap = new Map<
+      number,
+      { pago_ins: number; pago_dep: number; pago_fecha: number }
+    >();
     pagosResult.rows.forEach((r: any) => {
       const idequipo = r.idequipo;
-      const existing = pagosMap.get(idequipo) || { pago_ins: 0, pago_dep: 0, pago_fecha: 0 };
+      const existing = pagosMap.get(idequipo) || {
+        pago_ins: 0,
+        pago_dep: 0,
+        pago_fecha: 0,
+      };
 
       if (r.tipopago === 1) existing.pago_ins = parseFloat(r.total_pago || "0");
       if (r.tipopago === 2) existing.pago_dep = parseFloat(r.total_pago || "0");
-      if (r.tipopago === 3) existing.pago_fecha = parseFloat(r.total_pago || "0");
+      if (r.tipopago === 3)
+        existing.pago_fecha = parseFloat(r.total_pago || "0");
 
       pagosMap.set(idequipo, existing);
     });
 
-    // 6️⃣ Construir resultado final
+    // 6️⃣ Construir resultado final con valores CORRECTOS
     const equipos: PlanillaEquipo[] = [];
     let orden = 1;
 
     equiposMap.forEach((data, idequipo) => {
       const ausente = equiposAusentes.has(idequipo);
       const depositos = depositosMap.get(idequipo) || 0;
-      const pagos = pagosMap.get(idequipo) || { pago_ins: 0, pago_dep: 0, pago_fecha: 0 };
+      const pagos = pagosMap.get(idequipo) || {
+        pago_ins: 0,
+        pago_dep: 0,
+        pago_fecha: 0,
+      };
 
-      // Calcular deudas
+      // ✅ Calcular deudas con valores ESPECÍFICOS del equipo
       const deuda_insc = data.valor_insc;
       const deuda_dep = depositos;
       const deuda_fecha = data.valor_fecha * data.cantidad_partidos;
       const total_pagar = deuda_insc + deuda_dep + deuda_fecha;
-      const deuda_total = total_pagar - (pagos.pago_ins + pagos.pago_dep + pagos.pago_fecha);
+      const deuda_total =
+        total_pagar - (pagos.pago_ins + pagos.pago_dep + pagos.pago_fecha);
 
       equipos.push({
         idfecha,
@@ -150,7 +186,7 @@ export const getEquiposByPlanilla = async (
         ausente: ausente ? 1 : 0,
         cantidad_partidos: data.cantidad_partidos,
 
-        // Deudas
+        // Deudas con valores correctos
         deuda_insc,
         deuda_dep,
         deuda_fecha,
@@ -185,7 +221,6 @@ export const toggleAusencia = async (
 ): Promise<void> => {
   try {
     if (ausente) {
-      // Marcar como ausente
       await pool.query(
         `INSERT INTO wfechas_equipos_aus (idfecha, idequipo, fhcarga)
          VALUES ($1, $2, NOW())
@@ -193,7 +228,6 @@ export const toggleAusencia = async (
         [idfecha, idequipo]
       );
     } else {
-      // Quitar ausencia
       await pool.query(
         `DELETE FROM wfechas_equipos_aus
          WHERE idfecha = $1 AND idequipo = $2`,
@@ -213,14 +247,12 @@ export const updatePagoFecha = async (
   importe: number
 ): Promise<void> => {
   try {
-    // Primero eliminar pagos de fecha existentes para este equipo
     await pool.query(
       `DELETE FROM wfechas_equipos
        WHERE idfecha = $1 AND idequipo = $2 AND tipopago = 3`,
       [idfecha, idequipo]
     );
 
-    // Si el importe es > 0, insertar el nuevo pago
     if (importe > 0) {
       await pool.query(
         `INSERT INTO wfechas_equipos (idfecha, orden, idequipo, tipopago, importe, fhcarga)

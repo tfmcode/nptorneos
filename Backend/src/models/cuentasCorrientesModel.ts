@@ -23,14 +23,9 @@ export interface IResumenCuentaCorriente {
   total_haber: number;
 }
 
-/**
- * Obtener cuenta corriente de un equipo específico
- * Ejecuta el SP winfo_ccequipos
- */
 export const getCuentaCorrienteEquipo = async (
   idequipo: number
 ): Promise<ICuentaCorrienteEquipo> => {
-  // 1. Obtener nombre del equipo
   const { rows: equipoRows } = await pool.query(
     `SELECT nombre FROM wequipos WHERE id = $1 AND fhbaja IS NULL`,
     [idequipo]
@@ -42,21 +37,24 @@ export const getCuentaCorrienteEquipo = async (
 
   const nombreEquipo = equipoRows[0].nombre;
 
-  // 2. Ejecutar la función (cambiar CALL por SELECT * FROM)
-  const { rows: movimientos } = await pool.query(
+  const { rows: movimientosRaw } = await pool.query(
     `SELECT * FROM winfo_ccequipos($1)`,
     [idequipo]
   );
 
-  // 3. Calcular saldo final
+  const movimientos: IMovimientoCuentaCorriente[] = movimientosRaw.map(
+    (mov) => ({
+      txfecha: mov.txfecha,
+      descripcion: mov.descripcion,
+      debe: Number(mov.debe) || 0,
+      haber: Number(mov.haber) || 0,
+    })
+  );
+
   let saldoFinal = 0;
-  movimientos.forEach((mov: IMovimientoCuentaCorriente) => {
-    if (mov.debe > 0) {
-      saldoFinal -= mov.debe;
-    }
-    if (mov.haber > 0) {
-      saldoFinal += mov.haber;
-    }
+  movimientos.forEach((mov) => {
+    saldoFinal -= mov.debe;
+    saldoFinal += mov.haber;
   });
 
   return {
@@ -67,9 +65,6 @@ export const getCuentaCorrienteEquipo = async (
   };
 };
 
-/**
- * Obtener resumen de cuentas corrientes de todos los equipos activos
- */
 export const getCuentasCorrientesGeneral = async (): Promise<
   IResumenCuentaCorriente[]
 > => {
@@ -122,6 +117,8 @@ export const getCuentasCorrientesGeneral = async (): Promise<
       INNER JOIN wtorneos t ON a.idtorneo = t.id
       WHERE tf.fhbaja IS NULL
         AND e.fhbaja IS NULL
+        AND t.fhbaja IS NULL
+        AND a.importe > 0
       GROUP BY e.id, e.nombre
 
       UNION ALL
@@ -139,6 +136,7 @@ export const getCuentasCorrientesGeneral = async (): Promise<
       WHERE tf.fhbaja IS NULL
         AND a.tipopago = 1
         AND e.fhbaja IS NULL
+        AND a.importe > 0
       GROUP BY e.id, e.nombre
 
       UNION ALL
@@ -173,78 +171,7 @@ export const getCuentasCorrientesGeneral = async (): Promise<
       WHERE tf.fhbaja IS NULL
         AND a.tipopago = 3
         AND e.fhbaja IS NULL
-      GROUP BY e.id, e.nombre
-
-      UNION ALL
-
-      -- Ajustes de crédito
-      SELECT 
-        e.id as idequipo,
-        e.nombre as nombre_equipo,
-        0 as total_debe,
-        SUM(m.importe) as total_haber,
-        MAX(m.fecha) as ultimo_movimiento
-      FROM wmovimientos m
-      INNER JOIN wequipos e ON m.codopcion = e.id
-      WHERE m.fhbaja IS NULL
-        AND m.codtipo = 1
-        AND m.codref = 11
-        AND m.codpago = 3
-        AND e.fhbaja IS NULL
-      GROUP BY e.id, e.nombre
-
-      UNION ALL
-
-      -- Ajustes de débito
-      SELECT 
-        e.id as idequipo,
-        e.nombre as nombre_equipo,
-        SUM(m.importe) as total_debe,
-        0 as total_haber,
-        MAX(m.fecha) as ultimo_movimiento
-      FROM wmovimientos m
-      INNER JOIN wequipos e ON m.codopcion = e.id
-      WHERE m.fhbaja IS NULL
-        AND m.codtipo = 2
-        AND m.codref = 11
-        AND m.codpago = 0
-        AND e.fhbaja IS NULL
-      GROUP BY e.id, e.nombre
-
-      UNION ALL
-
-      -- Pagos de fecha (desde movimientos)
-      SELECT 
-        e.id as idequipo,
-        e.nombre as nombre_equipo,
-        0 as total_debe,
-        SUM(m.importe) as total_haber,
-        MAX(m.fecha) as ultimo_movimiento
-      FROM wmovimientos m
-      INNER JOIN wequipos e ON m.codopcion = e.id
-      WHERE m.fhbaja IS NULL
-        AND m.codtipo = 1
-        AND m.codref = 11
-        AND m.codpago = 2
-        AND e.fhbaja IS NULL
-      GROUP BY e.id, e.nombre
-
-      UNION ALL
-
-      -- Pagos de inscripción (desde movimientos)
-      SELECT 
-        e.id as idequipo,
-        e.nombre as nombre_equipo,
-        0 as total_debe,
-        SUM(m.importe) as total_haber,
-        MAX(m.fecha) as ultimo_movimiento
-      FROM wmovimientos m
-      INNER JOIN wequipos e ON m.codopcion = e.id
-      WHERE m.fhbaja IS NULL
-        AND m.codtipo = 1
-        AND m.codref = 11
-        AND m.codpago = 1
-        AND e.fhbaja IS NULL
+        AND a.importe > 0
       GROUP BY e.id, e.nombre
     )
     SELECT 

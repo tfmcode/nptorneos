@@ -33,21 +33,20 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
     };
   }, [dispatch, idequipo]);
 
-  // Calcular saldos acumulados cuando cambian los movimientos
   useEffect(() => {
     if (cuentaEquipo?.movimientos) {
-      // Primero calculamos los saldos en orden cronológico
       let saldo = 0;
       const saldos = cuentaEquipo.movimientos.map((mov) => {
-        if (mov.debe > 0) {
-          saldo -= mov.debe;
+        const debe = Number(mov.debe) || 0;
+        const haber = Number(mov.haber) || 0;
+        if (debe > 0) {
+          saldo -= debe;
         }
-        if (mov.haber > 0) {
-          saldo += mov.haber;
+        if (haber > 0) {
+          saldo += haber;
         }
         return saldo;
       });
-      // Invertimos para que coincida con el orden invertido de los movimientos
       setSaldosAcumulados(saldos.reverse());
     }
   }, [cuentaEquipo]);
@@ -56,7 +55,8 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
       currency: "ARS",
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -66,13 +66,32 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
     return "text-gray-600 font-bold";
   };
 
+  const calcularTotalDebe = () => {
+    if (!cuentaEquipo?.movimientos) return 0;
+    return cuentaEquipo.movimientos.reduce(
+      (acc, mov) => acc + (Number(mov.debe) || 0),
+      0
+    );
+  };
+
+  const calcularTotalHaber = () => {
+    if (!cuentaEquipo?.movimientos) return 0;
+    return cuentaEquipo.movimientos.reduce(
+      (acc, mov) => acc + (Number(mov.haber) || 0),
+      0
+    );
+  };
+
+  const calcularSaldoFinal = () => {
+    return calcularTotalHaber() - calcularTotalDebe();
+  };
+
   return (
     <div className="space-y-4">
       <StatusMessage loading={loading} error={error} />
 
       {!loading && cuentaEquipo && (
         <>
-          {/* Título */}
           <div className="mb-4">
             <h3 className="text-2xl font-bold text-gray-800">
               {cuentaEquipo.nombre_equipo}
@@ -80,44 +99,33 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
             <p className="text-sm text-gray-600">Cuenta Corriente</p>
           </div>
 
-          {/* Cajas de resumen: Debe, Haber y Saldo */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-sm text-red-600 font-medium">Total Debe</p>
               <p className="text-xl font-bold text-red-700">
-                {formatCurrency(
-                  cuentaEquipo.movimientos.reduce(
-                    (acc, mov) => acc + mov.debe,
-                    0
-                  )
-                )}
+                {formatCurrency(calcularTotalDebe())}
               </p>
             </div>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-sm text-green-600 font-medium">Total Haber</p>
               <p className="text-xl font-bold text-green-700">
-                {formatCurrency(
-                  cuentaEquipo.movimientos.reduce(
-                    (acc, mov) => acc + mov.haber,
-                    0
-                  )
-                )}
+                {formatCurrency(calcularTotalHaber())}
               </p>
             </div>
             <div
               className={`border rounded-lg p-4 ${
-                cuentaEquipo.saldo_final > 0
+                calcularSaldoFinal() > 0
                   ? "bg-green-50 border-green-200"
-                  : cuentaEquipo.saldo_final < 0
+                  : calcularSaldoFinal() < 0
                   ? "bg-red-50 border-red-200"
                   : "bg-gray-50 border-gray-200"
               }`}
             >
               <p
                 className={`text-sm font-medium ${
-                  cuentaEquipo.saldo_final > 0
+                  calcularSaldoFinal() > 0
                     ? "text-green-600"
-                    : cuentaEquipo.saldo_final < 0
+                    : calcularSaldoFinal() < 0
                     ? "text-red-600"
                     : "text-gray-600"
                 }`}
@@ -126,19 +134,18 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
               </p>
               <p
                 className={`text-xl font-bold ${
-                  cuentaEquipo.saldo_final > 0
+                  calcularSaldoFinal() > 0
                     ? "text-green-700"
-                    : cuentaEquipo.saldo_final < 0
+                    : calcularSaldoFinal() < 0
                     ? "text-red-700"
                     : "text-gray-700"
                 }`}
               >
-                {formatCurrency(cuentaEquipo.saldo_final)}
+                {formatCurrency(calcularSaldoFinal())}
               </p>
             </div>
           </div>
 
-          {/* Tabla de movimientos */}
           {cuentaEquipo.movimientos.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p className="text-lg">No hay movimientos registrados</p>
@@ -169,39 +176,43 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[...cuentaEquipo.movimientos].reverse().map((mov, index) => (
-                    <tr
-                      key={index}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
-                        {mov.txfecha}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          {mov.debe > 0 ? (
-                            <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
-                          ) : (
-                            <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
-                          )}
-                          {mov.descripcion}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600">
-                        {mov.debe > 0 ? formatCurrency(mov.debe) : "—"}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
-                        {mov.haber > 0 ? formatCurrency(mov.haber) : "—"}
-                      </td>
-                      <td
-                        className={`px-4 py-3 whitespace-nowrap text-sm text-right ${getSaldoColor(
-                          saldosAcumulados[index]
-                        )}`}
+                  {[...cuentaEquipo.movimientos].reverse().map((mov, index) => {
+                    const debe = Number(mov.debe) || 0;
+                    const haber = Number(mov.haber) || 0;
+                    return (
+                      <tr
+                        key={index}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        {formatCurrency(saldosAcumulados[index])}
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                          {mov.txfecha}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          <div className="flex items-center gap-2">
+                            {debe > 0 ? (
+                              <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
+                            )}
+                            {mov.descripcion}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-red-600">
+                          {debe > 0 ? formatCurrency(debe) : "—"}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600">
+                          {haber > 0 ? formatCurrency(haber) : "—"}
+                        </td>
+                        <td
+                          className={`px-4 py-3 whitespace-nowrap text-sm text-right ${getSaldoColor(
+                            saldosAcumulados[index]
+                          )}`}
+                        >
+                          {formatCurrency(saldosAcumulados[index] || 0)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-gray-100">
                   <tr>
@@ -215,10 +226,10 @@ const CuentaCorriente = ({ idequipo }: CuentaCorrienteProps) => {
                     <td className="px-4 py-3"></td>
                     <td
                       className={`px-4 py-3 text-right text-lg ${getSaldoColor(
-                        cuentaEquipo.saldo_final
+                        calcularSaldoFinal()
                       )}`}
                     >
-                      {formatCurrency(cuentaEquipo.saldo_final)}
+                      {formatCurrency(calcularSaldoFinal())}
                     </td>
                   </tr>
                 </tfoot>

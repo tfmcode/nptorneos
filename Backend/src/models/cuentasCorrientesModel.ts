@@ -70,24 +70,41 @@ export const getCuentasCorrientesGeneral = async (): Promise<
 > => {
   const query = `
     WITH movimientos_equipos AS (
-      -- Deudas de inscripción (torneos)
+      -- 1️⃣ Deudas de inscripción (torneos)
       SELECT 
         e.id as idequipo,
         e.nombre as nombre_equipo,
-        SUM(a.inscrip) as total_debe,
+        SUM(tei.inscrip) as total_debe,
         0 as total_haber,
-        MAX(t.fhcarga) as ultimo_movimiento
-      FROM wtorneos_equipos_insc a
-      INNER JOIN wtorneos t ON a.idtorneo = t.id
-      INNER JOIN wequipos e ON a.idequipo = e.id
+        MAX(tei.fhcarga) as ultimo_movimiento
+      FROM wtorneos_equipos_insc tei
+      INNER JOIN wtorneos t ON tei.idtorneo = t.id
+      INNER JOIN wequipos e ON tei.idequipo = e.id
       WHERE t.fhbaja IS NULL 
         AND e.fhbaja IS NULL
-        AND a.inscrip > 0
+        AND tei.inscrip > 0
       GROUP BY e.id, e.nombre
 
       UNION ALL
 
-      -- Deudas de depósito
+      -- 2️⃣ Deudas de fechas (habilitaciones) - SIN join a wtorneos_fechas
+      SELECT 
+        e.id as idequipo,
+        e.nombre as nombre_equipo,
+        SUM(feh.importe) as total_debe,
+        0 as total_haber,
+        MAX(feh.fhcarga) as ultimo_movimiento
+      FROM wfechas_equipos_hab feh
+      INNER JOIN wtorneos t ON feh.idtorneo = t.id
+      INNER JOIN wequipos e ON feh.idequipo = e.id
+      WHERE t.fhbaja IS NULL
+        AND e.fhbaja IS NULL
+        AND feh.importe > 0
+      GROUP BY e.id, e.nombre
+
+      UNION ALL
+
+      -- 3️⃣ Deudas de depósito
       SELECT 
         e.id as idequipo,
         e.nombre as nombre_equipo,
@@ -104,44 +121,25 @@ export const getCuentasCorrientesGeneral = async (): Promise<
 
       UNION ALL
 
-      -- Deudas de fechas (habilitaciones)
-      SELECT 
-        e.id as idequipo,
-        e.nombre as nombre_equipo,
-        SUM(a.importe) as total_debe,
-        0 as total_haber,
-        MAX(tf.fecha) as ultimo_movimiento
-      FROM wfechas_equipos_hab a
-      INNER JOIN wtorneos_fechas tf ON a.idfecha = tf.id
-      INNER JOIN wequipos e ON a.idequipo = e.id
-      INNER JOIN wtorneos t ON a.idtorneo = t.id
-      WHERE tf.fhbaja IS NULL
-        AND e.fhbaja IS NULL
-        AND t.fhbaja IS NULL
-        AND a.importe > 0
-      GROUP BY e.id, e.nombre
-
-      UNION ALL
-
-      -- Pagos de inscripción
+      -- 4️⃣ Pagos de inscripción
       SELECT 
         e.id as idequipo,
         e.nombre as nombre_equipo,
         0 as total_debe,
-        SUM(a.importe) as total_haber,
-        MAX(tf.fecha) as ultimo_movimiento
-      FROM wfechas_equipos a
-      INNER JOIN wtorneos_fechas tf ON a.idfecha = tf.id
-      INNER JOIN wequipos e ON a.idequipo = e.id
-      WHERE tf.fhbaja IS NULL
-        AND a.tipopago = 1
+        SUM(fe.importe) as total_haber,
+        MAX(wtf.fecha) as ultimo_movimiento
+      FROM wfechas_equipos fe
+      INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
+      INNER JOIN wequipos e ON fe.idequipo = e.id
+      WHERE wtf.fhbaja IS NULL
+        AND fe.tipopago = 1
         AND e.fhbaja IS NULL
-        AND a.importe > 0
+        AND fe.importe > 0
       GROUP BY e.id, e.nombre
 
       UNION ALL
 
-      -- Pagos de depósito
+      -- 5️⃣ Pagos de depósito
       SELECT 
         e.id as idequipo,
         e.nombre as nombre_equipo,
@@ -158,20 +156,20 @@ export const getCuentasCorrientesGeneral = async (): Promise<
 
       UNION ALL
 
-      -- Pagos de fechas
+      -- 6️⃣ Pagos de fechas
       SELECT 
         e.id as idequipo,
         e.nombre as nombre_equipo,
         0 as total_debe,
-        SUM(a.importe) as total_haber,
-        MAX(tf.fecha) as ultimo_movimiento
-      FROM wfechas_equipos a
-      INNER JOIN wtorneos_fechas tf ON a.idfecha = tf.id
-      INNER JOIN wequipos e ON a.idequipo = e.id
-      WHERE tf.fhbaja IS NULL
-        AND a.tipopago = 3
+        SUM(fe.importe) as total_haber,
+        MAX(wtf.fecha) as ultimo_movimiento
+      FROM wfechas_equipos fe
+      INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
+      INNER JOIN wequipos e ON fe.idequipo = e.id
+      WHERE wtf.fhbaja IS NULL
+        AND fe.tipopago = 3
         AND e.fhbaja IS NULL
-        AND a.importe > 0
+        AND fe.importe > 0
       GROUP BY e.id, e.nombre
     )
     SELECT 

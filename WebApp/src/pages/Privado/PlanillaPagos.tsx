@@ -1,6 +1,3 @@
-// WebApp/src/pages/Privado/PlanillaPagos.tsx
-// ✅ ACTUALIZADO: Agregado onUpdate para refrescar datos después de cambios
-
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
@@ -56,13 +53,20 @@ const PlanillaPagos: React.FC = () => {
     message: "",
   });
 
-  // Cargar torneos y sedes al montar
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   useEffect(() => {
     dispatch(fetchTorneos({ page: 1, limit: 1000, searchTerm: "" }));
     dispatch(fetchSedes());
   }, [dispatch]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [planillas]);
+
   const handleFiltrar = () => {
+    setCurrentPage(1);
     dispatch(getPlanillasByFiltros(filtros));
   };
 
@@ -74,7 +78,6 @@ const PlanillaPagos: React.FC = () => {
     }
   };
 
-  // ✅ NUEVA FUNCIÓN: Refrescar la planilla actual después de cambios
   const handleRefreshPlanilla = async () => {
     if (selectedPlanilla?.idfecha) {
       await dispatch(getPlanillaCompleta(selectedPlanilla.idfecha));
@@ -103,8 +106,24 @@ const PlanillaPagos: React.FC = () => {
     return "bg-gray-100 text-gray-800";
   };
 
-  // Filtrar torneos activos
   const torneosActivos = torneos.filter((t) => t.codestado === 1);
+
+  const totalPages = Math.ceil(planillas.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const planillasPaginadas = planillas.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   return (
     <div className="flex justify-center items-center">
@@ -121,10 +140,8 @@ const PlanillaPagos: React.FC = () => {
           subtitle="Gestión de ingresos y egresos por caja (agrupación de fecha/profesor/sede)"
         />
 
-        {/* Filtros */}
         <div className="mb-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Torneo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Torneo
@@ -145,7 +162,6 @@ const PlanillaPagos: React.FC = () => {
               </select>
             </div>
 
-            {/* Sede */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Sede
@@ -166,7 +182,6 @@ const PlanillaPagos: React.FC = () => {
               </select>
             </div>
 
-            {/* Estado */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Estado
@@ -193,7 +208,6 @@ const PlanillaPagos: React.FC = () => {
             </div>
           </div>
 
-          {/* Rango de fechas */}
           <DateRangePicker
             startDate={filtros.fecha_desde || ""}
             endDate={filtros.fecha_hasta || ""}
@@ -203,7 +217,6 @@ const PlanillaPagos: React.FC = () => {
             setEndDate={(date) => setFiltros({ ...filtros, fecha_hasta: date })}
           />
 
-          {/* Botón Filtrar */}
           <div className="flex justify-end gap-2">
             <button
               onClick={() => {
@@ -230,85 +243,106 @@ const PlanillaPagos: React.FC = () => {
 
         <StatusMessage loading={loading} error={error} />
 
-        {/* Tabla de Planillas con SCROLL */}
         {!loading && planillas.length > 0 && (
-          <div className="overflow-auto max-h-[600px] border border-gray-300 rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 sticky top-0 z-10">
-                <tr>
-                  <th className="px-4 py-2 text-left">Fecha</th>
-                  <th className="px-4 py-2 text-left">Nro. Fecha</th>
-                  <th className="px-4 py-2 text-left">Sede</th>
-                  <th className="px-4 py-2 text-left">Torneo</th>
-                  <th className="px-4 py-2 text-left">Profesor</th>
-                  <th className="px-4 py-2 text-center">Estado</th>
-                  <th className="px-4 py-2 text-right">Total Caja</th>
-                  <th className="px-4 py-2 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {planillas.map((planilla: PlanillaPago) => (
-                  <tr
-                    key={`planilla-${planilla.idfecha}`}
-                    className="border-t hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleVerDetalle(planilla)}
-                  >
-                    <td className="px-4 py-2">
-                      {new Date(planilla.fecha).toLocaleDateString("es-AR")}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      {planilla.codfecha || "-"}
-                    </td>
-                    <td className="px-4 py-2">{planilla.sede_nombre || "-"}</td>
-                    <td className="px-4 py-2">
-                      {planilla.torneo_nombre || planilla.torneo || "-"}
-                    </td>
-                    <td className="px-4 py-2">
-                      {planilla.profesor_nombre ||
-                        (planilla.idprofesor
-                          ? `ID: ${planilla.idprofesor}`
-                          : "-")}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      {planilla.cantidad_partidos ? (
-                        <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-blue-700 bg-blue-100 rounded-full">
-                          {planilla.cantidad_partidos}
-                        </span>
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <span
-                        className={`inline-block px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
-                          planilla
-                        )}`}
-                      >
-                        {getEstadoTexto(planilla)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right font-semibold">
-                      ${planilla.total_caja?.toLocaleString() || "0"}
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVerDetalle(planilla);
-                          }}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Ver detalle"
-                        >
-                          <DocumentTextIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-auto border border-gray-300 rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Fecha</th>
+                    <th className="px-4 py-2 text-center">Nro. Fecha</th>
+                    <th className="px-4 py-2 text-left">Sede</th>
+                    <th className="px-4 py-2 text-left">Torneo</th>
+                    <th className="px-4 py-2 text-left">Profesor</th>
+                    <th className="px-4 py-2 text-center">Partidos</th>
+                    <th className="px-4 py-2 text-center">Estado</th>
+                    <th className="px-4 py-2 text-right">Total Caja</th>
+                    <th className="px-4 py-2 text-center">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {planillasPaginadas.map((planilla: PlanillaPago) => (
+                    <tr
+                      key={`planilla-${planilla.idfecha}`}
+                      className="border-t hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleVerDetalle(planilla)}
+                    >
+                      <td className="px-4 py-2">
+                        {new Date(planilla.fecha).toLocaleDateString("es-AR")}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {planilla.codfecha || "-"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {planilla.sede_nombre || "-"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {planilla.torneo_nombre || planilla.torneo || "-"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {planilla.profesor_nombre ||
+                          (planilla.idprofesor
+                            ? `ID: ${planilla.idprofesor}`
+                            : "-")}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {planilla.cantidad_partidos || 0}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
+                            planilla
+                          )}`}
+                        >
+                          {getEstadoTexto(planilla)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right font-semibold">
+                        ${planilla.total_caja?.toLocaleString() || "0"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleVerDetalle(planilla);
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Ver detalle"
+                          >
+                            <DocumentTextIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-4 px-2">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-gray-700">
+                  Página {currentPage} de {totalPages} ({planillas.length}{" "}
+                  planillas)
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {!loading && planillas.length === 0 && (
@@ -317,7 +351,6 @@ const PlanillaPagos: React.FC = () => {
           </div>
         )}
 
-        {/* Estadísticas */}
         {planillas.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
             <div className="flex flex-wrap gap-4">
@@ -336,18 +369,10 @@ const PlanillaPagos: React.FC = () => {
                 <strong>Contabilizadas:</strong>{" "}
                 {planillas.filter((p) => p.fhcierrecaja).length}
               </div>
-              <div>
-                <strong>Total partidos:</strong>{" "}
-                {planillas.reduce(
-                  (sum, p) => sum + (p.cantidad_partidos || 0),
-                  0
-                )}
-              </div>
             </div>
           </div>
         )}
 
-        {/* Modal Detalle - ✅ ACTUALIZADO con onUpdate */}
         <Modal
           isOpen={isModalOpen}
           onClose={() => {

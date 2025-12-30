@@ -131,13 +131,13 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
         </div>
       </div>
 
-      {/* Transferencias/MP */}
+      {/* EFECTIVO*/} 
       <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-3 rounded-xl border-2 border-yellow-300 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg">💳</span>
             <div>
-              <div className="text-xs font-bold text-yellow-800">Transferencias / MP</div>
+              <div className="text-xs font-bold text-yellow-800">EFECTIVO</div>
               <div className="text-[10px] text-yellow-600">(Depósitos + Pagos Fecha)</div>
             </div>
           </div>
@@ -248,10 +248,10 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
           value={observ_caja || ""}
           onChange={(e) => onUpdateObservCaja(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Ej: Transferencias: Madrazo $2000, Tiburón $35.000..."
+          placeholder="Ej: EFECTIVO: Madrazo $2000, Tiburón $35.000..."
         />
         <p className="text-xs text-gray-500 mt-1">
-          Anotar acá las transferencias, MercadoPago y otros medios no-efectivo
+          Anotar el detalle del efectivo real por caja o cualquier observación relevante.
         </p>
       </div>
 
@@ -262,7 +262,7 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
         </h5>
         <ul className="text-xs text-blue-700 space-y-1">
           <li>
-            • <strong>Total Caja:</strong> Todo lo cobrado (efectivo + transferencias/MP) menos egresos
+            • <strong>Total Caja:</strong> Todo lo cobrado (efectivo) menos egresos
           </li>
           <li>
             • <strong>Efectivo Esperado:</strong> Solo inscripciones en efectivo menos egresos (lo que debería haber en la caja)

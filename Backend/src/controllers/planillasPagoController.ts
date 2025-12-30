@@ -640,32 +640,226 @@ export const exportarPlanillaController = async (
       return res.status(404).json({ message: "Planilla no encontrada." });
     }
 
-    const { planilla, equipos, totales } = planillaCompleta;
+    const {
+      planilla,
+      equipos,
+      arbitros,
+      canchas,
+      profesores,
+      medico,
+      otros_gastos,
+      totales,
+    } = planillaCompleta;
 
-    let csv = "RESUMEN DE CAJA\n";
-    csv += `Fecha,${planilla.fecha}\n`;
-    csv += `Torneo,${planilla.torneo_nombre || ""}\n`;
-    csv += `Sede,${planilla.sede_nombre || ""}\n`;
-    csv += `Profesor,${planilla.profesor_nombre || ""}\n\n`;
+    const formatFecha = (fecha: string) => {
+      if (!fecha) return "";
+      return new Date(fecha).toLocaleDateString("es-AR");
+    };
 
-    csv += "EQUIPOS\n";
+    const formatMoney = (value: number) => {
+      return `$${(value || 0).toLocaleString("es-AR")}`;
+    };
+
+    let csv = "";
+
+    csv += "═══════════════════════════════════════════════════════════════\n";
+    csv += "                    PLANILLA DE CAJA\n";
     csv +=
-      "Equipo,Partidos,Deuda Insc,Deuda Dep,Deuda Fecha,Total a Pagar,Pago Insc,Pago Dep,Pago Fecha,Deuda Total\n";
+      "═══════════════════════════════════════════════════════════════\n\n";
+
+    csv += "INFORMACIÓN GENERAL\n";
+    csv += "───────────────────────────────────────────────────────────────\n";
+    csv += `Fecha:;${formatFecha(planilla.fecha)}\n`;
+    csv += `Número de Fecha:;${planilla.codfecha || "-"}\n`;
+    csv += `Torneo:;${planilla.torneo_nombre || "-"}\n`;
+    csv += `Sede:;${planilla.sede_nombre || "-"}\n`;
+    csv += `Profesor:;${planilla.profesor_nombre || "-"}\n`;
+    csv += `Estado:;${
+      planilla.fhcierrecaja
+        ? "Contabilizada"
+        : planilla.fhcierre
+        ? "Cerrada"
+        : "Abierta"
+    }\n\n`;
+
+    csv += "═══════════════════════════════════════════════════════════════\n";
+    csv += "                         INGRESOS\n";
+    csv +=
+      "═══════════════════════════════════════════════════════════════\n\n";
+
+    csv += "EQUIPOS - DETALLE DE COBROS\n";
+    csv += "───────────────────────────────────────────────────────────────\n";
+    csv +=
+      "Equipo;Partidos;Ausente;Deuda Insc;Deuda Dep;Deuda Fecha;Total a Pagar;Pago Insc;Pago Dep;Pago Fecha;Deuda Total\n";
+
+    let totalDeudaInsc = 0;
+    let totalDeudaDep = 0;
+    let totalDeudaFecha = 0;
+    let totalAPagar = 0;
+    let totalPagoInsc = 0;
+    let totalPagoDep = 0;
+    let totalPagoFecha = 0;
+    let totalDeudaTotal = 0;
 
     equipos.forEach((eq) => {
-      csv += `${eq.nombre_equipo},${eq.cantidad_partidos},${eq.deuda_insc},${eq.deuda_dep},${eq.deuda_fecha},${eq.total_pagar},${eq.pago_ins},${eq.pago_dep},${eq.pago_fecha},${eq.deuda_total}\n`;
+      totalDeudaInsc += eq.deuda_insc || 0;
+      totalDeudaDep += eq.deuda_dep || 0;
+      totalDeudaFecha += eq.deuda_fecha || 0;
+      totalAPagar += eq.total_pagar || 0;
+      totalPagoInsc += eq.pago_ins || 0;
+      totalPagoDep += eq.pago_dep || 0;
+      totalPagoFecha += eq.pago_fecha || 0;
+      totalDeudaTotal += eq.deuda_total || 0;
+
+      csv += `${eq.nombre_equipo};${eq.cantidad_partidos};${
+        eq.ausente === 1 ? "SÍ" : "NO"
+      };`;
+      csv += `${formatMoney(eq.deuda_insc || 0)};${formatMoney(
+        eq.deuda_dep || 0
+      )};${formatMoney(eq.deuda_fecha || 0)};`;
+      csv += `${formatMoney(eq.total_pagar || 0)};${formatMoney(
+        eq.pago_ins || 0
+      )};${formatMoney(eq.pago_dep || 0)};`;
+      csv += `${formatMoney(eq.pago_fecha || 0)};${formatMoney(
+        eq.deuda_total || 0
+      )}\n`;
     });
 
-    csv += "\nTOTALES\n";
-    csv += `Total Ingresos,${totales.total_ingresos}\n`;
-    csv += `Total Egresos,${totales.total_egresos}\n`;
-    csv += `Total Caja,${totales.total_caja}\n`;
-    csv += `Total Efectivo,${totales.total_efectivo}\n`;
+    csv += "───────────────────────────────────────────────────────────────\n";
+    csv += `TOTALES EQUIPOS;;;${formatMoney(totalDeudaInsc)};${formatMoney(
+      totalDeudaDep
+    )};${formatMoney(totalDeudaFecha)};`;
+    csv += `${formatMoney(totalAPagar)};${formatMoney(
+      totalPagoInsc
+    )};${formatMoney(totalPagoDep)};`;
+    csv += `${formatMoney(totalPagoFecha)};${formatMoney(totalDeudaTotal)}\n\n`;
+
+    csv += "RESUMEN INGRESOS\n";
+    csv += "───────────────────────────────────────────────────────────────\n";
+    csv += `Inscripciones:;${formatMoney(totales.ingreso_inscripciones)}\n`;
+    csv += `Depósitos:;${formatMoney(totales.ingreso_depositos)}\n`;
+    csv += `Pagos de Fecha:;${formatMoney(totales.ingreso_fecha)}\n`;
+    csv += `TOTAL INGRESOS:;${formatMoney(totales.total_ingresos)}\n\n`;
+
+    csv += "═══════════════════════════════════════════════════════════════\n";
+    csv += "                         EGRESOS\n";
+    csv +=
+      "═══════════════════════════════════════════════════════════════\n\n";
+
+    if (arbitros.length > 0) {
+      csv += "ÁRBITROS\n";
+      csv +=
+        "───────────────────────────────────────────────────────────────\n";
+      csv += "Nombre;Partidos;Valor Partido;Total\n";
+      arbitros.forEach((a) => {
+        csv += `${a.nombre_arbitro || `Árbitro ${a.idarbitro}`};${
+          a.partidos
+        };${formatMoney(a.valor_partido)};${formatMoney(a.total)}\n`;
+      });
+      csv += `Subtotal Árbitros:;;;${formatMoney(totales.egreso_arbitros)}\n\n`;
+    }
+
+    if (canchas.length > 0) {
+      csv += "CANCHAS\n";
+      csv +=
+        "───────────────────────────────────────────────────────────────\n";
+      csv += "Horas;Valor Hora;Total\n";
+      canchas.forEach((c) => {
+        csv += `${c.horas};${formatMoney(c.valor_hora)};${formatMoney(
+          c.total
+        )}\n`;
+      });
+      csv += `Subtotal Canchas:;;${formatMoney(totales.egreso_canchas)}\n\n`;
+    }
+
+    if (profesores.length > 0) {
+      csv += "PROFESORES\n";
+      csv +=
+        "───────────────────────────────────────────────────────────────\n";
+      csv += "Nombre;Horas;Valor Hora;Total\n";
+      profesores.forEach((p) => {
+        csv += `${p.nombre_profesor || `Profesor ${p.idprofesor}`};${
+          p.horas
+        };${formatMoney(p.valor_hora)};${formatMoney(p.total)}\n`;
+      });
+      csv += `Subtotal Profesores:;;;${formatMoney(
+        totales.egreso_profesores
+      )}\n\n`;
+    }
+
+    if (medico.length > 0) {
+      csv += "SERVICIO MÉDICO\n";
+      csv +=
+        "───────────────────────────────────────────────────────────────\n";
+      csv += "Nombre;Horas;Valor Hora;Total\n";
+      medico.forEach((m) => {
+        csv += `${m.nombre_medico || `Médico ${m.idmedico}`};${
+          m.horas
+        };${formatMoney(m.valor_hora)};${formatMoney(m.total)}\n`;
+      });
+      csv += `Subtotal Serv. Médico:;;;${formatMoney(
+        totales.egreso_medico
+      )}\n\n`;
+    }
+
+    if (otros_gastos.length > 0) {
+      csv += "OTROS GASTOS\n";
+      csv +=
+        "───────────────────────────────────────────────────────────────\n";
+      csv += "Descripción;Cantidad;Valor Unidad;Total\n";
+      otros_gastos.forEach((g) => {
+        csv += `${g.descripcion_gasto || `Gasto ${g.codgasto}`};${
+          g.cantidad
+        };${formatMoney(g.valor_unidad)};${formatMoney(g.total)}\n`;
+      });
+      csv += `Subtotal Otros Gastos:;;;${formatMoney(
+        totales.egreso_otros
+      )}\n\n`;
+    }
+
+    csv += "RESUMEN EGRESOS\n";
+    csv += "───────────────────────────────────────────────────────────────\n";
+    csv += `Árbitros:;${formatMoney(totales.egreso_arbitros)}\n`;
+    csv += `Canchas:;${formatMoney(totales.egreso_canchas)}\n`;
+    csv += `Profesores:;${formatMoney(totales.egreso_profesores)}\n`;
+    csv += `Serv. Médico:;${formatMoney(totales.egreso_medico)}\n`;
+    csv += `Otros Gastos:;${formatMoney(totales.egreso_otros)}\n`;
+    csv += `TOTAL EGRESOS:;${formatMoney(totales.total_egresos)}\n\n`;
+
+    csv += "═══════════════════════════════════════════════════════════════\n";
+    csv += "                    RESUMEN FINAL DE CAJA\n";
+    csv +=
+      "═══════════════════════════════════════════════════════════════\n\n";
+    csv += `Total Ingresos:;${formatMoney(totales.total_ingresos)}\n`;
+    csv += `Total Egresos:;${formatMoney(totales.total_egresos)}\n`;
+    csv += "───────────────────────────────────────────────────────────────\n";
+    csv += `TOTAL CAJA:;${formatMoney(totales.total_caja)}\n`;
+    csv += `EFECTIVO ESPERADO:;${formatMoney(totales.total_efectivo)}\n`;
+    csv += `TRANSFERENCIAS/MP:;${formatMoney(totales.diferencia_caja)}\n`;
+
+    if (planilla.totefectivo !== undefined && planilla.totefectivo !== null) {
+      const diferencia = (planilla.totefectivo || 0) - totales.total_efectivo;
+      csv += `EFECTIVO REAL:;${formatMoney(planilla.totefectivo)}\n`;
+      csv += `DIFERENCIA:;${formatMoney(diferencia)}\n`;
+    }
+
+    if (planilla.observ_caja) {
+      csv +=
+        "\n───────────────────────────────────────────────────────────────\n";
+      csv += `Observaciones:;${planilla.observ_caja}\n`;
+    }
+
+    csv +=
+      "\n═══════════════════════════════════════════════════════════════\n";
+    csv += `Exportado el:;${new Date().toLocaleString("es-AR")}\n`;
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=caja_fecha_${idfecha}.csv`
+      `attachment; filename=planilla_caja_${formatFecha(planilla.fecha).replace(
+        /\//g,
+        "-"
+      )}_fecha${planilla.codfecha || idfecha}.csv`
     );
 
     return res.status(200).send("\uFEFF" + csv);

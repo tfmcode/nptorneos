@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { PlanillaCompleta } from "../../types/planillasPago";
@@ -19,6 +19,7 @@ import {
   cerrarCaja,
   reabrirPlanilla,
   exportarPlanillaCSV,
+  getPlanillaCompleta,
 } from "../../api/planillasPagosService";
 
 type Props = {
@@ -28,10 +29,15 @@ type Props = {
 };
 
 const PlanillaDetalleTabs: React.FC<Props> = ({
-  planillaCompleta,
+  planillaCompleta: initialPlanillaCompleta,
   onClose,
   onUpdate,
 }) => {
+  const [planillaCompleta, setPlanillaCompleta] = useState(
+    initialPlanillaCompleta
+  );
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const {
     planilla,
     arbitros,
@@ -55,9 +61,29 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
   );
 
   useEffect(() => {
+    setPlanillaCompleta(initialPlanillaCompleta);
+  }, [initialPlanillaCompleta]);
+
+  useEffect(() => {
     setEfectivoReal(planilla.totefectivo || 0);
     setObservCaja(planilla.observ_caja || "");
   }, [planilla]);
+
+  const refreshData = useCallback(async () => {
+    if (!planilla.idfecha) return;
+
+    setIsRefreshing(true);
+    try {
+      const updatedPlanilla = await getPlanillaCompleta(planilla.idfecha);
+      if (updatedPlanilla) {
+        setPlanillaCompleta(updatedPlanilla);
+      }
+    } catch (error) {
+      console.error("Error al refrescar datos:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [planilla.idfecha]);
 
   const getEstado = (): string => {
     if (planilla.fhcierrecaja) return "Contabilizada";
@@ -82,10 +108,11 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     { id: "totales", label: "Totales", icon: "💵" },
   ];
 
-  const handleSuccess = () => {
-    console.log("✅ Operación exitosa");
+  const handleSuccess = useCallback(async () => {
+    console.log("✅ Operación exitosa - Refrescando datos...");
+    await refreshData();
     onUpdate?.();
-  };
+  }, [refreshData, onUpdate]);
 
   const handleError = (error: string) => {
     console.error("❌ Error:", error);
@@ -95,7 +122,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
   const handleUpdateTurno = async (idturno: number) => {
     try {
       await updateTurnoPlanilla(planilla.idfecha, idturno);
-      handleSuccess();
+      await handleSuccess();
     } catch (error) {
       handleError(
         error instanceof Error ? error.message : "Error al actualizar turno"
@@ -126,6 +153,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     try {
       await cerrarPlanilla(planilla.idfecha, planilla.idprofesor);
       alert("✅ Planilla cerrada exitosamente");
+      await refreshData();
       onUpdate?.();
       setShowConfirmDialog(null);
     } catch (error) {
@@ -142,6 +170,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     try {
       await cerrarCaja(planilla.idfecha, Number(user?.id) || 1);
       alert("✅ Caja contabilizada exitosamente");
+      await refreshData();
       onUpdate?.();
       setShowConfirmDialog(null);
     } catch (error) {
@@ -158,6 +187,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     try {
       await reabrirPlanilla(planilla.idfecha);
       alert("✅ Planilla reabierta exitosamente");
+      await refreshData();
       onUpdate?.();
       setShowConfirmDialog(null);
     } catch (error) {
@@ -190,6 +220,12 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col h-full">
+      {isRefreshing && (
+        <div className="absolute top-0 left-0 right-0 bg-blue-500 text-white text-center py-1 text-sm z-50">
+          Actualizando datos...
+        </div>
+      )}
+
       <PlanillaHeader
         planilla={planilla}
         estado={getEstado()}
@@ -284,6 +320,14 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
               className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
             >
               Cerrar
+            </button>
+            <button
+              onClick={refreshData}
+              disabled={isRefreshing}
+              className="px-4 py-2 border border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 transition disabled:opacity-50"
+              title="Refrescar datos"
+            >
+              🔄 Refrescar
             </button>
           </div>
 

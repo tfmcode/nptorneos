@@ -1,6 +1,4 @@
-// WebApp/src/hooks/usePlanillaEdition.ts
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PlanillaEquipo,
   PlanillaArbitro,
@@ -31,7 +29,6 @@ import {
   deleteOtroGastoPlanilla,
 } from "../api/planillasPagosService";
 
-// Tipo genérico que acepta todas las entidades de planilla
 type PlanillaEntity =
   | PlanillaEquipo
   | PlanillaArbitro
@@ -59,10 +56,12 @@ interface UsePlanillaEditionProps<T extends PlanillaEntity> {
 interface UsePlanillaEditionReturn<T extends PlanillaEntity> {
   data: T[];
   isEditing: boolean;
+  hasChanges: boolean;
   handleAdd: (newItem?: Partial<T>) => void;
   handleUpdate: (index: number, field: keyof T, value: unknown) => void;
   handleDelete: (index: number) => void;
   handleSave: () => Promise<void>;
+  resetChanges: () => void;
 }
 
 export function usePlanillaEdition<T extends PlanillaEntity>({
@@ -75,22 +74,21 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
   const [data, setData] = useState<T[]>(initialData);
   const [deletedItems, setDeletedItems] = useState<T[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Actualizar data cuando cambia initialData
   useEffect(() => {
     setData(initialData);
-    setDeletedItems([]); // Limpiar items eliminados cuando se recarga
+    setDeletedItems([]);
+    setHasChanges(false);
   }, [initialData]);
 
-  // Obtener el siguiente orden disponible
-  const getNextOrden = (): number => {
+  const getNextOrden = useCallback((): number => {
     if (data.length === 0) return 1;
     const maxOrden = Math.max(...data.map((item) => item.orden));
     return maxOrden + 1;
-  };
+  }, [data]);
 
-  // Crear una nueva entidad vacía según el tipo
-  const createEmptyEntity = (): T => {
+  const createEmptyEntity = useCallback((): T => {
     const baseEntity = {
       idfecha,
       orden: getNextOrden(),
@@ -152,45 +150,56 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
       default:
         return baseEntity as T;
     }
-  };
+  }, [entityType, idfecha, getNextOrden]);
 
-  // Agregar nueva entidad
-  const handleAdd = (newItem?: Partial<T>) => {
-    const baseEntity = createEmptyEntity();
-    const newEntity = newItem ? { ...baseEntity, ...newItem } : baseEntity;
-    setData([...data, newEntity as T]);
-  };
+  const handleAdd = useCallback(
+    (newItem?: Partial<T>) => {
+      const baseEntity = createEmptyEntity();
+      const newEntity = newItem ? { ...baseEntity, ...newItem } : baseEntity;
+      setData((prev) => [...prev, newEntity as T]);
+      setHasChanges(true);
+    },
+    [createEmptyEntity]
+  );
 
-  // Actualizar campo de una entidad
-  const handleUpdate = (index: number, field: keyof T, value: unknown) => {
-    const newData = [...data];
-    newData[index] = {
-      ...newData[index],
-      [field]: value,
-    };
-    setData(newData);
-  };
+  const handleUpdate = useCallback(
+    (index: number, field: keyof T, value: unknown) => {
+      setData((prev) => {
+        const newData = [...prev];
+        newData[index] = {
+          ...newData[index],
+          [field]: value,
+        };
+        return newData;
+      });
+      setHasChanges(true);
+    },
+    []
+  );
 
-  // Eliminar entidad
-  const handleDelete = (index: number) => {
-    const itemToDelete = data[index];
+  const handleDelete = useCallback((index: number) => {
+    setData((prev) => {
+      const itemToDelete = prev[index];
 
-    // Si el item ya existe en la BD (tiene id o fhcarga), guardarlo para eliminarlo después
-    if (itemToDelete.id !== undefined || itemToDelete.fhcarga !== undefined) {
-      setDeletedItems([...deletedItems, itemToDelete]);
-    }
+      if (itemToDelete.id !== undefined || itemToDelete.fhcarga !== undefined) {
+        setDeletedItems((deleted) => [...deleted, itemToDelete]);
+      }
 
-    // Remover del array local
-    const newData = data.filter((_, i) => i !== index);
-    setData(newData);
-  };
+      return prev.filter((_, i) => i !== index);
+    });
+    setHasChanges(true);
+  }, []);
 
-  // Guardar todos los cambios
+  const resetChanges = useCallback(() => {
+    setData(initialData);
+    setDeletedItems([]);
+    setHasChanges(false);
+  }, [initialData]);
+
   const handleSave = async () => {
     setIsEditing(true);
 
     try {
-      // Determinar qué funciones usar según el tipo de entidad
       const {
         addFn,
         updateFn,
@@ -288,26 +297,21 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
         }
       })();
 
-      // 1. Primero procesar eliminaciones
       for (const item of deletedItems) {
         await deleteFn(item.idfecha, item.orden);
       }
 
-      // 2. Luego procesar adiciones y actualizaciones
       for (const item of data) {
-        // Si el item tiene ID o fhcarga, es una actualización
         if (item.id !== undefined || item.fhcarga !== undefined) {
           await updateFn(item.idfecha, item.orden, item);
         } else {
-          // Si no tiene ID ni fhcarga, es una nueva entidad
           await addFn(item);
         }
       }
 
-      // Limpiar el array de items eliminados después de guardar
       setDeletedItems([]);
+      setHasChanges(false);
 
-      // Notificar éxito
       onSuccess?.();
     } catch (error) {
       const errorMessage =
@@ -321,9 +325,11 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
   return {
     data,
     isEditing,
+    hasChanges,
     handleAdd,
     handleUpdate,
     handleDelete,
     handleSave,
+    resetChanges,
   };
 }

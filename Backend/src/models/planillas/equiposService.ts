@@ -99,6 +99,8 @@ export const getEquiposByPlanilla = async (
 
     const idsEquipos = Array.from(equiposMap.keys());
 
+    // ✅ CORREGIDO: Excluir pagos de inscripción de la fecha ACTUAL
+    // Solo contar pagos de fechas ANTERIORES para calcular deuda pendiente
     const pagosInscripcionTotalesQuery = `
       SELECT 
         fe.idequipo,
@@ -108,11 +110,12 @@ export const getEquiposByPlanilla = async (
       WHERE fe.idequipo = ANY($1) 
         AND fe.tipopago = 1
         AND tf.fhbaja IS NULL
+        AND fe.idfecha != $2
       GROUP BY fe.idequipo
     `;
     const pagosInscTotalesResult = await pool.query(
       pagosInscripcionTotalesQuery,
-      [idsEquipos]
+      [idsEquipos, idfecha]
     );
     const pagosInscTotalesMap = new Map(
       pagosInscTotalesResult.rows.map((r: any) => [
@@ -121,21 +124,11 @@ export const getEquiposByPlanilla = async (
       ])
     );
 
-    // ✅ CORREGIDO: Calcular saldo CC EXCLUYENDO los cargos de la fecha actual
-    // Esto evita contar doble la deuda de esta fecha
-    const saldosCCExcluyendoFechaActualQuery = `
+    // ✅ CORREGIDO: Calcular deuda de fechas ANTERIORES solamente
+    // NO incluir inscripción ni depósitos (se calculan aparte)
+    const deudaFechasAnterioresQuery = `
       SELECT 
         e.id as idequipo,
-        COALESCE((
-          -- Cargos de Inscripción (DEBE)
-          SELECT COALESCE(SUM(tei.inscrip), 0)
-          FROM wtorneos_equipos_insc tei
-          INNER JOIN wtorneos t ON tei.idtorneo = t.id
-          WHERE tei.idequipo = e.id
-            AND tei.inscrip > 0
-            AND t.fhbaja IS NULL
-        ), 0) 
-        +
         COALESCE((
           -- Cargos de Fechas ANTERIORES (DEBE) - EXCLUYENDO la fecha actual
           SELECT COALESCE(SUM(feh.importe), 0)
@@ -144,42 +137,11 @@ export const getEquiposByPlanilla = async (
           WHERE feh.idequipo = e.id
             AND feh.importe > 0
             AND t.fhbaja IS NULL
-            AND feh.idfecha != $2  -- ✅ EXCLUIR la fecha actual
-        ), 0)
-        +
-        COALESCE((
-          -- Cargos de Depósito (DEBE)
-          SELECT COALESCE(SUM(d.importe), 0)
-          FROM wdepositos d
-          WHERE d.idequipo = e.id
-            AND d.codtipo = 2
-            AND d.fhbaja IS NULL
-            AND d.importe > 0
+            AND feh.idfecha != $2
         ), 0)
         -
         COALESCE((
-          -- Pagos de Inscripción (HABER)
-          SELECT COALESCE(SUM(fe.importe), 0)
-          FROM wfechas_equipos fe
-          INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
-          WHERE fe.idequipo = e.id
-            AND fe.tipopago = 1
-            AND wtf.fhbaja IS NULL
-            AND fe.importe > 0
-        ), 0)
-        -
-        COALESCE((
-          -- Pagos de Depósito (HABER)
-          SELECT COALESCE(SUM(d.importe), 0)
-          FROM wdepositos d
-          WHERE d.idequipo = e.id
-            AND d.codtipo = 1
-            AND d.fhbaja IS NULL
-            AND d.importe > 0
-        ), 0)
-        -
-        COALESCE((
-          -- Pagos de Fecha (HABER)
+          -- Pagos de Fecha ANTERIORES (HABER) - EXCLUYENDO la fecha actual
           SELECT COALESCE(SUM(fe.importe), 0)
           FROM wfechas_equipos fe
           INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
@@ -187,26 +149,30 @@ export const getEquiposByPlanilla = async (
             AND fe.tipopago = 3
             AND wtf.fhbaja IS NULL
             AND fe.importe > 0
+            AND fe.idfecha != $2
         ), 0)
-        as deuda_pendiente
+        as deuda_fechas_anteriores
       FROM wequipos e
       WHERE e.id = ANY($1) AND e.fhbaja IS NULL
     `;
 
-    let saldosCCMap = new Map<number, number>();
+    let deudaFechasAnterioresMap = new Map<number, number>();
     try {
-      const saldosCCResult = await pool.query(
-        saldosCCExcluyendoFechaActualQuery,
-        [idsEquipos, idfecha]
-      );
-      saldosCCMap = new Map(
-        saldosCCResult.rows.map((r: any) => [
+      const deudaFechasResult = await pool.query(deudaFechasAnterioresQuery, [
+        idsEquipos,
+        idfecha,
+      ]);
+      deudaFechasAnterioresMap = new Map(
+        deudaFechasResult.rows.map((r: any) => [
           r.idequipo,
-          parseFloat(r.deuda_pendiente || "0"),
+          parseFloat(r.deuda_fechas_anteriores || "0"),
         ])
       );
     } catch (err) {
-      console.log("Info: Error al calcular saldo CC, usando valor 0:", err);
+      console.log(
+        "Info: Error al calcular deuda fechas anteriores, usando valor 0:",
+        err
+      );
     }
 
     const pagosQuery = `
@@ -257,16 +223,16 @@ export const getEquiposByPlanilla = async (
         data.valor_insc - totalPagadoInscAnterior
       );
 
-      // ✅ CORREGIDO: deuda_dep ahora es el saldo pendiente SIN la fecha actual
-      // Solo muestra deuda de fechas ANTERIORES + inscripción + depósitos - pagos
-      const deudaPendienteAnterior = saldosCCMap.get(idequipo) || 0;
+      // ✅ CORREGIDO: deuda_dep ahora es solo deuda de fechas ANTERIORES no pagadas
+      // NO incluye inscripción (ya se muestra en deuda_insc)
+      const deudaFechasAnterior = deudaFechasAnterioresMap.get(idequipo) || 0;
       const deudaDepPendiente =
-        deudaPendienteAnterior > 0 ? deudaPendienteAnterior : 0;
+        deudaFechasAnterior > 0 ? deudaFechasAnterior : 0;
 
       // Deuda de ESTA fecha específica
       const deuda_fecha = data.valor_fecha * data.cantidad_partidos;
 
-      // Total a pagar = inscripción pendiente + deuda anterior + deuda de esta fecha
+      // Total a pagar = inscripción pendiente + fechas anteriores adeudadas + deuda de esta fecha
       const total_pagar = deudaInscPendiente + deudaDepPendiente + deuda_fecha;
 
       const total_pagado_esta_fecha =

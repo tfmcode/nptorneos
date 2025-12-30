@@ -9,6 +9,7 @@ import {
   createPlanillaController,
   cerrarPlanillaController,
   cerrarCajaController,
+  reabrirPlanillaController,
   addEquipoController,
   updateEquipoController,
   deleteEquipoController,
@@ -30,16 +31,14 @@ import {
   updateTurnoController,
   toggleAusenciaController,
   updatePagoFechaController,
+  updatePagoInscripcionController,
+  updatePagoDepositoController,
   updateEfectivoRealController,
+  exportarPlanillaController,
 } from "../controllers/planillasPagoController";
 
 const router = express.Router();
 
-// ========================================
-// RUTAS PRINCIPALES DE PLANILLAS
-// ========================================
-
-// GET /api/planillas-pago - Listado con filtros
 router.get(
   "/",
   authMiddleware,
@@ -57,7 +56,6 @@ router.get(
   asyncHandler(getPlanillasController)
 );
 
-// GET /api/planillas-pago/:idfecha - Obtener planilla completa
 router.get(
   "/:idfecha",
   authMiddleware,
@@ -66,7 +64,14 @@ router.get(
   asyncHandler(getPlanillaCompletaController)
 );
 
-// POST /api/planillas-pago - Crear planilla
+router.get(
+  "/:idfecha/exportar",
+  authMiddleware,
+  [param("idfecha").isInt().withMessage("ID de fecha inválido")],
+  validateRequest,
+  asyncHandler(exportarPlanillaController)
+);
+
 router.post(
   "/",
   authMiddleware,
@@ -79,7 +84,6 @@ router.post(
   asyncHandler(createPlanillaController)
 );
 
-// POST /api/planillas-pago/:idfecha/cerrar - Cerrar planilla
 router.post(
   "/:idfecha/cerrar",
   authMiddleware,
@@ -93,23 +97,25 @@ router.post(
   asyncHandler(cerrarPlanillaController)
 );
 
-// POST /api/planillas-pago/:idfecha/cerrar-caja - Cerrar caja (contabilizar)
 router.post(
   "/:idfecha/cerrar-caja",
   authMiddleware,
   [
     param("idfecha").isInt().withMessage("ID de fecha inválido"),
-    body("idusuario").isInt().withMessage("ID de usuario inválido"),
+    body("idusuario").optional().isInt().withMessage("ID de usuario inválido"),
   ],
   validateRequest,
   asyncHandler(cerrarCajaController)
 );
 
-// ========================================
-// RUTAS DE EQUIPOS (CORREGIDAS)
-// ========================================
+router.post(
+  "/:idfecha/reabrir",
+  authMiddleware,
+  [param("idfecha").isInt().withMessage("ID de fecha inválido")],
+  validateRequest,
+  asyncHandler(reabrirPlanillaController)
+);
 
-// POST /api/planillas-pago/equipos - Agregar equipo
 router.post(
   "/equipos",
   authMiddleware,
@@ -125,7 +131,6 @@ router.post(
   asyncHandler(addEquipoController)
 );
 
-// ✅ CORREGIDO: PUT /api/planillas-pago/equipos/:idfecha/:orden
 router.put(
   "/equipos/:idfecha/:orden",
   authMiddleware,
@@ -140,7 +145,6 @@ router.put(
   asyncHandler(updateEquipoController)
 );
 
-// ✅ CORREGIDO: DELETE /api/planillas-pago/equipos/:idfecha/:orden
 router.delete(
   "/equipos/:idfecha/:orden",
   authMiddleware,
@@ -151,10 +155,6 @@ router.delete(
   validateRequest,
   asyncHandler(deleteEquipoController)
 );
-
-// ========================================
-// RUTAS DE ÁRBITROS
-// ========================================
 
 router.post(
   "/arbitros",
@@ -203,10 +203,6 @@ router.delete(
   asyncHandler(deleteArbitroController)
 );
 
-// ========================================
-// RUTAS DE CANCHAS
-// ========================================
-
 router.post(
   "/canchas",
   authMiddleware,
@@ -249,10 +245,6 @@ router.delete(
   validateRequest,
   asyncHandler(deleteCanchaController)
 );
-
-// ========================================
-// RUTAS DE PROFESORES
-// ========================================
 
 router.post(
   "/profesores",
@@ -302,10 +294,6 @@ router.delete(
   asyncHandler(deleteProfesorController)
 );
 
-// ========================================
-// RUTAS DE SERVICIO MÉDICO
-// ========================================
-
 router.post(
   "/medico",
   authMiddleware,
@@ -350,10 +338,6 @@ router.delete(
   validateRequest,
   asyncHandler(deleteMedicoController)
 );
-
-// ========================================
-// RUTAS DE OTROS GASTOS
-// ========================================
 
 router.post(
   "/otros-gastos",
@@ -410,7 +394,6 @@ router.put(
   asyncHandler(updateTurnoController)
 );
 
-// Actualizar ausencia de equipo
 router.put(
   "/:idfecha/ausencia",
   authMiddleware,
@@ -423,7 +406,6 @@ router.put(
   asyncHandler(toggleAusenciaController)
 );
 
-// Actualizar pago de fecha
 router.put(
   "/:idfecha/pago-fecha",
   authMiddleware,
@@ -436,7 +418,30 @@ router.put(
   asyncHandler(updatePagoFechaController)
 );
 
-// Actualizar efectivo real en caja
+router.put(
+  "/:idfecha/pago-inscripcion",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("idequipo").isInt().withMessage("ID de equipo inválido"),
+    body("importe").isNumeric().withMessage("Importe inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updatePagoInscripcionController)
+);
+
+router.put(
+  "/:idfecha/pago-deposito",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("idequipo").isInt().withMessage("ID de equipo inválido"),
+    body("importe").isNumeric().withMessage("Importe inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updatePagoDepositoController)
+);
+
 router.put(
   "/:idfecha/efectivo-real",
   authMiddleware,

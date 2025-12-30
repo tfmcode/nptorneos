@@ -117,6 +117,30 @@ export const cerrarCajaController = async (req: Request, res: Response) => {
   }
 };
 
+export const reabrirPlanillaController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+
+    if (isNaN(idfecha)) {
+      return res.status(400).json({ message: "ID de fecha inválido." });
+    }
+
+    await planillasModel.reabrirPlanilla(idfecha);
+
+    return res.status(200).json({
+      message: "Planilla reabierta exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al reabrir planilla:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al reabrir planilla.", error });
+  }
+};
+
 export const updateTurnoController = async (req: Request, res: Response) => {
   try {
     const idfecha = Number(req.params.idfecha);
@@ -495,7 +519,10 @@ export const toggleAusenciaController = async (req: Request, res: Response) => {
   }
 };
 
-export const updatePagoFechaController = async (req: Request, res: Response) => {
+export const updatePagoFechaController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const idfecha = Number(req.params.idfecha);
     const { idequipo, importe } = req.body;
@@ -517,7 +544,64 @@ export const updatePagoFechaController = async (req: Request, res: Response) => 
   }
 };
 
-export const updateEfectivoRealController = async (req: Request, res: Response) => {
+export const updatePagoInscripcionController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { idequipo, importe } = req.body;
+
+    if (isNaN(idfecha) || !idequipo || importe === undefined) {
+      return res.status(400).json({ message: "Parámetros inválidos." });
+    }
+
+    await planillasModel.updatePagoInscripcion(
+      idfecha,
+      idequipo,
+      Number(importe)
+    );
+
+    return res.status(200).json({
+      message: "Pago de inscripción actualizado exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar pago inscripción:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar pago inscripción.", error });
+  }
+};
+
+export const updatePagoDepositoController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { idequipo, importe } = req.body;
+
+    if (isNaN(idfecha) || !idequipo || importe === undefined) {
+      return res.status(400).json({ message: "Parámetros inválidos." });
+    }
+
+    await planillasModel.updatePagoDeposito(idfecha, idequipo, Number(importe));
+
+    return res.status(200).json({
+      message: "Pago de depósito actualizado exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar pago depósito:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar pago depósito.", error });
+  }
+};
+
+export const updateEfectivoRealController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const idfecha = Number(req.params.idfecha);
     const { totefectivo } = req.body;
@@ -536,5 +620,59 @@ export const updateEfectivoRealController = async (req: Request, res: Response) 
     return res
       .status(500)
       .json({ message: "Error al actualizar efectivo real.", error });
+  }
+};
+
+export const exportarPlanillaController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+
+    if (isNaN(idfecha)) {
+      return res.status(400).json({ message: "ID de fecha inválido." });
+    }
+
+    const planillaCompleta = await planillasModel.getPlanillaByIdFecha(idfecha);
+
+    if (!planillaCompleta) {
+      return res.status(404).json({ message: "Planilla no encontrada." });
+    }
+
+    const { planilla, equipos, totales } = planillaCompleta;
+
+    let csv = "RESUMEN DE CAJA\n";
+    csv += `Fecha,${planilla.fecha}\n`;
+    csv += `Torneo,${planilla.torneo_nombre || ""}\n`;
+    csv += `Sede,${planilla.sede_nombre || ""}\n`;
+    csv += `Profesor,${planilla.profesor_nombre || ""}\n\n`;
+
+    csv += "EQUIPOS\n";
+    csv +=
+      "Equipo,Partidos,Deuda Insc,Deuda Dep,Deuda Fecha,Total a Pagar,Pago Insc,Pago Dep,Pago Fecha,Deuda Total\n";
+
+    equipos.forEach((eq) => {
+      csv += `${eq.nombre_equipo},${eq.cantidad_partidos},${eq.deuda_insc},${eq.deuda_dep},${eq.deuda_fecha},${eq.total_pagar},${eq.pago_ins},${eq.pago_dep},${eq.pago_fecha},${eq.deuda_total}\n`;
+    });
+
+    csv += "\nTOTALES\n";
+    csv += `Total Ingresos,${totales.total_ingresos}\n`;
+    csv += `Total Egresos,${totales.total_egresos}\n`;
+    csv += `Total Caja,${totales.total_caja}\n`;
+    csv += `Total Efectivo,${totales.total_efectivo}\n`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=caja_fecha_${idfecha}.csv`
+    );
+
+    return res.status(200).send("\uFEFF" + csv);
+  } catch (error) {
+    console.error("❌ Error al exportar planilla:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al exportar planilla.", error });
   }
 };

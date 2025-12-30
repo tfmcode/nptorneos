@@ -51,12 +51,6 @@ export const getPlanillaCompleta = async (
   try {
     const response = await API.get(`/api/planillas-pago/${idfecha}`);
     const planillaCompleta = response.data;
-
-    // ✅ SIMPLIFICADO: Ya no necesitamos llamar a /api/partidos porque:
-    // 1. getEquiposByPlanilla trae los nombres de los equipos con JOIN
-    // 2. El backend ya retorna partido_info completo
-    // 3. Una caja puede tener MÚLTIPLES partidos, no solo uno
-
     return planillaCompleta;
   } catch (error) {
     return handleAxiosError(error);
@@ -87,12 +81,20 @@ export const cerrarPlanilla = async (
 
 export const cerrarCaja = async (
   idfecha: number,
-  idusuario: number
+  idusuario?: number
 ): Promise<void> => {
   try {
     await API.post(`/api/planillas-pago/${idfecha}/cerrar-caja`, {
-      idusuario,
+      idusuario: idusuario || 1,
     });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const reabrirPlanilla = async (idfecha: number): Promise<void> => {
+  try {
+    await API.post(`/api/planillas-pago/${idfecha}/reabrir`);
   } catch (error) {
     return handleAxiosError(error);
   }
@@ -114,7 +116,9 @@ export const updateEfectivoRealPlanilla = async (
   totefectivo: number
 ): Promise<void> => {
   try {
-    await API.put(`/api/planillas-pago/${idfecha}/efectivo-real`, { totefectivo });
+    await API.put(`/api/planillas-pago/${idfecha}/efectivo-real`, {
+      totefectivo,
+    });
   } catch (error) {
     return handleAxiosError(error);
   }
@@ -373,6 +377,55 @@ export const updatePagoFechaEquipo = async (
       idequipo,
       importe,
     });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const updatePagoInscripcionEquipo = async (
+  idfecha: number,
+  idequipo: number,
+  importe: number
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/pago-inscripcion`, {
+      idequipo,
+      importe,
+    });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const updatePagoDepositoEquipo = async (
+  idfecha: number,
+  idequipo: number,
+  importe: number
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/pago-deposito`, {
+      idequipo,
+      importe,
+    });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const exportarPlanillaCSV = async (idfecha: number): Promise<void> => {
+  try {
+    const response = await API.get(`/api/planillas-pago/${idfecha}/exportar`, {
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `caja_fecha_${idfecha}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     return handleAxiosError(error);
   }

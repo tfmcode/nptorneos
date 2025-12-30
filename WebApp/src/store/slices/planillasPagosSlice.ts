@@ -1,5 +1,3 @@
-// Ubicación: WebApp/src/store/slices/planillasPagoSlice.ts
-
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import {
   getPlanillasByFiltros as getPlanillasByFiltrosService,
@@ -7,6 +5,7 @@ import {
   createPlanilla as createPlanillaService,
   cerrarPlanilla as cerrarPlanillaService,
   cerrarCaja as cerrarCajaService,
+  reabrirPlanilla as reabrirPlanillaService,
 } from "../../api/planillasPagosService";
 import {
   PlanillaPago,
@@ -27,10 +26,6 @@ const initialState: PlanillasPagoState = {
   loading: false,
   error: null,
 };
-
-// ========================================
-// THUNKS - PLANILLAS PRINCIPALES
-// ========================================
 
 export const getPlanillasByFiltros = createAsyncThunk(
   "planillasPago/fetchByFiltros",
@@ -106,9 +101,19 @@ export const cerrarCaja = createAsyncThunk(
   }
 );
 
-// ========================================
-// SLICE
-// ========================================
+export const reabrirPlanillaAction = createAsyncThunk(
+  "planillasPago/reabrir",
+  async (idfecha: number, { rejectWithValue }) => {
+    try {
+      await reabrirPlanillaService(idfecha);
+      return idfecha;
+    } catch (error: unknown) {
+      return rejectWithValue(
+        (error as Error).message || "Error al reabrir planilla."
+      );
+    }
+  }
+);
 
 const planillasPagoSlice = createSlice({
   name: "planillasPago",
@@ -128,7 +133,6 @@ const planillasPagoSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // getPlanillasByFiltros
       .addCase(getPlanillasByFiltros.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -142,7 +146,6 @@ const planillasPagoSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // getPlanillaCompleta
       .addCase(getPlanillaCompleta.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -156,7 +159,6 @@ const planillasPagoSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // createPlanilla
       .addCase(createPlanilla.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -172,18 +174,15 @@ const planillasPagoSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // cerrarPlanilla
       .addCase(cerrarPlanilla.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(cerrarPlanilla.fulfilled, (state, action) => {
         state.loading = false;
-        // action.payload es el idfecha
         if (state.planillaActual?.planilla.idfecha === action.payload) {
           state.planillaActual.planilla.fhcierre = new Date().toISOString();
         }
-        // Actualizar en la lista también
         const index = state.planillas.findIndex(
           (p) => p.idfecha === action.payload
         );
@@ -196,18 +195,15 @@ const planillasPagoSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // cerrarCaja
       .addCase(cerrarCaja.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(cerrarCaja.fulfilled, (state, action) => {
         state.loading = false;
-        // action.payload es el idfecha
         if (state.planillaActual?.planilla.idfecha === action.payload) {
           state.planillaActual.planilla.fhcierrecaja = new Date().toISOString();
         }
-        // Actualizar en la lista también
         const index = state.planillas.findIndex(
           (p) => p.idfecha === action.payload
         );
@@ -216,6 +212,29 @@ const planillasPagoSlice = createSlice({
         }
       })
       .addCase(cerrarCaja.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      .addCase(reabrirPlanillaAction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(reabrirPlanillaAction.fulfilled, (state, action) => {
+        state.loading = false;
+        if (state.planillaActual?.planilla.idfecha === action.payload) {
+          state.planillaActual.planilla.fhcierre = undefined;
+          state.planillaActual.planilla.fhcierrecaja = undefined;
+        }
+        const index = state.planillas.findIndex(
+          (p) => p.idfecha === action.payload
+        );
+        if (index !== -1) {
+          state.planillas[index].fhcierre = undefined;
+          state.planillas[index].fhcierrecaja = undefined;
+        }
+      })
+      .addCase(reabrirPlanillaAction.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

@@ -1,16 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
 import { PlanillaCompleta } from "../../types/planillasPago";
 import { PlanillaHeader } from "./shared/PlanillaHeader";
 import { TabNavigation, Tab } from "./shared/TabNavigation";
 import { DatosTab } from "./tabs/DatosTab";
-import { TotalesTab } from "./tabs/TotalesTab"; // ✅ CORREGIDO: Import desde su propio archivo
+import { TotalesTab } from "./tabs/TotalesTab";
 import { EquiposTab } from "./tabs/EquiposTab";
 import { ArbitrosTab } from "./tabs/ArbitrosTab";
 import { CanchasTab } from "./tabs/CanchasTab";
 import { ProfesoresTab } from "./tabs/ProfesoresTab";
 import { MedicoTab } from "./tabs/MedicoTab";
 import { OtrosGastosTab } from "./tabs/OtrosGastosTab";
-import { updateTurnoPlanilla, updateEfectivoRealPlanilla } from "../../api/planillasPagosService";
+import {
+  updateTurnoPlanilla,
+  updateEfectivoRealPlanilla,
+  cerrarPlanilla,
+  cerrarCaja,
+  reabrirPlanilla,
+  exportarPlanillaCSV,
+} from "../../api/planillasPagosService";
 
 type Props = {
   planillaCompleta: PlanillaCompleta;
@@ -33,10 +42,22 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     totales,
   } = planillaCompleta;
 
-  const [activeTab, setActiveTab] = useState<string>("datos");
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { proveedores } = useSelector((state: RootState) => state.proveedores);
+
+  const [activeTab, setActiveTab] = useState<string>("equipos");
   const [, setObserv] = useState(planilla.observ || "");
   const [observCaja, setObservCaja] = useState(planilla.observ_caja || "");
   const [efectivoReal, setEfectivoReal] = useState(planilla.totefectivo || 0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    setEfectivoReal(planilla.totefectivo || 0);
+    setObservCaja(planilla.observ_caja || "");
+  }, [planilla]);
 
   const getEstado = (): string => {
     if (planilla.fhcierrecaja) return "Contabilizada";
@@ -88,12 +109,84 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
       await updateEfectivoRealPlanilla(planilla.idfecha, efectivo);
     } catch (error) {
       handleError(
-        error instanceof Error ? error.message : "Error al actualizar efectivo real"
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar efectivo real"
       );
     }
   };
 
+  const handleCerrarPlanilla = async () => {
+    if (!planilla.idprofesor) {
+      handleError("Debe asignar un profesor antes de cerrar la planilla");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await cerrarPlanilla(planilla.idfecha, planilla.idprofesor);
+      alert("✅ Planilla cerrada exitosamente");
+      onUpdate?.();
+      setShowConfirmDialog(null);
+    } catch (error) {
+      handleError(
+        error instanceof Error ? error.message : "Error al cerrar planilla"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCerrarCaja = async () => {
+    setIsProcessing(true);
+    try {
+      await cerrarCaja(planilla.idfecha, Number(user?.id) || 1);
+      alert("✅ Caja contabilizada exitosamente");
+      onUpdate?.();
+      setShowConfirmDialog(null);
+    } catch (error) {
+      handleError(
+        error instanceof Error ? error.message : "Error al cerrar caja"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReabrirPlanilla = async () => {
+    setIsProcessing(true);
+    try {
+      await reabrirPlanilla(planilla.idfecha);
+      alert("✅ Planilla reabierta exitosamente");
+      onUpdate?.();
+      setShowConfirmDialog(null);
+    } catch (error) {
+      handleError(
+        error instanceof Error ? error.message : "Error al reabrir planilla"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleExportar = async () => {
+    setIsProcessing(true);
+    try {
+      await exportarPlanillaCSV(planilla.idfecha);
+    } catch (error) {
+      handleError(error instanceof Error ? error.message : "Error al exportar");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const isEditable = !planilla.fhcierre && !planilla.fhcierrecaja;
+  const isClosed = !!planilla.fhcierre && !planilla.fhcierrecaja;
+  const isContabilizada = !!planilla.fhcierrecaja;
+
+  const profesorAsignado = proveedores.find(
+    (p) => p.id === planilla.idprofesor
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -126,6 +219,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
             onError={handleError}
           />
         )}
+
         {activeTab === "arbitros" && (
           <ArbitrosTab
             arbitros={arbitros}
@@ -182,24 +276,161 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
         )}
       </div>
 
-      <div className="border-t p-4 flex justify-between gap-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
-        >
-          Cerrar
-        </button>
+      <div className="border-t p-4">
+        <div className="flex flex-wrap justify-between gap-3">
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+            >
+              Cerrar
+            </button>
+          </div>
 
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-            📄 Exportar
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleExportar}
+              disabled={isProcessing}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition disabled:opacity-50"
+            >
+              📄 Exportar CSV
+            </button>
 
-          <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
-            📊 Resumen
-          </button>
+            {isEditable && (
+              <button
+                onClick={() => setShowConfirmDialog("cerrar")}
+                disabled={isProcessing || !planilla.idprofesor}
+                className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition disabled:opacity-50"
+                title={
+                  !planilla.idprofesor
+                    ? "Debe asignar un profesor primero"
+                    : "Cerrar planilla"
+                }
+              >
+                🔒 Cerrar Planilla
+              </button>
+            )}
+
+            {isClosed && (
+              <>
+                <button
+                  onClick={() => setShowConfirmDialog("contabilizar")}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  ✅ Contabilizar Caja
+                </button>
+                <button
+                  onClick={() => setShowConfirmDialog("reabrir")}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition disabled:opacity-50"
+                >
+                  🔓 Reabrir
+                </button>
+              </>
+            )}
+
+            {isContabilizada && (
+              <button
+                onClick={() => setShowConfirmDialog("reabrir")}
+                disabled={isProcessing}
+                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition disabled:opacity-50"
+              >
+                🔓 Reabrir (Admin)
+              </button>
+            )}
+          </div>
         </div>
+
+        {!planilla.idprofesor && isEditable && (
+          <div className="mt-3 text-sm text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+            ⚠️ Debe asignar un profesor en la pestaña "Datos" antes de cerrar la
+            planilla.
+          </div>
+        )}
       </div>
+
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-bold mb-4">
+              {showConfirmDialog === "cerrar" && "¿Cerrar Planilla?"}
+              {showConfirmDialog === "contabilizar" && "¿Contabilizar Caja?"}
+              {showConfirmDialog === "reabrir" && "¿Reabrir Planilla?"}
+            </h3>
+
+            <div className="mb-4 text-sm text-gray-600">
+              {showConfirmDialog === "cerrar" && (
+                <>
+                  <p>
+                    Esta acción cerrará la planilla de la fecha{" "}
+                    <strong>{planilla.codfecha}</strong>.
+                  </p>
+                  <p className="mt-2">
+                    Profesor que cierra:{" "}
+                    <strong>
+                      {profesorAsignado?.nombre ||
+                        planilla.profesor_nombre ||
+                        "N/A"}
+                    </strong>
+                  </p>
+                  <p className="mt-2">
+                    Una vez cerrada, no se podrán editar los equipos ni pagos.
+                  </p>
+                </>
+              )}
+              {showConfirmDialog === "contabilizar" && (
+                <>
+                  <p>
+                    Esta acción contabilizará la caja de la fecha{" "}
+                    <strong>{planilla.codfecha}</strong>.
+                  </p>
+                  <p className="mt-2">
+                    Total Caja:{" "}
+                    <strong>${totales.total_caja.toLocaleString()}</strong>
+                  </p>
+                  <p className="mt-2">
+                    Una vez contabilizada, la caja quedará bloqueada.
+                  </p>
+                </>
+              )}
+              {showConfirmDialog === "reabrir" && (
+                <p>
+                  Esta acción reabrirá la planilla para permitir ediciones.
+                  ¿Está seguro?
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(null)}
+                disabled={isProcessing}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (showConfirmDialog === "cerrar") handleCerrarPlanilla();
+                  if (showConfirmDialog === "contabilizar") handleCerrarCaja();
+                  if (showConfirmDialog === "reabrir") handleReabrirPlanilla();
+                }}
+                disabled={isProcessing}
+                className={`px-4 py-2 text-white rounded-md transition disabled:opacity-50 ${
+                  showConfirmDialog === "reabrir"
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : showConfirmDialog === "contabilizar"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                {isProcessing ? "Procesando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

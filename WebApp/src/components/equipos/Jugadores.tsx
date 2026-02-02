@@ -98,6 +98,16 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
       return;
     }
 
+    // No permitir si el jugador está de baja global
+    if (jugador.jugador_codestado === 0) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar un jugador dado de baja globalmente."
+        )
+      );
+      return;
+    }
+
     try {
       const esCapitanActual = jugador.capitan === 1;
 
@@ -161,6 +171,16 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
       dispatch(
         setEquiposJugadoresError(
           "No se puede modificar este jugador porque no tiene ID válido."
+        )
+      );
+      return;
+    }
+
+    // No permitir si el jugador está de baja global
+    if (jugador.jugador_codestado === 0) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar un jugador dado de baja globalmente."
         )
       );
       return;
@@ -236,6 +256,16 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
       return;
     }
 
+    // No permitir si el jugador está de baja global
+    if (jugador.jugador_codestado === 0) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar un jugador dado de baja globalmente."
+        )
+      );
+      return;
+    }
+
     try {
       const nuevoCodTipo = jugador.codtipo === 1 ? 2 : 1; // Toggle OFICIAL/INVITADO
 
@@ -258,6 +288,49 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
     }
   };
 
+  // Toggle habilitar/deshabilitar jugador para resultados (wequipos_jugadores.codestado)
+  const handleToggleCodEstado = async (jugador: EquipoJugador) => {
+    if (!jugador.id) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar este jugador porque no tiene ID válido."
+        )
+      );
+      return;
+    }
+
+    // No permitir si el jugador está de baja global
+    if (jugador.jugador_codestado === 0) {
+      dispatch(
+        setEquiposJugadoresError(
+          "No se puede modificar un jugador dado de baja globalmente."
+        )
+      );
+      return;
+    }
+
+    try {
+      const nuevoCodEstado = jugador.codestado === 1 ? 0 : 1; // Toggle habilitado/deshabilitado
+
+      await dispatch(
+        saveEquipoJugadorThunk({
+          id: jugador.id,
+          idjugador: jugador.idjugador,
+          idequipo,
+          capitan: jugador.capitan ?? 0,
+          subcapitan: jugador.subcapitan ?? 0,
+          codtipo: jugador.codtipo ?? 1,
+          codestado: nuevoCodEstado,
+          idusuario: user?.idusuario ?? 0,
+        })
+      ).unwrap();
+
+      dispatch(fetchEquipoJugadoresByEquipo(idequipo));
+    } catch (error) {
+      console.error("Error al cambiar estado del jugador:", error);
+    }
+  };
+
   // Filtrar jugadores que no estén ya en el equipo para el autocomplete
   const handleJugadorChange = (jugador: { id?: number } | null) => {
     setSelectedJugadorId(jugador?.id ?? 0);
@@ -268,6 +341,7 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
     onToggleCapitan: handleToggleCapitan,
     onToggleSubcapitan: handleToggleSubcapitan,
     onToggleCodTipo: handleToggleCodTipo,
+    onToggleCodEstado: handleToggleCodEstado,
   });
 
   // Ordenar jugadores alfabéticamente por nombre
@@ -326,7 +400,9 @@ const EquiposJugadores = ({ idequipo }: EquiposJugadoresProps) => {
           <strong>Oficiales:</strong>{" "}
           {equiposJugadores.filter((j) => j.codtipo === 1 && j.id).length} |{" "}
           <strong>Invitados:</strong>{" "}
-          {equiposJugadores.filter((j) => j.codtipo === 2 && j.id).length}
+          {equiposJugadores.filter((j) => j.codtipo === 2 && j.id).length} |{" "}
+          <strong>Habilitados p/resultados:</strong>{" "}
+          {equiposJugadores.filter((j) => j.codestado === 1 && j.jugador_codestado === 1 && j.id).length}
         </p>
         {equiposJugadores.find((j) => j.capitan === 1 && j.id) && (
           <p>

@@ -4,19 +4,39 @@ interface ColumnProps {
   onToggleCapitan?: (jugador: EquipoJugador) => void;
   onToggleSubcapitan?: (jugador: EquipoJugador) => void;
   onToggleCodTipo?: (jugador: EquipoJugador) => void;
+  onToggleCodEstado?: (jugador: EquipoJugador) => void;
 }
+
+// Helper para verificar si el jugador está de baja global
+const isJugadorDeBajaGlobal = (jugador: EquipoJugador): boolean => {
+  return jugador.jugador_codestado === 0;
+};
 
 export const createEquipoJugadoresColumns = ({
   onToggleCapitan,
   onToggleSubcapitan,
   onToggleCodTipo,
+  onToggleCodEstado,
 }: ColumnProps = {}) => [
   {
     header: "Nombre",
     accessor: "nombres" as keyof EquipoJugador,
     sortable: true,
-    render: (jugador: EquipoJugador) =>
-      `${jugador.nombres || ""} ${jugador.apellido || ""}`.trim() || "—",
+    render: (jugador: EquipoJugador) => {
+      const nombre = `${jugador.nombres || ""} ${jugador.apellido || ""}`.trim() || "—";
+      const deBajaGlobal = isJugadorDeBajaGlobal(jugador);
+
+      return (
+        <span className={deBajaGlobal ? "text-gray-400 line-through" : ""}>
+          {nombre}
+          {deBajaGlobal && (
+            <span className="ml-2 text-xs text-red-500 font-normal" title="Jugador dado de baja globalmente">
+              (BAJA)
+            </span>
+          )}
+        </span>
+      );
+    },
   },
   {
     header: "DNI",
@@ -40,6 +60,16 @@ export const createEquipoJugadoresColumns = ({
     sortable: true,
     render: (jugador: EquipoJugador) => {
       const esOficial = jugador.codtipo === 1;
+      const deBajaGlobal = isJugadorDeBajaGlobal(jugador);
+
+      if (deBajaGlobal) {
+        return (
+          <span className="px-2 py-1 rounded text-xs bg-gray-200 text-gray-400">
+            {esOficial ? "OFICIAL" : "INVITADO"}
+          </span>
+        );
+      }
+
       return onToggleCodTipo ? (
         <button
           onClick={() => onToggleCodTipo(jugador)}
@@ -71,6 +101,12 @@ export const createEquipoJugadoresColumns = ({
     sortable: true,
     render: (jugador: EquipoJugador) => {
       const esCapitan = jugador.capitan === 1;
+      const deBajaGlobal = isJugadorDeBajaGlobal(jugador);
+
+      if (deBajaGlobal) {
+        return <span className="text-gray-400">—</span>;
+      }
+
       return onToggleCapitan ? (
         <button
           onClick={() => onToggleCapitan(jugador)}
@@ -98,6 +134,12 @@ export const createEquipoJugadoresColumns = ({
     sortable: true,
     render: (jugador: EquipoJugador) => {
       const esSubcapitan = jugador.subcapitan === 1;
+      const deBajaGlobal = isJugadorDeBajaGlobal(jugador);
+
+      if (deBajaGlobal) {
+        return <span className="text-gray-400">—</span>;
+      }
+
       return onToggleSubcapitan ? (
         <button
           onClick={() => onToggleSubcapitan(jugador)}
@@ -118,6 +160,55 @@ export const createEquipoJugadoresColumns = ({
         "✅"
       ) : (
         "—"
+      );
+    },
+  },
+  {
+    header: "Resultados",
+    accessor: "codestado" as keyof EquipoJugador,
+    sortable: true,
+    render: (jugador: EquipoJugador) => {
+      const habilitado = jugador.codestado === 1;
+      const deBajaGlobal = isJugadorDeBajaGlobal(jugador);
+
+      // Si está de baja global, mostrar bloqueado
+      if (deBajaGlobal) {
+        return (
+          <span
+            className="px-2 py-1 rounded text-xs bg-gray-200 text-gray-400 cursor-not-allowed"
+            title="Jugador dado de baja globalmente - no puede participar en resultados"
+          >
+            BLOQUEADO
+          </span>
+        );
+      }
+
+      return onToggleCodEstado ? (
+        <button
+          onClick={() => onToggleCodEstado(jugador)}
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            habilitado
+              ? "bg-green-100 text-green-800 hover:bg-green-200"
+              : "bg-red-100 text-red-800 hover:bg-red-200"
+          }`}
+          title={
+            habilitado
+              ? "Habilitado para resultados - Click para deshabilitar"
+              : "Deshabilitado para resultados - Click para habilitar"
+          }
+        >
+          {habilitado ? "HABILITADO" : "DESHABILITADO"}
+        </button>
+      ) : (
+        <span
+          className={`px-2 py-1 rounded text-xs ${
+            habilitado
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {habilitado ? "HABILITADO" : "DESHABILITADO"}
+        </span>
       );
     },
   },

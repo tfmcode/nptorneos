@@ -199,12 +199,12 @@ function DatosBasicos({
             type: "select",
             options: [
               { label: "Sin torneo padre", value: 0 },
-              ...(Array.isArray(torneosPadre) ? torneosPadre : []).map(
-                (torneo) => ({
+              ...(Array.isArray(torneosPadre) ? torneosPadre : [])
+                .filter((torneo) => torneo.codestado === 1)
+                .map((torneo) => ({
                   label: torneo.nombre,
                   value: torneo.id ?? 1,
-                })
-              ),
+                })),
             ],
             value: formData.idpadre ?? 0,
             label: "Torneo Padre",

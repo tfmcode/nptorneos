@@ -412,6 +412,21 @@ export const updatePagoDepositoEquipo = async (
   }
 };
 
+export const updateDescuentoEquipo = async (
+  idfecha: number,
+  idequipo: number,
+  importe: number
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/descuento`, {
+      idequipo,
+      importe,
+    });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
 export const exportarPlanillaCSV = async (idfecha: number): Promise<void> => {
   try {
     const response = await API.get(`/api/planillas-pago/${idfecha}/exportar`, {

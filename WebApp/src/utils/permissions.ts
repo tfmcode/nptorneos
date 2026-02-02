@@ -32,6 +32,7 @@ const MODULE_PERMISSIONS: Record<number, string[]> = {
   2: [
     // Staff - Solo Resultados
     "Resultados",
+    "Caja"
   ],
   3: [], // Sin acceso a módulos
 };

@@ -5,6 +5,15 @@ export const getEquiposByPlanilla = async (
   idfecha: number
 ): Promise<PlanillaEquipo[]> => {
   try {
+    // 1. Obtener el idtorneo de la fecha
+    const torneoQuery = `SELECT idtorneo FROM wtorneos_fechas WHERE id = $1`;
+    const torneoResult = await pool.query(torneoQuery, [idfecha]);
+    if (torneoResult.rows.length === 0) {
+      return [];
+    }
+    const idtorneo = torneoResult.rows[0].idtorneo;
+
+    // 2. Obtener partidos y equipos de esta fecha
     const partidosQuery = `
       SELECT
         p.id as partido_id,
@@ -14,29 +23,21 @@ export const getEquiposByPlanilla = async (
         e1.nombre as nombre_equipo1,
         e2.nombre as nombre_equipo2,
         z.idtorneo,
-        
-        COALESCE(ze1.valor_insc, t.valor_insc, 0) as valor_insc_eq1,
         COALESCE(ze1.valor_fecha, t.valor_fecha, 0) as valor_fecha_eq1,
-        
-        COALESCE(ze2.valor_insc, t.valor_insc, 0) as valor_insc_eq2,
         COALESCE(ze2.valor_fecha, t.valor_fecha, 0) as valor_fecha_eq2
-        
       FROM partidos p
       LEFT JOIN wequipos e1 ON p.idequipo1 = e1.id
       LEFT JOIN wequipos e2 ON p.idequipo2 = e2.id
       LEFT JOIN zonas z ON p.idzona = z.id
       LEFT JOIN wtorneos t ON z.idtorneo = t.id
-      
-      LEFT JOIN zonas_equipos ze1 
-        ON ze1.idzona = p.idzona 
+      LEFT JOIN zonas_equipos ze1
+        ON ze1.idzona = p.idzona
         AND ze1.idequipo = p.idequipo1
         AND ze1.fhbaja IS NULL
-        
-      LEFT JOIN zonas_equipos ze2 
-        ON ze2.idzona = p.idzona 
+      LEFT JOIN zonas_equipos ze2
+        ON ze2.idzona = p.idzona
         AND ze2.idequipo = p.idequipo2
         AND ze2.fhbaja IS NULL
-        
       WHERE p.idfecha = $1 AND p.fhbaja IS NULL
       ORDER BY p.id
     `;
@@ -47,18 +48,11 @@ export const getEquiposByPlanilla = async (
       return [];
     }
 
-    const planillaQuery = `SELECT id FROM wtorneos_fechas WHERE id = $1`;
-    const planillaResult = await pool.query(planillaQuery, [idfecha]);
-    if (planillaResult.rows.length === 0) {
-      return [];
-    }
-
     const equiposMap = new Map<
       number,
       {
         nombre: string;
         idtorneo: number;
-        valor_insc: number;
         valor_fecha: number;
         cantidad_partidos: number;
       }
@@ -70,7 +64,6 @@ export const getEquiposByPlanilla = async (
         equiposMap.set(partido.idequipo1, {
           nombre: partido.nombre_equipo1 || `Equipo ${partido.idequipo1}`,
           idtorneo: partido.idtorneo,
-          valor_insc: parseFloat(partido.valor_insc_eq1 || "0"),
           valor_fecha: parseFloat(partido.valor_fecha_eq1 || "0"),
           cantidad_partidos: (existing?.cantidad_partidos || 0) + 1,
         });
@@ -81,13 +74,13 @@ export const getEquiposByPlanilla = async (
         equiposMap.set(partido.idequipo2, {
           nombre: partido.nombre_equipo2 || `Equipo ${partido.idequipo2}`,
           idtorneo: partido.idtorneo,
-          valor_insc: parseFloat(partido.valor_insc_eq2 || "0"),
           valor_fecha: parseFloat(partido.valor_fecha_eq2 || "0"),
           cantidad_partidos: (existing?.cantidad_partidos || 0) + 1,
         });
       }
     });
 
+    // 3. Obtener ausencias
     const ausenciasQuery = `
       SELECT idequipo FROM wfechas_equipos_aus
       WHERE idfecha = $1
@@ -99,49 +92,55 @@ export const getEquiposByPlanilla = async (
 
     const idsEquipos = Array.from(equiposMap.keys());
 
-    // ✅ CORREGIDO: Excluir pagos de inscripción de la fecha ACTUAL
-    // Solo contar pagos de fechas ANTERIORES para calcular deuda pendiente
-    const pagosInscripcionTotalesQuery = `
-      SELECT 
-        fe.idequipo,
-        SUM(fe.importe) as total_pagado_insc
-      FROM wfechas_equipos fe
-      INNER JOIN wtorneos_fechas tf ON fe.idfecha = tf.id
-      WHERE fe.idequipo = ANY($1) 
-        AND fe.tipopago = 1
-        AND tf.fhbaja IS NULL
-        AND fe.idfecha != $2
-      GROUP BY fe.idequipo
+    // 4. SALDO INSCRIPCIÓN - DEBE: wtorneos_equipos_insc.inscrip, HABER: SUM(wfechas_equipos WHERE tipopago=1)
+    const saldoInscripcionQuery = `
+      SELECT
+        e.id as idequipo,
+        COALESCE((
+          SELECT COALESCE(SUM(tei.inscrip), 0)
+          FROM wtorneos_equipos_insc tei
+          WHERE tei.idequipo = e.id AND tei.idtorneo = $2
+        ), 0) as debe_insc,
+        COALESCE((
+          SELECT COALESCE(SUM(fe.importe), 0)
+          FROM wfechas_equipos fe
+          INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
+          WHERE fe.idequipo = e.id
+            AND fe.tipopago = 1
+            AND wtf.fhbaja IS NULL
+            AND fe.importe > 0
+            AND wtf.idtorneo = $2
+            AND fe.idfecha != $3
+        ), 0) as haber_insc
+      FROM wequipos e
+      WHERE e.id = ANY($1) AND e.fhbaja IS NULL
     `;
-    const pagosInscTotalesResult = await pool.query(
-      pagosInscripcionTotalesQuery,
-      [idsEquipos, idfecha]
-    );
-    const pagosInscTotalesMap = new Map(
-      pagosInscTotalesResult.rows.map((r: any) => [
+    const saldoInscResult = await pool.query(saldoInscripcionQuery, [idsEquipos, idtorneo, idfecha]);
+    const saldoInscMap = new Map(
+      saldoInscResult.rows.map((r: any) => [
         r.idequipo,
-        parseFloat(r.total_pagado_insc || "0"),
+        {
+          debe: parseFloat(r.debe_insc || "0"),
+          haber: parseFloat(r.haber_insc || "0"),
+        },
       ])
     );
 
-    // ✅ CORREGIDO: Calcular deuda de fechas ANTERIORES solamente
-    // NO incluir inscripción ni depósitos (se calculan aparte)
-    const deudaFechasAnterioresQuery = `
-      SELECT 
+    // 5. SALDO FECHAS ANTERIORES - DEBE: wfechas_equipos_hab, HABER: wfechas_equipos WHERE tipopago=3
+    const saldoFechasAntQuery = `
+      SELECT
         e.id as idequipo,
         COALESCE((
-          -- Cargos de Fechas ANTERIORES (DEBE) - EXCLUYENDO la fecha actual
           SELECT COALESCE(SUM(feh.importe), 0)
           FROM wfechas_equipos_hab feh
           INNER JOIN wtorneos t ON feh.idtorneo = t.id
           WHERE feh.idequipo = e.id
             AND feh.importe > 0
             AND t.fhbaja IS NULL
-            AND feh.idfecha != $2
-        ), 0)
-        -
+            AND feh.idtorneo = $2
+            AND feh.idfecha != $3
+        ), 0) as debe_fecha_ant,
         COALESCE((
-          -- Pagos de Fecha ANTERIORES (HABER) - EXCLUYENDO la fecha actual
           SELECT COALESCE(SUM(fe.importe), 0)
           FROM wfechas_equipos fe
           INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
@@ -149,32 +148,58 @@ export const getEquiposByPlanilla = async (
             AND fe.tipopago = 3
             AND wtf.fhbaja IS NULL
             AND fe.importe > 0
-            AND fe.idfecha != $2
-        ), 0)
-        as deuda_fechas_anteriores
+            AND wtf.idtorneo = $2
+            AND fe.idfecha != $3
+        ), 0) as haber_fecha_ant
       FROM wequipos e
       WHERE e.id = ANY($1) AND e.fhbaja IS NULL
     `;
+    const saldoFechasAntResult = await pool.query(saldoFechasAntQuery, [idsEquipos, idtorneo, idfecha]);
+    const saldoFechasAntMap = new Map(
+      saldoFechasAntResult.rows.map((r: any) => [
+        r.idequipo,
+        {
+          debe: parseFloat(r.debe_fecha_ant || "0"),
+          haber: parseFloat(r.haber_fecha_ant || "0"),
+        },
+      ])
+    );
 
-    let deudaFechasAnterioresMap = new Map<number, number>();
-    try {
-      const deudaFechasResult = await pool.query(deudaFechasAnterioresQuery, [
-        idsEquipos,
-        idfecha,
-      ]);
-      deudaFechasAnterioresMap = new Map(
-        deudaFechasResult.rows.map((r: any) => [
-          r.idequipo,
-          parseFloat(r.deuda_fechas_anteriores || "0"),
-        ])
-      );
-    } catch (err) {
-      console.log(
-        "Info: Error al calcular deuda fechas anteriores, usando valor 0:",
-        err
-      );
-    }
+    // 6. SALDO DEPÓSITO - DEBE: wdepositos codtipo=2, HABER: wdepositos codtipo=1
+    const saldoDepositoQuery = `
+      SELECT
+        e.id as idequipo,
+        COALESCE((
+          SELECT COALESCE(SUM(d.importe), 0)
+          FROM wdepositos d
+          WHERE d.idequipo = e.id
+            AND d.codtipo = 2
+            AND d.fhbaja IS NULL
+            AND d.importe > 0
+        ), 0) as debe_dep,
+        COALESCE((
+          SELECT COALESCE(SUM(d.importe), 0)
+          FROM wdepositos d
+          WHERE d.idequipo = e.id
+            AND d.codtipo = 1
+            AND d.fhbaja IS NULL
+            AND d.importe > 0
+        ), 0) as haber_dep
+      FROM wequipos e
+      WHERE e.id = ANY($1) AND e.fhbaja IS NULL
+    `;
+    const saldoDepResult = await pool.query(saldoDepositoQuery, [idsEquipos]);
+    const saldoDepMap = new Map(
+      saldoDepResult.rows.map((r: any) => [
+        r.idequipo,
+        {
+          debe: parseFloat(r.debe_dep || "0"),
+          haber: parseFloat(r.haber_dep || "0"),
+        },
+      ])
+    );
 
+    // 7. Pagos de ESTA fecha (para mostrar en las celdas editables)
     const pagosQuery = `
       SELECT
         idequipo,
@@ -188,24 +213,44 @@ export const getEquiposByPlanilla = async (
 
     const pagosMap = new Map<
       number,
-      { pago_ins: number; pago_dep: number; pago_fecha: number }
+      { pago_ins: number; pago_fecha: number; pago_descuento: number }
     >();
     pagosResult.rows.forEach((r: any) => {
       const idequipo = r.idequipo;
       const existing = pagosMap.get(idequipo) || {
         pago_ins: 0,
-        pago_dep: 0,
         pago_fecha: 0,
+        pago_descuento: 0,
       };
 
       if (r.tipopago === 1) existing.pago_ins = parseFloat(r.total_pago || "0");
-      if (r.tipopago === 2) existing.pago_dep = parseFloat(r.total_pago || "0");
-      if (r.tipopago === 3)
-        existing.pago_fecha = parseFloat(r.total_pago || "0");
+      if (r.tipopago === 3) existing.pago_fecha = parseFloat(r.total_pago || "0");
+      if (r.tipopago === 4) existing.pago_descuento = parseFloat(r.total_pago || "0");
 
       pagosMap.set(idequipo, existing);
     });
 
+    // 8. Pagos de depósito de ESTA fecha (de wdepositos)
+    const pagosDepQuery = `
+      SELECT
+        d.idequipo,
+        SUM(d.importe) as total_pago_dep
+      FROM wdepositos d
+      WHERE d.idequipo = ANY($1)
+        AND d.codtipo = 1
+        AND d.fhbaja IS NULL
+        AND d.idfecha = $2
+      GROUP BY d.idequipo
+    `;
+    const pagosDepResult = await pool.query(pagosDepQuery, [idsEquipos, idfecha]);
+    const pagosDepMap = new Map(
+      pagosDepResult.rows.map((r: any) => [
+        r.idequipo,
+        parseFloat(r.total_pago_dep || "0"),
+      ])
+    );
+
+    // 9. Construir resultado
     const equipos: PlanillaEquipo[] = [];
     let orden = 1;
 
@@ -213,30 +258,35 @@ export const getEquiposByPlanilla = async (
       const ausente = equiposAusentes.has(idequipo);
       const pagos = pagosMap.get(idequipo) || {
         pago_ins: 0,
-        pago_dep: 0,
         pago_fecha: 0,
+        pago_descuento: 0,
       };
+      const pagoDepEstaFecha = pagosDepMap.get(idequipo) || 0;
 
-      const totalPagadoInscAnterior = pagosInscTotalesMap.get(idequipo) || 0;
-      const deudaInscPendiente = Math.max(
-        0,
-        data.valor_insc - totalPagadoInscAnterior
-      );
+      // Saldos calculados según modelo contable
+      const saldoInsc = saldoInscMap.get(idequipo) || { debe: 0, haber: 0 };
+      const saldoFechasAnt = saldoFechasAntMap.get(idequipo) || { debe: 0, haber: 0 };
+      const saldoDep = saldoDepMap.get(idequipo) || { debe: 0, haber: 0 };
 
-      // ✅ CORREGIDO: deuda_dep ahora es solo deuda de fechas ANTERIORES no pagadas
-      // NO incluye inscripción (ya se muestra en deuda_insc)
-      const deudaFechasAnterior = deudaFechasAnterioresMap.get(idequipo) || 0;
-      const deudaDepPendiente =
-        deudaFechasAnterior > 0 ? deudaFechasAnterior : 0;
+      // Deuda de inscripción = DEBE - HABER (sin contar pago de esta fecha)
+      const deudaInscPendiente = Math.max(0, saldoInsc.debe - saldoInsc.haber);
 
-      // Deuda de ESTA fecha específica
+      // Deuda de fechas anteriores = DEBE - HABER
+      const deudaFechasAntPendiente = Math.max(0, saldoFechasAnt.debe - saldoFechasAnt.haber);
+
+      // Deuda de depósito = DEBE - HABER (sin contar pago de esta fecha)
+      // Restamos pagoDepEstaFecha porque ya está en haber total
+      const deudaDepPendiente = Math.max(0, saldoDep.debe - (saldoDep.haber - pagoDepEstaFecha));
+
+      // Deuda de ESTA fecha específica (valor_fecha * cantidad_partidos)
       const deuda_fecha = data.valor_fecha * data.cantidad_partidos;
 
-      // Total a pagar = inscripción pendiente + fechas anteriores adeudadas + deuda de esta fecha
-      const total_pagar = deudaInscPendiente + deudaDepPendiente + deuda_fecha;
+      // Total a pagar = inscripción pendiente + depósito pendiente + fechas anteriores + esta fecha
+      const total_pagar = deudaInscPendiente + deudaDepPendiente + deudaFechasAntPendiente + deuda_fecha;
 
+      // Total pagado esta fecha (incluyendo descuentos como pagos)
       const total_pagado_esta_fecha =
-        pagos.pago_ins + pagos.pago_dep + pagos.pago_fecha;
+        pagos.pago_ins + pagoDepEstaFecha + pagos.pago_fecha + pagos.pago_descuento;
       const deuda_total = total_pagar - total_pagado_esta_fecha;
 
       equipos.push({
@@ -249,12 +299,14 @@ export const getEquiposByPlanilla = async (
 
         deuda_insc: deudaInscPendiente,
         deuda_dep: deudaDepPendiente,
+        deuda_fecha_ant: deudaFechasAntPendiente, // Nueva columna para deuda de fechas anteriores
         deuda_fecha,
         total_pagar,
 
         pago_ins: pagos.pago_ins,
-        pago_dep: pagos.pago_dep,
+        pago_dep: pagoDepEstaFecha,
         pago_fecha: pagos.pago_fecha,
+        pago_descuento: pagos.pago_descuento, // Nuevo campo para descuentos
 
         deuda_total,
 
@@ -346,7 +398,36 @@ export const updatePagoInscripcion = async (
   }
 };
 
+// Pago de depósito va a wdepositos con codtipo=1 (pago)
 export const updatePagoDeposito = async (
+  idfecha: number,
+  idequipo: number,
+  importe: number
+): Promise<void> => {
+  try {
+    // Eliminar pago de depósito anterior de esta fecha
+    await pool.query(
+      `DELETE FROM wdepositos
+       WHERE idfecha = $1 AND idequipo = $2 AND codtipo = 1`,
+      [idfecha, idequipo]
+    );
+
+    if (importe > 0) {
+      // Insertar nuevo pago de depósito (codtipo=1 = pago)
+      await pool.query(
+        `INSERT INTO wdepositos (idfecha, idequipo, codtipo, importe, fecha, fhcarga)
+         VALUES ($1, $2, 1, $3, (SELECT fecha FROM wtorneos_fechas WHERE id = $1), NOW())`,
+        [idfecha, idequipo, importe]
+      );
+    }
+  } catch (error) {
+    console.error("Error en updatePagoDeposito:", error);
+    throw error;
+  }
+};
+
+// Nuevo: Descuento va a wfechas_equipos con tipopago=4
+export const updateDescuento = async (
   idfecha: number,
   idequipo: number,
   importe: number
@@ -354,19 +435,19 @@ export const updatePagoDeposito = async (
   try {
     await pool.query(
       `DELETE FROM wfechas_equipos
-       WHERE idfecha = $1 AND idequipo = $2 AND tipopago = 2`,
+       WHERE idfecha = $1 AND idequipo = $2 AND tipopago = 4`,
       [idfecha, idequipo]
     );
 
     if (importe > 0) {
       await pool.query(
         `INSERT INTO wfechas_equipos (idfecha, orden, idequipo, tipopago, importe, fhcarga)
-         VALUES ($1, 1, $2, 2, $3, NOW())`,
+         VALUES ($1, 1, $2, 4, $3, NOW())`,
         [idfecha, idequipo, importe]
       );
     }
   } catch (error) {
-    console.error("Error en updatePagoDeposito:", error);
+    console.error("Error en updateDescuento:", error);
     throw error;
   }
 };

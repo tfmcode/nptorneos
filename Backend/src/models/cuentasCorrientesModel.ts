@@ -157,7 +157,7 @@ export const getCuentasCorrientesGeneral = async (): Promise<
       UNION ALL
 
       -- 6️⃣ Pagos de fechas
-      SELECT 
+      SELECT
         e.id as idequipo,
         e.nombre as nombre_equipo,
         0 as total_debe,
@@ -171,8 +171,26 @@ export const getCuentasCorrientesGeneral = async (): Promise<
         AND e.fhbaja IS NULL
         AND fe.importe > 0
       GROUP BY e.id, e.nombre
+
+      UNION ALL
+
+      -- 7️⃣ Descuentos (tipopago = 4)
+      SELECT
+        e.id as idequipo,
+        e.nombre as nombre_equipo,
+        0 as total_debe,
+        SUM(fe.importe) as total_haber,
+        MAX(wtf.fecha) as ultimo_movimiento
+      FROM wfechas_equipos fe
+      INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
+      INNER JOIN wequipos e ON fe.idequipo = e.id
+      WHERE wtf.fhbaja IS NULL
+        AND fe.tipopago = 4
+        AND e.fhbaja IS NULL
+        AND fe.importe > 0
+      GROUP BY e.id, e.nombre
     )
-    SELECT 
+    SELECT
       idequipo,
       nombre_equipo,
       SUM(total_debe) as total_debe,
@@ -181,7 +199,6 @@ export const getCuentasCorrientesGeneral = async (): Promise<
       MAX(ultimo_movimiento) as ultimo_movimiento
     FROM movimientos_equipos
     GROUP BY idequipo, nombre_equipo
-    HAVING (SUM(total_haber) - SUM(total_debe)) != 0
     ORDER BY nombre_equipo ASC
   `;
 

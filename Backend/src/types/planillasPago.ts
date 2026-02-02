@@ -49,15 +49,17 @@ export interface PlanillaEquipo {
   nombre_equipo?: string;
   ausente?: number; // 0 = presente, 1 = ausente
   cantidad_partidos?: number;
-  // Deudas
-  deuda_insc?: number;
-  deuda_dep?: number;
-  deuda_fecha?: number;
+  // Deudas (calculadas según modelo contable DEBE - HABER)
+  deuda_insc?: number; // Saldo Inscripción: wtorneos_equipos_insc.inscrip - SUM(wfechas_equipos tipopago=1)
+  deuda_dep?: number; // Saldo Depósito: wdepositos codtipo=2 - wdepositos codtipo=1
+  deuda_fecha_ant?: number; // Saldo Fechas Anteriores: wfechas_equipos_hab - SUM(wfechas_equipos tipopago=3)
+  deuda_fecha?: number; // Deuda de esta fecha específica
   total_pagar?: number;
-  // Pagos
-  pago_ins?: number;
-  pago_dep?: number;
-  pago_fecha?: number;
+  // Pagos (de esta fecha)
+  pago_ins?: number; // wfechas_equipos tipopago=1
+  pago_dep?: number; // wdepositos codtipo=1 con idfecha
+  pago_fecha?: number; // wfechas_equipos tipopago=3
+  pago_descuento?: number; // wfechas_equipos tipopago=4 (nuevo)
   // Total
   deuda_total?: number;
   [key: string]: unknown;

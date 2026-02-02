@@ -6,7 +6,8 @@ export interface EquipoJugador {
   capitan?: number; // Cambiado de boolean a number (0 o 1)
   subcapitan?: number; // Cambiado de boolean a number (0 o 1)
   codtipo?: number;
-  codestado?: number;
+  codestado?: number; // Estado del jugador en el equipo (wequipos_jugadores)
+  jugador_codestado?: number; // Estado global del jugador (tabla jugadores) - 0=baja, 1=habilitado
   fhcarga?: string;
   fhbaja?: string | null;
   idusuario: number;

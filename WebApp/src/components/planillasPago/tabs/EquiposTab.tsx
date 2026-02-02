@@ -4,6 +4,7 @@ import {
   updatePagoFechaEquipo,
   updatePagoInscripcionEquipo,
   updatePagoDepositoEquipo,
+  updateDescuentoEquipo,
 } from "../../../api/planillasPagosService";
 import { PlanillaEquipo } from "../../../types/planillasPago";
 import API from "../../../api/httpClient";
@@ -15,7 +16,7 @@ interface EquiposTabProps {
   onError?: (error: string) => void;
 }
 
-type EditingField = "pago_ins" | "pago_dep" | "pago_fecha" | null;
+type EditingField = "pago_ins" | "pago_dep" | "pago_fecha" | "pago_descuento" | null;
 
 export const EquiposTab: React.FC<EquiposTabProps> = ({
   idfecha,
@@ -111,7 +112,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
                 ? {
                     ...e,
                     pago_ins: nuevoImporte,
-                    deuda_total: e.total_pagar - (nuevoImporte + e.pago_dep + e.pago_fecha),
+                    deuda_total: e.total_pagar - (nuevoImporte + e.pago_dep + e.pago_fecha + (e.pago_descuento || 0)),
                   }
                 : e
             )
@@ -125,7 +126,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
                 ? {
                     ...e,
                     pago_dep: nuevoImporte,
-                    deuda_total: e.total_pagar - (e.pago_ins + nuevoImporte + e.pago_fecha),
+                    deuda_total: e.total_pagar - (e.pago_ins + nuevoImporte + e.pago_fecha + (e.pago_descuento || 0)),
                   }
                 : e
             )
@@ -139,7 +140,21 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
                 ? {
                     ...e,
                     pago_fecha: nuevoImporte,
-                    deuda_total: e.total_pagar - (e.pago_ins + e.pago_dep + nuevoImporte),
+                    deuda_total: e.total_pagar - (e.pago_ins + e.pago_dep + nuevoImporte + (e.pago_descuento || 0)),
+                  }
+                : e
+            )
+          );
+          break;
+        case "pago_descuento":
+          await updateDescuentoEquipo(equipo.idfecha, equipo.idequipo, nuevoImporte);
+          setEquipos((prev) =>
+            prev.map((e) =>
+              e.idequipo === equipo.idequipo
+                ? {
+                    ...e,
+                    pago_descuento: nuevoImporte,
+                    deuda_total: e.total_pagar - (e.pago_ins + e.pago_dep + e.pago_fecha + nuevoImporte),
                   }
                 : e
             )
@@ -163,6 +178,24 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
     })}`;
   };
 
+  // Determina si un campo de pago debe estar bloqueado (cuando la deuda correspondiente es 0)
+  const isFieldDisabled = (equipo: PlanillaEquipo, field: EditingField): boolean => {
+    if (!isEditable) return true;
+    switch (field) {
+      case "pago_ins":
+        return equipo.deuda_insc === 0 && equipo.pago_ins === 0;
+      case "pago_dep":
+        return equipo.deuda_dep === 0 && equipo.pago_dep === 0;
+      case "pago_fecha":
+        return equipo.deuda_fecha === 0 && equipo.pago_fecha === 0;
+      case "pago_descuento":
+        // Descuento siempre editable si hay algo que pagar
+        return equipo.total_pagar === 0;
+      default:
+        return false;
+    }
+  };
+
   const renderEditableCell = (
     equipo: PlanillaEquipo,
     field: EditingField,
@@ -170,6 +203,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
   ) => {
     const isEditing =
       editingCell?.idequipo === equipo.idequipo && editingCell?.field === field;
+    const disabled = isFieldDisabled(equipo, field);
 
     if (isEditing) {
       return (
@@ -203,6 +237,17 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
           >
             ✗
           </button>
+        </div>
+      );
+    }
+
+    if (disabled) {
+      return (
+        <div
+          className="px-2 py-1 rounded text-gray-400 cursor-not-allowed"
+          title="Sin deuda pendiente"
+        >
+          {formatMoney(currentValue)}
         </div>
       );
     }
@@ -259,13 +304,16 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
             <tr>
               <th className="px-2 py-2 text-center border-r-2 border-gray-300 w-12">Ord</th>
               <th className="px-2 py-2 text-center border-r-2 border-gray-300 w-12">AUS</th>
-              <th className="px-3 py-2 text-left border-r-2 border-gray-300 min-w-[150px]">Equipo</th>
+              <th className="px-3 py-2 text-left border-r-2 border-gray-300 min-w-[120px]">Equipo</th>
 
               <th className="px-2 py-2 text-right bg-red-50 border-r border-gray-300">
                 Deuda<br/>Insc.
               </th>
               <th className="px-2 py-2 text-right bg-red-50 border-r border-gray-300">
                 Deuda<br/>Dep.
+              </th>
+              <th className="px-2 py-2 text-right bg-orange-50 border-r border-gray-300">
+                Deuda<br/>Fch.Ant.
               </th>
               <th className="px-2 py-2 text-right bg-red-50 border-r-2 border-gray-300">
                 Deuda<br/>Fecha
@@ -281,8 +329,11 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
               <th className="px-2 py-2 text-right bg-green-100 border-r border-gray-300">
                 Pago<br/>Dep. ✏️
               </th>
-              <th className="px-2 py-2 text-right bg-green-100 border-r-2 border-gray-300">
+              <th className="px-2 py-2 text-right bg-green-100 border-r border-gray-300">
                 Pago<br/>Fecha ✏️
+              </th>
+              <th className="px-2 py-2 text-right bg-purple-100 border-r-2 border-gray-300">
+                Desc. ✏️
               </th>
 
               <th className="px-2 py-2 text-right bg-yellow-100 font-bold">
@@ -337,8 +388,19 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
                       <span className="text-gray-400">$0</span>
                     )}
                   </td>
+                  <td className="px-2 py-2 text-right bg-orange-50 border-r border-gray-300">
+                    {(equipo.deuda_fecha_ant || 0) > 0 ? (
+                      <span className="text-orange-600 font-medium">{formatMoney(equipo.deuda_fecha_ant || 0)}</span>
+                    ) : (
+                      <span className="text-gray-400">$0</span>
+                    )}
+                  </td>
                   <td className="px-2 py-2 text-right bg-red-50 border-r-2 border-gray-300">
-                    <span className="text-red-600 font-medium">{formatMoney(equipo.deuda_fecha)}</span>
+                    {equipo.deuda_fecha > 0 ? (
+                      <span className="text-red-600 font-medium">{formatMoney(equipo.deuda_fecha)}</span>
+                    ) : (
+                      <span className="text-gray-400">$0</span>
+                    )}
                   </td>
 
                   <td className="px-2 py-2 text-right bg-blue-100 font-bold border-r-2 border-gray-300">
@@ -351,8 +413,11 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
                   <td className="px-2 py-2 text-right bg-green-50 border-r border-gray-300">
                     {renderEditableCell(equipo, "pago_dep", equipo.pago_dep)}
                   </td>
-                  <td className="px-2 py-2 text-right bg-green-50 border-r-2 border-gray-300">
+                  <td className="px-2 py-2 text-right bg-green-50 border-r border-gray-300">
                     {renderEditableCell(equipo, "pago_fecha", equipo.pago_fecha)}
+                  </td>
+                  <td className="px-2 py-2 text-right bg-purple-50 border-r-2 border-gray-300">
+                    {renderEditableCell(equipo, "pago_descuento", equipo.pago_descuento || 0)}
                   </td>
 
                   <td
@@ -389,7 +454,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
             <div className="text-xl font-bold text-green-700">
               {formatMoney(
                 equipos.reduce(
-                  (sum, e) => sum + e.pago_ins + e.pago_dep + e.pago_fecha,
+                  (sum, e) => sum + e.pago_ins + e.pago_dep + e.pago_fecha + (e.pago_descuento || 0),
                   0
                 )
               )}
@@ -418,10 +483,12 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
         <div className="font-semibold text-blue-800 mb-2">ℹ️ Información</div>
         <ul className="text-blue-700 space-y-1">
           <li>• <strong>AUS:</strong> Marca el equipo como ausente (no computa económicamente)</li>
-          <li>• <strong>Deuda Insc:</strong> Valor pendiente de inscripción (0 si ya se pagó en fechas anteriores)</li>
-          <li>• <strong>Deuda Dep:</strong> Saldo negativo de cuenta corriente (depósitos adeudados)</li>
-          <li>• <strong>Deuda Fecha:</strong> Valor por fecha × cantidad de partidos</li>
-          <li>• <strong>Campos verdes (✏️):</strong> Click para editar el pago</li>
+          <li>• <strong>Deuda Insc:</strong> Saldo de inscripción (wtorneos_equipos_insc - pagos tipopago=1)</li>
+          <li>• <strong>Deuda Dep:</strong> Saldo de depósitos (wdepositos codtipo=2 - codtipo=1)</li>
+          <li>• <strong>Deuda Fch.Ant:</strong> Saldo de fechas anteriores sin pagar</li>
+          <li>• <strong>Deuda Fecha:</strong> Valor por fecha × cantidad de partidos de esta fecha</li>
+          <li>• <strong>Campos verdes (✏️):</strong> Click para editar el pago (bloqueado si deuda=0)</li>
+          <li>• <strong>Desc. (✏️):</strong> Descuento aplicado al equipo</li>
           <li>• <strong>Deuda Total:</strong> Rojo si debe, verde si pagó de más</li>
         </ul>
       </div>

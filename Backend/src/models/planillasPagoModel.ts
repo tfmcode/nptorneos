@@ -21,6 +21,7 @@ export const toggleAusencia = equiposService.toggleAusencia;
 export const updatePagoFecha = equiposService.updatePagoFecha;
 export const updatePagoInscripcion = equiposService.updatePagoInscripcion;
 export const updatePagoDeposito = equiposService.updatePagoDeposito;
+export const updateDescuento = equiposService.updateDescuento;
 
 export const getArbitrosByPlanilla = arbitrosService.getArbitrosByPlanilla;
 export const addArbitro = arbitrosService.addArbitro;

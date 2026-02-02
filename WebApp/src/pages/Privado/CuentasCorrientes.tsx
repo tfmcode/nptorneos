@@ -70,9 +70,11 @@ const CuentasCorrientes: React.FC = () => {
   // Filtrar y ordenar resumenes
   const resumeneFiltrados = resumenes
     .filter((resumen) => {
-      const matchSearch = resumen.nombre_equipo
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      // Buscar por nombre O por ID
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchSearch =
+        resumen.nombre_equipo.toLowerCase().includes(searchLower) ||
+        resumen.idequipo.toString() === searchLower;
 
       const matchSaldo =
         filtroSaldo === "todos" ||
@@ -183,7 +185,7 @@ const CuentasCorrientes: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
             <SearchField
-              placeholder="Buscar por nombre de equipo"
+              placeholder="Buscar por nombre o ID de equipo"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onSearch={() => {}}

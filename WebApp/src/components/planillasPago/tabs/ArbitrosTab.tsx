@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../../store";
 import { fetchProveedores } from "../../../store/slices/proveedoresSlice";
 import { PlanillaArbitro } from "../../../types/planillasPago";
-import { usePlanillaEdition } from "../../../hooks/usePlanillaEdition";
-import { SeccionPlanilla } from "../shared/SeccionPlanilla";
-import { CampoFormulario } from "../shared/FormularioEntrada";
-import { ColumnaTabla } from "../shared/TablaGenerica";
+import { CampoFormulario, FormularioEntrada } from "../shared/FormularioEntrada";
+import { ColumnaTabla, TablaGenerica } from "../shared/TablaGenerica";
 import {
   formatearMoneda,
   resetearFormulario,
   validarFormulario,
   calcularTotalMultiplicado,
 } from "../../../utils/utilidadesPlanilla";
+import {
+  addArbitroPlanilla,
+  deleteArbitroPlanilla,
+} from "../../../api/planillasPagosService";
 
 interface ArbitrosTabProps {
   arbitros: PlanillaArbitro[];
@@ -37,14 +39,8 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
   const dispatch = useDispatch<AppDispatch>();
   const { proveedores } = useSelector((state: RootState) => state.proveedores);
 
-  const { data, isEditing, handleAdd, handleDelete, handleSave } =
-    usePlanillaEdition({
-      entityType: "arbitro",
-      initialData: arbitros,
-      idfecha,
-      onSuccess,
-      onError,
-    });
+  const [data, setData] = useState<PlanillaArbitro[]>(arbitros);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState<FormularioArbitro>({
     idarbitro: 0,
@@ -52,21 +48,32 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
     valor_partido: 0,
   });
 
-  // ✅ Cargar proveedores al montar el componente
+  // Sincronizar con props cuando cambian
+  useEffect(() => {
+    setData(arbitros);
+  }, [arbitros]);
+
+  // Cargar proveedores al montar el componente
   useEffect(() => {
     dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
   }, [dispatch]);
 
-  // ✅ Filtrar solo árbitros (codtipo = 1 generalmente, ajustar según tu BD)
-  // ⚠️ IMPORTANTE: Verificá en tu base de datos qué codtipo corresponde a árbitros
+  // Filtrar solo árbitros (codtipo = 1)
   const arbitrosDisponibles = Array.isArray(proveedores)
     ? proveedores
-        .filter((p) => p.codtipo === 1) // Ajustar codtipo según tu base de datos
+        .filter((p) => p.codtipo === 1)
         .map((p) => ({
           label: p.nombre,
           value: p.id || 0,
         }))
     : [];
+
+  // Calcular próximo orden disponible
+  const getNextOrden = useCallback((): number => {
+    if (data.length === 0) return 1;
+    const maxOrden = Math.max(...data.map((item) => item.orden));
+    return maxOrden + 1;
+  }, [data]);
 
   // Configuración de campos del formulario
   const campos: CampoFormulario<FormularioArbitro>[] = [
@@ -123,19 +130,84 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAgregar = () => {
+  // Agregar árbitro - GUARDA INMEDIATAMENTE EN LA BD
+  const handleAgregar = async () => {
     const validacion = validarFormulario(formData, [
       { campo: "idarbitro", mensaje: "Debe seleccionar un árbitro" },
     ]);
 
     if (!validacion.valido) {
-      alert(validacion.mensaje);
+      onError?.(validacion.mensaje || "Validación fallida");
       return;
     }
 
-    // ✅ CORREGIDO: Pasar los datos del formulario al agregar
-    handleAdd(formData);
-    setFormData(resetearFormulario(formData));
+    // Verificar si el árbitro ya está agregado
+    const yaExiste = data.some((a) => a.idarbitro === formData.idarbitro);
+    if (yaExiste) {
+      onError?.("Este árbitro ya está agregado en esta fecha");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const nuevoOrden = getNextOrden();
+      const nuevoArbitro = {
+        idfecha,
+        orden: nuevoOrden,
+        idarbitro: formData.idarbitro,
+        partidos: formData.partidos,
+        valor_partido: formData.valor_partido,
+      };
+
+      const resultado = await addArbitroPlanilla(nuevoArbitro);
+
+      if (resultado) {
+        // Buscar el nombre del árbitro para mostrarlo
+        const nombreArbitro = arbitrosDisponibles.find(
+          (a) => a.value === formData.idarbitro
+        )?.label;
+
+        // Agregar al estado local con el nombre
+        setData((prev) => [
+          ...prev,
+          {
+            ...resultado,
+            nombre_arbitro: nombreArbitro,
+          },
+        ]);
+
+        // Limpiar formulario
+        setFormData(resetearFormulario(formData));
+        onSuccess?.();
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al agregar árbitro";
+      onError?.(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Eliminar árbitro - ELIMINA INMEDIATAMENTE DE LA BD
+  const handleEliminar = async (index: number) => {
+    const arbitro = data[index];
+    if (!arbitro) return;
+
+    setIsLoading(true);
+    try {
+      await deleteArbitroPlanilla(arbitro.idfecha, arbitro.orden);
+
+      // Eliminar del estado local
+      setData((prev) => prev.filter((_, i) => i !== index));
+      onSuccess?.();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al eliminar árbitro";
+      onError?.(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const calcularTotal = () => {
@@ -148,27 +220,49 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
   };
 
   return (
-    <SeccionPlanilla
-      titulo="Egresos - Árbitros"
-      datos={data}
-      formData={formData}
-      campos={campos}
-      columnas={columnas}
-      onFormChange={handleFormChange}
-      onAgregar={handleAgregar}
-      onEliminar={handleDelete}
-      onGuardar={handleSave}
-      campoCalculado={{
-        label: "Total",
-        valor: formatearMoneda(calcularTotalFormulario()),
-      }}
-      mensajeVacio="No hay árbitros registrados"
-      textoBotonAgregar="Agregar"
-      colorBotonAgregar="green"
-      mostrarTotal={true}
-      calcularTotal={calcularTotal}
-      columnasTotal={3}
-      isEditing={isEditing}
-    />
+    <div className="space-y-5">
+      {/* Encabezado */}
+      <div className="flex justify-between items-center pb-3 border-b-2 border-gray-200">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <span className="text-2xl">📊</span>
+          Egresos - Árbitros
+        </h3>
+        {isLoading && (
+          <span className="text-sm text-blue-600">Guardando...</span>
+        )}
+      </div>
+
+      {/* Formulario de Entrada */}
+      <FormularioEntrada
+        campos={campos}
+        valores={formData}
+        onChange={handleFormChange}
+        onSubmit={handleAgregar}
+        campoCalculado={{
+          label: "Total",
+          valor: formatearMoneda(calcularTotalFormulario()),
+        }}
+        textoBoton="Agregar"
+        colorBoton="green"
+        disabled={isLoading}
+      />
+
+      {/* Tabla de Registros */}
+      <TablaGenerica
+        columnas={columnas}
+        datos={data}
+        onDelete={handleEliminar}
+        mensajeVacio="No hay árbitros registrados"
+        mostrarTotal={true}
+        calcularTotal={calcularTotal}
+        columnasTotal={3}
+        disabled={isLoading}
+      />
+
+      {/* Nota informativa */}
+      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+        Los cambios se guardan automáticamente al agregar o eliminar.
+      </div>
+    </div>
   );
 };

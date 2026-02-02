@@ -33,6 +33,7 @@ import {
   updatePagoFechaController,
   updatePagoInscripcionController,
   updatePagoDepositoController,
+  updateDescuentoController,
   updateEfectivoRealController,
   exportarPlanillaController,
 } from "../controllers/planillasPagoController";
@@ -440,6 +441,18 @@ router.put(
   ],
   validateRequest,
   asyncHandler(updatePagoDepositoController)
+);
+
+router.put(
+  "/:idfecha/descuento",
+  authMiddleware,
+  [
+    param("idfecha").isInt().withMessage("ID de fecha inválido"),
+    body("idequipo").isInt().withMessage("ID de equipo inválido"),
+    body("importe").isNumeric().withMessage("Importe inválido"),
+  ],
+  validateRequest,
+  asyncHandler(updateDescuentoController)
 );
 
 router.put(

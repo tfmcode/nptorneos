@@ -27,15 +27,17 @@ export const getEquipoJugadorById = async (
 };
 
 // Obtener todos los jugadores activos de un equipo
+// Incluye jugador_codestado para saber si el jugador está habilitado globalmente
 export const getJugadoresByEquipo = async (
   idequipo: number
 ): Promise<IEquipoJugador[]> => {
   const { rows } = await pool.query(
-    `SELECT ej.*, j.apellido, j.nombres, j.docnro
+    `SELECT ej.*, j.apellido, j.nombres, j.docnro,
+            j.codestado AS jugador_codestado
      FROM wequipos_jugadores ej
      INNER JOIN jugadores j ON ej.idjugador = j.id
-     WHERE ej.idequipo = $1 AND ej.fhbaja IS NULL
-     ORDER BY ej.id ASC;`,
+     WHERE ej.idequipo = $1 AND ej.fhbaja IS NULL AND j.fhbaja IS NULL
+     ORDER BY j.apellido, j.nombres ASC;`,
     [idequipo]
   );
   return rows;

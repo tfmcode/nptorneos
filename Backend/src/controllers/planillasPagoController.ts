@@ -598,6 +598,31 @@ export const updatePagoDepositoController = async (
   }
 };
 
+export const updateDescuentoController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { idequipo, importe } = req.body;
+
+    if (isNaN(idfecha) || !idequipo || importe === undefined) {
+      return res.status(400).json({ message: "Parámetros inválidos." });
+    }
+
+    await planillasModel.updateDescuento(idfecha, idequipo, Number(importe));
+
+    return res.status(200).json({
+      message: "Descuento actualizado exitosamente.",
+    });
+  } catch (error) {
+    console.error("❌ Error al actualizar descuento:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al actualizar descuento.", error });
+  }
+};
+
 export const updateEfectivoRealController = async (
   req: Request,
   res: Response

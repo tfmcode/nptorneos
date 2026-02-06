@@ -33,7 +33,6 @@ export const getPartido = async (id: number): Promise<Partido | null> => {
 
 const cleanPartidoData = (data: Partial<Partido>): Partial<Partido> => {
   const camposValidos: (keyof Partido)[] = [
-    "id",
     "idzona",
     "nrofecha",
     "fecha",
@@ -62,8 +61,6 @@ const cleanPartidoData = (data: Partial<Partido>): Partial<Partido> => {
     "dt2",
     "suplentes1",
     "suplentes2",
-    "fhcarga",
-    "fhbaja",
   ];
 
   return camposValidos.reduce((acc, key) => {

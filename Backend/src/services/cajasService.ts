@@ -111,11 +111,12 @@ const createEquiposInCaja = async (
 };
 
 /**
- * ✅ CAMBIADO: Busca o crea una caja usando fecha timestamp + sede + profesor
+ * Busca o crea una caja usando fecha timestamp + sede + profesor
+ * @param data - Datos para buscar/crear la caja
+ * @param externalClient - Cliente de pool existente (reutiliza la transacción del llamador)
  * @returns El ID de la caja (idfecha)
  */
-export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
-  // Validaciones
+export const findOrCreateCaja = async (data: CajaData, externalClient?: any): Promise<number> => {
   if (!data.idprofesor || data.idprofesor === 0) {
     throw new Error("El profesor es obligatorio para abrir una caja");
   }
@@ -126,18 +127,18 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
     throw new Error("La sede es obligatoria para abrir una caja");
   }
 
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+  const client = externalClient || await pool.connect();
+  const ownTransaction = !externalClient;
 
-    // ✅ CAMBIADO: Normalizar la fecha a YYYY-MM-DD para comparación
+  try {
+    if (ownTransaction) await client.query("BEGIN");
+
     const fechaNormalizada = new Date(data.fecha).toISOString().split("T")[0];
 
-    // ✅ CAMBIADO: Buscar si ya existe una caja con la misma triple clave (fecha timestamp + sede + profesor)
     const findQuery = `
-      SELECT id 
-      FROM wtorneos_fechas 
-      WHERE idprofesor = $1 
+      SELECT id
+      FROM wtorneos_fechas
+      WHERE idprofesor = $1
         AND DATE(fecha) = DATE($2)
         AND idsede = $3
         AND fhbaja IS NULL
@@ -150,27 +151,21 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
       data.idsede,
     ]);
 
-    // Si existe, agregar los equipos del partido a esa caja y retornar el ID
     if (findResult.rows.length > 0) {
       const existingId = findResult.rows[0].id;
-
-      // ✅ CRÍTICO: Agregar los equipos del nuevo partido a la caja existente
       await createEquiposInCaja(client, existingId, data.idequipo1, data.idequipo2);
 
-      await client.query("COMMIT");
+      if (ownTransaction) await client.query("COMMIT");
       console.log(
         `✅ Caja existente encontrada: idfecha=${existingId} (profesor=${data.idprofesor}, fecha=${fechaNormalizada}, sede=${data.idsede})`
       );
       return existingId;
     }
 
-    // 2. No existe: crear nueva caja
-    // Obtener el siguiente ID correlativo
     const maxIdQuery = `SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM wtorneos_fechas`;
     const maxIdResult = await client.query(maxIdQuery);
     const nextId = maxIdResult.rows[0].next_id;
 
-    // Insertar nueva caja
     const insertQuery = `
       INSERT INTO wtorneos_fechas (
         id,
@@ -187,38 +182,39 @@ export const findOrCreateCaja = async (data: CajaData): Promise<number> => {
 
     const insertResult = await client.query(insertQuery, [
       nextId,
-      data.fecha, // ✅ Guardar fecha completa
+      data.fecha,
       data.idsede,
       data.idsubsede || null,
       data.idtorneo || null,
-      data.codfecha || null, // ✅ codfecha es opcional, solo informativo
+      data.codfecha || null,
       data.idprofesor,
     ]);
 
-    // ✅ NUEVO: Crear registros en wfechas_equipos para los equipos del partido
     await createEquiposInCaja(client, nextId, data.idequipo1, data.idequipo2);
 
-    await client.query("COMMIT");
+    if (ownTransaction) await client.query("COMMIT");
     console.log(
       `✅ Nueva caja creada: idfecha=${nextId} (profesor=${data.idprofesor}, fecha=${fechaNormalizada}, sede=${data.idsede})`
     );
     return insertResult.rows[0].id;
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (ownTransaction) await client.query("ROLLBACK");
     console.error("❌ Error en findOrCreateCaja:", error);
     throw error;
   } finally {
-    client.release();
+    if (ownTransaction) client.release();
   }
 };
 
 /**
- * ✅ CAMBIADO: Verifica si un partido debe cambiar de caja
- * (cuando cambia alguno de los 3 campos clave: fecha timestamp, sede o profesor)
+ * Verifica si un partido debe cambiar de caja
+ * (cuando cambia alguno de los 3 campos clave: fecha, sede o profesor)
+ * @param externalClient - Cliente de pool existente (para leer dentro de la misma transacción)
  */
 export const shouldUpdateCaja = async (
   idpartido: number,
-  newData: Partial<CajaData>
+  newData: Partial<CajaData>,
+  externalClient?: any
 ): Promise<boolean> => {
   const query = `
     SELECT idprofesor, fecha, idsede, idfecha
@@ -226,12 +222,14 @@ export const shouldUpdateCaja = async (
     WHERE id = $1
   `;
 
-  const result = await pool.query(query, [idpartido]);
+  // Usar el client externo si existe, sino pool.query
+  const result = externalClient
+    ? await externalClient.query(query, [idpartido])
+    : await pool.query(query, [idpartido]);
   if (result.rows.length === 0) return false;
 
   const current = result.rows[0];
 
-  // ✅ CAMBIADO: Comparar fecha como timestamp (normalizado a YYYY-MM-DD)
   const currentFecha = current.fecha
     ? new Date(current.fecha).toISOString().split("T")[0]
     : null;
@@ -293,14 +291,14 @@ export const getCajaDataFromPartido = async (
 };
 
 /**
- * ✅ NUEVO: Crea los cargos de fecha (deuda) en wfechas_equipos_hab
- * Se llama cuando se crea/asigna una caja a un partido (desde Resultados)
- * Es idempotente: usa ON CONFLICT DO NOTHING para no duplicar cargos
- *
+ * Crea los cargos de fecha (deuda) en wfechas_equipos_hab
+ * Es idempotente: usa ON CONFLICT para no duplicar cargos
  * @param data - Datos del partido con caja asignada
+ * @param externalClient - Cliente de pool existente (reutiliza la transacción del llamador)
  */
 export const createCargosFechaPartido = async (
-  data: CargoFechaData
+  data: CargoFechaData,
+  externalClient?: any
 ): Promise<void> => {
   const { idpartido, idfecha, idequipo1, idequipo2, idzona, nrofecha } = data;
 
@@ -311,22 +309,22 @@ export const createCargosFechaPartido = async (
     return;
   }
 
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+  const client = externalClient || await pool.connect();
+  const ownTransaction = !externalClient;
 
-    // 1. Obtener idtorneo y valor_fecha desde la zona
+  try {
+    if (ownTransaction) await client.query("BEGIN");
+
     const zonaQuery = `SELECT idtorneo FROM zonas WHERE id = $1`;
     const zonaResult = await client.query(zonaQuery, [idzona]);
     const idtorneo = zonaResult.rows[0]?.idtorneo;
 
     if (!idtorneo) {
       console.log(`⚠️ No se encontró idtorneo para zona ${idzona}`);
-      await client.query("ROLLBACK");
+      if (ownTransaction) await client.query("ROLLBACK");
       return;
     }
 
-    // 2. Obtener valor_fecha para cada equipo (desde zonas_equipos o wtorneos)
     const getValorFecha = async (idequipo: number): Promise<number> => {
       const query = `
         SELECT COALESCE(ze.valor_fecha, t.valor_fecha, 0) as valor_fecha
@@ -343,67 +341,45 @@ export const createCargosFechaPartido = async (
     const valorFechaEq1 = await getValorFecha(idequipo1);
     const valorFechaEq2 = await getValorFecha(idequipo2);
 
-    // 3. Insertar cargo para equipo1 (si tiene valor > 0)
+    const upsertQuery = `
+      INSERT INTO wfechas_equipos_hab (
+        idfecha, idequipo, importe, fhcarga, iva, idtorneo, codfecha, idpartido
+      ) VALUES ($1, $2, $3, NOW(), 0, $4, $5, $6)
+      ON CONFLICT (idpartido, idequipo) WHERE idpartido IS NOT NULL
+      DO UPDATE SET
+        idfecha = EXCLUDED.idfecha,
+        importe = EXCLUDED.importe,
+        idtorneo = EXCLUDED.idtorneo,
+        codfecha = EXCLUDED.codfecha
+    `;
+
     if (idequipo1 && valorFechaEq1 > 0) {
-      const insertQuery = `
-        INSERT INTO wfechas_equipos_hab (
-          idfecha, idequipo, importe, fhcarga, iva, idtorneo, codfecha, idpartido
-        ) VALUES ($1, $2, $3, NOW(), 0, $4, $5, $6)
-        ON CONFLICT (idpartido, idequipo) WHERE idpartido IS NOT NULL
-        DO UPDATE SET
-          idfecha = EXCLUDED.idfecha,
-          importe = EXCLUDED.importe,
-          idtorneo = EXCLUDED.idtorneo,
-          codfecha = EXCLUDED.codfecha
-      `;
-      await client.query(insertQuery, [
-        idfecha,
-        idequipo1,
-        valorFechaEq1,
-        idtorneo,
-        nrofecha,
-        idpartido,
+      await client.query(upsertQuery, [
+        idfecha, idequipo1, valorFechaEq1, idtorneo, nrofecha, idpartido,
       ]);
       console.log(
         `✅ Cargo de fecha creado: partido=${idpartido}, equipo=${idequipo1}, importe=${valorFechaEq1}`
       );
     }
 
-    // 4. Insertar cargo para equipo2 (si tiene valor > 0)
     if (idequipo2 && valorFechaEq2 > 0) {
-      const insertQuery = `
-        INSERT INTO wfechas_equipos_hab (
-          idfecha, idequipo, importe, fhcarga, iva, idtorneo, codfecha, idpartido
-        ) VALUES ($1, $2, $3, NOW(), 0, $4, $5, $6)
-        ON CONFLICT (idpartido, idequipo) WHERE idpartido IS NOT NULL
-        DO UPDATE SET
-          idfecha = EXCLUDED.idfecha,
-          importe = EXCLUDED.importe,
-          idtorneo = EXCLUDED.idtorneo,
-          codfecha = EXCLUDED.codfecha
-      `;
-      await client.query(insertQuery, [
-        idfecha,
-        idequipo2,
-        valorFechaEq2,
-        idtorneo,
-        nrofecha,
-        idpartido,
+      await client.query(upsertQuery, [
+        idfecha, idequipo2, valorFechaEq2, idtorneo, nrofecha, idpartido,
       ]);
       console.log(
         `✅ Cargo de fecha creado: partido=${idpartido}, equipo=${idequipo2}, importe=${valorFechaEq2}`
       );
     }
 
-    await client.query("COMMIT");
+    if (ownTransaction) await client.query("COMMIT");
     console.log(
       `💰 Cargos de fecha generados para partido ${idpartido} en caja ${idfecha}`
     );
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (ownTransaction) await client.query("ROLLBACK");
     console.error(`❌ Error al crear cargos de fecha para partido ${idpartido}:`, error);
     throw error;
   } finally {
-    client.release();
+    if (ownTransaction) client.release();
   }
 };

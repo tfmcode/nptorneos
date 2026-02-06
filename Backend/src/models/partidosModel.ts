@@ -153,12 +153,23 @@ export const updatePartido = async (
   try {
     await client.query("BEGIN");
 
-    // 1. Construir el UPDATE
+    // Campos que NO deben incluirse en el UPDATE
+    const camposExcluidos = ["id", "nombre1", "nombre2", "sede", "fhcarga"];
+
+    // 1. Leer datos actuales ANTES del update (misma transacción, misma conexión)
+    const oldDataResult = await client.query(
+      `SELECT idprofesor, fecha, idsede, idfecha, nrofecha FROM partidos WHERE id = $1`,
+      [id]
+    );
+    const oldData = oldDataResult.rows[0];
+
+    // 2. Construir el UPDATE
     const updates: string[] = [];
     const values: any[] = [];
     let index = 1;
 
     for (const key in partido) {
+      if (camposExcluidos.includes(key)) continue;
       if (partido[key as keyof IPartido] !== undefined) {
         updates.push(`${key} = $${index}`);
         values.push(partido[key as keyof IPartido]);
@@ -167,14 +178,15 @@ export const updatePartido = async (
     }
 
     if (updates.length === 0) {
-      throw new Error("No hay datos para actualizar.");
+      client.release();
+      return oldData ? (await getPartidoById(id)) : null;
     }
 
     values.push(id);
     const query = `
-      UPDATE partidos 
-      SET ${updates.join(", ")} 
-      WHERE id = $${index} 
+      UPDATE partidos
+      SET ${updates.join(", ")}
+      WHERE id = $${index}
       RETURNING *
     `;
 
@@ -186,86 +198,67 @@ export const updatePartido = async (
       return null;
     }
 
-    // 2. Verificar si cambió algún campo clave de la caja
-    const needsNewCaja = await shouldUpdateCaja(id, {
-      idprofesor: partido.idprofesor,
-      fecha: partido.fecha, // ✅ CORREGIDO: usar fecha en lugar de codfecha
-      idsede: partido.idsede,
-    });
+    // 3. Verificar si cambió algún campo clave de la caja (comparando old vs new)
+    const profesorChanged =
+      partido.idprofesor !== undefined &&
+      oldData &&
+      Number(partido.idprofesor) !== Number(oldData.idprofesor);
+    const fechaChanged =
+      partido.fecha !== undefined &&
+      oldData &&
+      partido.fecha !== oldData.fecha;
+    const sedeChanged =
+      partido.idsede !== undefined &&
+      oldData &&
+      Number(partido.idsede) !== Number(oldData.idsede);
 
-    // 3. Si cambió algún campo clave Y tiene los 3 campos completos, actualizar caja
+    const needsNewCaja = profesorChanged || fechaChanged || sedeChanged;
+
+    if (needsNewCaja) {
+      console.log(`⚠️ Partido ${id} necesita cambio de caja:`, {
+        profesorChanged,
+        fechaChanged,
+        sedeChanged,
+      });
+    }
+
+    // 4. Si cambió algún campo clave Y tiene los 3 campos completos, actualizar caja
     const tieneIdProfesor =
       updatedPartido.idprofesor && updatedPartido.idprofesor !== 0;
     const tieneNroFecha =
       updatedPartido.nrofecha && updatedPartido.nrofecha !== 0;
     const tieneIdsede = updatedPartido.idsede && updatedPartido.idsede !== 0;
 
-    if (needsNewCaja && tieneIdProfesor && tieneNroFecha && tieneIdsede) {
-      console.log(
-        `🔄 Partido ${id} cambió campos clave - buscando/creando nueva caja...`
-      );
-
-      // Obtener idtorneo desde la zona
-      const zonaQuery = `SELECT idtorneo FROM zonas WHERE id = $1`;
-      const zonaResult = await client.query(zonaQuery, [updatedPartido.idzona]);
-      const idtorneo = zonaResult.rows[0]?.idtorneo;
-
-      // Buscar o crear caja con la nueva configuración
-      const idfecha = await findOrCreateCaja({
-        idprofesor: updatedPartido.idprofesor,
-        codfecha: updatedPartido.nrofecha,
-        idsede: updatedPartido.idsede,
-        fecha: updatedPartido.fecha,
-        idtorneo,
-        idequipo1: updatedPartido.idequipo1,
-        idequipo2: updatedPartido.idequipo2,
-      });
-
-      console.log(`✅ Nueva caja asignada: idfecha=${idfecha}`);
-
-      // Actualizar el idfecha del partido
-      const updateCajaQuery = `
-        UPDATE partidos
-        SET idfecha = $1
-        WHERE id = $2
-        RETURNING *
-      `;
-      const finalResult = await client.query(updateCajaQuery, [idfecha, id]);
-      updatedPartido = finalResult.rows[0];
-
-      // ✅ NUEVO: Crear cargos de fecha (deuda) para este partido
-      await createCargosFechaPartido({
-        idpartido: id,
-        idfecha,
-        idequipo1: updatedPartido.idequipo1,
-        idequipo2: updatedPartido.idequipo2,
-        idzona: updatedPartido.idzona,
-        nrofecha: updatedPartido.nrofecha,
-      });
-    } else if (
-      !updatedPartido.idfecha &&
+    const deberiaProcesarCaja =
+      (needsNewCaja || !updatedPartido.idfecha) &&
       tieneIdProfesor &&
       tieneNroFecha &&
-      tieneIdsede
-    ) {
-      // Caso especial: el partido no tenía caja pero ahora tiene los 3 campos completos
+      tieneIdsede;
+
+    if (deberiaProcesarCaja) {
       console.log(
-        `✅ Partido ${id} completó datos - generando caja por primera vez...`
+        `🔄 Partido ${id} - procesando caja (cambió=${needsNewCaja}, sinCaja=${!updatedPartido.idfecha})...`
       );
 
       const zonaQuery = `SELECT idtorneo FROM zonas WHERE id = $1`;
       const zonaResult = await client.query(zonaQuery, [updatedPartido.idzona]);
       const idtorneo = zonaResult.rows[0]?.idtorneo;
 
-      const idfecha = await findOrCreateCaja({
-        idprofesor: updatedPartido.idprofesor,
-        codfecha: updatedPartido.nrofecha,
-        idsede: updatedPartido.idsede,
-        fecha: updatedPartido.fecha,
-        idtorneo,
-        idequipo1: updatedPartido.idequipo1,
-        idequipo2: updatedPartido.idequipo2,
-      });
+      // Usar el MISMO client para findOrCreateCaja (misma transacción, sin conexión extra)
+      const idfecha = await findOrCreateCaja(
+        {
+          idprofesor: updatedPartido.idprofesor,
+          codfecha: updatedPartido.nrofecha,
+          idsede: updatedPartido.idsede,
+          fecha: updatedPartido.fecha,
+          idtorneo,
+          idequipo1: updatedPartido.idequipo1,
+          idequipo2: updatedPartido.idequipo2,
+        },
+        client
+      );
+
+      console.log(`✅ Caja asignada: idfecha=${idfecha}`);
 
       const updateCajaQuery = `
         UPDATE partidos
@@ -276,15 +269,18 @@ export const updatePartido = async (
       const finalResult = await client.query(updateCajaQuery, [idfecha, id]);
       updatedPartido = finalResult.rows[0];
 
-      // ✅ NUEVO: Crear cargos de fecha (deuda) para este partido
-      await createCargosFechaPartido({
-        idpartido: id,
-        idfecha,
-        idequipo1: updatedPartido.idequipo1,
-        idequipo2: updatedPartido.idequipo2,
-        idzona: updatedPartido.idzona,
-        nrofecha: updatedPartido.nrofecha,
-      });
+      // Usar el MISMO client para createCargosFechaPartido (misma transacción)
+      await createCargosFechaPartido(
+        {
+          idpartido: id,
+          idfecha,
+          idequipo1: updatedPartido.idequipo1,
+          idequipo2: updatedPartido.idequipo2,
+          idzona: updatedPartido.idzona,
+          nrofecha: updatedPartido.nrofecha,
+        },
+        client
+      );
     }
 
     await client.query("COMMIT");

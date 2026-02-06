@@ -49,7 +49,6 @@ const cleanPartidoData = (data: Partial<Partido>): Partial<Partido> => {
     "ausente2",
     "idusuario",
     "idprofesor",
-    "idfecha",
     "observaciones",
     "arbitro",
     "incidencias",

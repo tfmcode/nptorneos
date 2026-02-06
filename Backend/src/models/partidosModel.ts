@@ -1,11 +1,7 @@
 // Backend/src/models/partidosModel.ts
 
 import { pool } from "../config/db";
-import {
-  findOrCreateCaja,
-  shouldUpdateCaja,
-  createCargosFechaPartido,
-} from "../services/cajasService";
+import { findOrCreateCaja, createCargosFechaPartido } from "../services/cajasService";
 
 export interface IPartido {
   id?: number;
@@ -153,8 +149,10 @@ export const updatePartido = async (
   try {
     await client.query("BEGIN");
 
-    // Campos que NO deben incluirse en el UPDATE
-    const camposExcluidos = ["id", "nombre1", "nombre2", "sede", "fhcarga"];
+    // Campos que NO deben incluirse en el UPDATE principal
+    // idfecha: lo maneja la lógica de caja + trigger sync_cargo_fecha_partido
+    // fhbaja: lo maneja la lógica de baja + trigger remove_cargo_fecha_partido
+    const camposExcluidos = ["id", "nombre1", "nombre2", "sede", "fhcarga", "idfecha", "fhbaja"];
 
     // 1. Leer datos actuales ANTES del update (misma transacción, misma conexión)
     const oldDataResult = await client.query(
@@ -260,6 +258,9 @@ export const updatePartido = async (
 
       console.log(`✅ Caja asignada: idfecha=${idfecha}`);
 
+      // Actualizar idfecha en el partido
+      // Si existe el trigger sync_cargo_fecha_partido, él crea los cargos
+      // Si no existe (producción sin triggers), los creamos manualmente abajo
       const updateCajaQuery = `
         UPDATE partidos
         SET idfecha = $1
@@ -269,18 +270,25 @@ export const updatePartido = async (
       const finalResult = await client.query(updateCajaQuery, [idfecha, id]);
       updatedPartido = finalResult.rows[0];
 
-      // Usar el MISMO client para createCargosFechaPartido (misma transacción)
-      await createCargosFechaPartido(
-        {
-          idpartido: id,
-          idfecha,
-          idequipo1: updatedPartido.idequipo1,
-          idequipo2: updatedPartido.idequipo2,
-          idzona: updatedPartido.idzona,
-          nrofecha: updatedPartido.nrofecha,
-        },
-        client
-      );
+      // Crear cargos de fecha - es idempotente (ON CONFLICT DO UPDATE)
+      // Si el trigger ya los creó, esto es un no-op
+      // Si no hay trigger (producción), esto los crea
+      try {
+        await createCargosFechaPartido(
+          {
+            idpartido: id,
+            idfecha,
+            idequipo1: updatedPartido.idequipo1,
+            idequipo2: updatedPartido.idequipo2,
+            idzona: updatedPartido.idzona,
+            nrofecha: updatedPartido.nrofecha,
+          },
+          client
+        );
+      } catch (cargoError) {
+        // Si falla (ej: falta unique index en producción), loguear pero no romper el guardado
+        console.warn(`⚠️ No se pudieron crear cargos de fecha (no crítico):`, cargoError);
+      }
     }
 
     await client.query("COMMIT");

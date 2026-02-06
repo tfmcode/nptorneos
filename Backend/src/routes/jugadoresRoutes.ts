@@ -9,6 +9,7 @@ import {
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminOrStaffMiddleware } from "../middlewares/adminOrStaffMiddleware";
 
 const router = express.Router();
 
@@ -17,13 +18,13 @@ router.get("/:id", authMiddleware, asyncHandler(getJugador));
 router.post(
   "/",
   authMiddleware,
-  adminMiddleware,
+  adminOrStaffMiddleware,
   asyncHandler(createJugadorController)
 );
 router.put(
   "/:id",
   authMiddleware,
-  adminMiddleware,
+  adminOrStaffMiddleware,
   asyncHandler(updateJugadorController)
 );
 router.delete(

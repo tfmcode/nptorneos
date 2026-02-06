@@ -1,7 +1,14 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Logo from "../../assets/logonew1.png";
 import { NavLink as RouteLink } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
+
+const reglamentos = [
+  { name: "Fútbol 5", file: "/Reglamentos/Reglamento_F5.pdf" },
+  { name: "Fútbol 8", file: "/Reglamentos/Reglamento_F8.pdf" },
+  { name: "Fútbol 11", file: "/Reglamentos/Reglamento_F11.pdf" },
+  { name: "Infantil", file: "/Reglamentos/Reglamento_Infantil.pdf" },
+];
 
 const footerNavs = [
   {
@@ -16,7 +23,7 @@ const footerNavs = [
     label: "Información",
     items: [
       { href: "/concents", name: "Consentimiento" },
-      { href: "/", name: "Reglamentos" },
+      { name: "Reglamentos", isDropdown: true },
       { href: "/", name: "Novedades" },
     ],
   },
@@ -49,6 +56,19 @@ const socialLinks = [
 ];
 
 export const Footer: React.FC = () => {
+  const [isReglamentosOpen, setIsReglamentosOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsReglamentosOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <footer className="pt-10 bg-gray-800 text-white">
       <div className="max-w-screen-xl mx-auto px-4 md:px-8">
@@ -60,12 +80,40 @@ export const Footer: React.FC = () => {
               <ul>
                 {nav.items.map((item, itemIdx) => (
                   <li key={itemIdx}>
-                    <a
-                      href={item.href}
-                      className="hover:text-gray-400 duration-150"
-                    >
-                      {item.name}
-                    </a>
+                    {item.isDropdown ? (
+                      <div className="relative" ref={dropdownRef}>
+                        <button
+                          onClick={() => setIsReglamentosOpen(!isReglamentosOpen)}
+                          className="hover:text-gray-400 duration-150 flex items-center gap-1"
+                        >
+                          {item.name}
+                          <i className={`bi bi-chevron-${isReglamentosOpen ? 'up' : 'down'} text-xs`}></i>
+                        </button>
+                        {isReglamentosOpen && (
+                          <div className="absolute bottom-full left-0 mb-2 bg-gray-700 rounded-md shadow-lg py-2 min-w-[160px] z-50">
+                            {reglamentos.map((reg, regIdx) => (
+                              <a
+                                key={regIdx}
+                                href={reg.file}
+                                download
+                                className="block px-4 py-2 text-sm hover:bg-gray-600 duration-150"
+                                onClick={() => setIsReglamentosOpen(false)}
+                              >
+                                <i className="bi bi-file-pdf text-red-400 mr-2"></i>
+                                {reg.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <a
+                        href={item.href}
+                        className="hover:text-gray-400 duration-150"
+                      >
+                        {item.name}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

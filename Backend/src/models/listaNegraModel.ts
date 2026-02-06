@@ -8,7 +8,7 @@ export interface IListaNegra {
   fhbaja?: Date | string | null;
   fhultmod?: Date | string | null;
   usrultmod?: number;
-  codestado?: number; // 1: habilitado, 0: inhabilitado
+  codestado?: number; // 0: sanción vigente (jugador bloqueado), 1: no vigente (jugador liberado)
   fhcarga?: Date | string | null;
 }
 

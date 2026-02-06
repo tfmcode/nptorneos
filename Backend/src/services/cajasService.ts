@@ -16,6 +16,15 @@ interface CajaData extends CajaKey {
   idequipo2?: number;
 }
 
+interface CargoFechaData {
+  idpartido: number;
+  idfecha: number;
+  idequipo1: number;
+  idequipo2: number;
+  idzona: number;
+  nrofecha: number;
+}
+
 /**
  * ✅ ACTUALIZADO: Agrega los equipos de un partido a wfechas_equipos
  * Si los equipos ya existen, no los duplica
@@ -281,4 +290,120 @@ export const getCajaDataFromPartido = async (
     idtorneo: row.idtorneo,
     idsubsede: row.idsubsede,
   };
+};
+
+/**
+ * ✅ NUEVO: Crea los cargos de fecha (deuda) en wfechas_equipos_hab
+ * Se llama cuando se crea/asigna una caja a un partido (desde Resultados)
+ * Es idempotente: usa ON CONFLICT DO NOTHING para no duplicar cargos
+ *
+ * @param data - Datos del partido con caja asignada
+ */
+export const createCargosFechaPartido = async (
+  data: CargoFechaData
+): Promise<void> => {
+  const { idpartido, idfecha, idequipo1, idequipo2, idzona, nrofecha } = data;
+
+  if (!idpartido || !idfecha) {
+    console.log(
+      `⚠️ No se pueden crear cargos de fecha: idpartido=${idpartido}, idfecha=${idfecha}`
+    );
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Obtener idtorneo y valor_fecha desde la zona
+    const zonaQuery = `SELECT idtorneo FROM zonas WHERE id = $1`;
+    const zonaResult = await client.query(zonaQuery, [idzona]);
+    const idtorneo = zonaResult.rows[0]?.idtorneo;
+
+    if (!idtorneo) {
+      console.log(`⚠️ No se encontró idtorneo para zona ${idzona}`);
+      await client.query("ROLLBACK");
+      return;
+    }
+
+    // 2. Obtener valor_fecha para cada equipo (desde zonas_equipos o wtorneos)
+    const getValorFecha = async (idequipo: number): Promise<number> => {
+      const query = `
+        SELECT COALESCE(ze.valor_fecha, t.valor_fecha, 0) as valor_fecha
+        FROM wtorneos t
+        LEFT JOIN zonas_equipos ze ON ze.idzona = $1
+          AND ze.idequipo = $2
+          AND ze.fhbaja IS NULL
+        WHERE t.id = $3
+      `;
+      const result = await client.query(query, [idzona, idequipo, idtorneo]);
+      return parseFloat(result.rows[0]?.valor_fecha || "0");
+    };
+
+    const valorFechaEq1 = await getValorFecha(idequipo1);
+    const valorFechaEq2 = await getValorFecha(idequipo2);
+
+    // 3. Insertar cargo para equipo1 (si tiene valor > 0)
+    if (idequipo1 && valorFechaEq1 > 0) {
+      const insertQuery = `
+        INSERT INTO wfechas_equipos_hab (
+          idfecha, idequipo, importe, fhcarga, iva, idtorneo, codfecha, idpartido
+        ) VALUES ($1, $2, $3, NOW(), 0, $4, $5, $6)
+        ON CONFLICT (idpartido, idequipo) WHERE idpartido IS NOT NULL
+        DO UPDATE SET
+          idfecha = EXCLUDED.idfecha,
+          importe = EXCLUDED.importe,
+          idtorneo = EXCLUDED.idtorneo,
+          codfecha = EXCLUDED.codfecha
+      `;
+      await client.query(insertQuery, [
+        idfecha,
+        idequipo1,
+        valorFechaEq1,
+        idtorneo,
+        nrofecha,
+        idpartido,
+      ]);
+      console.log(
+        `✅ Cargo de fecha creado: partido=${idpartido}, equipo=${idequipo1}, importe=${valorFechaEq1}`
+      );
+    }
+
+    // 4. Insertar cargo para equipo2 (si tiene valor > 0)
+    if (idequipo2 && valorFechaEq2 > 0) {
+      const insertQuery = `
+        INSERT INTO wfechas_equipos_hab (
+          idfecha, idequipo, importe, fhcarga, iva, idtorneo, codfecha, idpartido
+        ) VALUES ($1, $2, $3, NOW(), 0, $4, $5, $6)
+        ON CONFLICT (idpartido, idequipo) WHERE idpartido IS NOT NULL
+        DO UPDATE SET
+          idfecha = EXCLUDED.idfecha,
+          importe = EXCLUDED.importe,
+          idtorneo = EXCLUDED.idtorneo,
+          codfecha = EXCLUDED.codfecha
+      `;
+      await client.query(insertQuery, [
+        idfecha,
+        idequipo2,
+        valorFechaEq2,
+        idtorneo,
+        nrofecha,
+        idpartido,
+      ]);
+      console.log(
+        `✅ Cargo de fecha creado: partido=${idpartido}, equipo=${idequipo2}, importe=${valorFechaEq2}`
+      );
+    }
+
+    await client.query("COMMIT");
+    console.log(
+      `💰 Cargos de fecha generados para partido ${idpartido} en caja ${idfecha}`
+    );
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error(`❌ Error al crear cargos de fecha para partido ${idpartido}:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
 };

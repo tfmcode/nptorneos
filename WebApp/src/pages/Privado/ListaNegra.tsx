@@ -72,6 +72,26 @@ const ListaNegraPage: React.FC = () => {
     dispatch(fetchListaNegra({ page, limit, searchTerm }));
   };
 
+  const handleToggleEstado = async (registro: ListaNegra) => {
+    const nuevoEstado = registro.codestado === 0 ? 1 : 0;
+    try {
+      await dispatch(
+        saveRegistroListaNegra({
+          id: registro.id,
+          idjugador: registro.idjugador,
+          codestado: nuevoEstado,
+        })
+      ).unwrap();
+      dispatch(fetchListaNegra({ page, limit, searchTerm }));
+      showPopup(
+        "success",
+        nuevoEstado === 0 ? "Sanción activada" : "Sanción desactivada"
+      );
+    } catch {
+      showPopup("error", "Error al cambiar el estado");
+    }
+  };
+
   const handleSearch = () => {
     dispatch(
       fetchListaNegra({ page: 1, limit, searchTerm: pendingSearchTerm })
@@ -159,6 +179,10 @@ const ListaNegraPage: React.FC = () => {
           data={registros}
           onEdit={(row) => handleOpenModal(row as ListaNegra)}
           onDelete={handleDelete}
+          onToggleEstado={handleToggleEstado}
+          estadoHeader="Sanción"
+          estadoLabels={{ active: "No vigente", inactive: "Vigente" }}
+          useTextLabels
         />
         <div className="flex justify-between items-center mt-4">
           <button
@@ -252,10 +276,11 @@ const ListaNegraPage: React.FC = () => {
               },
               {
                 name: "codestado",
+                label: "Sanción",
                 type: "select",
                 options: [
-                  { label: "Inhabilitado", value: "0" },
-                  { label: "Habilitado", value: "1" },
+                  { label: "Vigente", value: "0" },
+                  { label: "No vigente", value: "1" },
                 ],
                 value: (formData.codestado ?? 0).toString(),
               },

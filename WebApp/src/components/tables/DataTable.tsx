@@ -21,6 +21,9 @@ interface DataTableProps<T> {
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
   onToggleEstado?: (row: T) => void;
+  estadoHeader?: string;
+  estadoLabels?: { active: string; inactive: string };
+  useTextLabels?: boolean;
 }
 
 const DataTable = <T extends Record<string, unknown>>({
@@ -29,6 +32,9 @@ const DataTable = <T extends Record<string, unknown>>({
   onEdit,
   onDelete,
   onToggleEstado,
+  estadoHeader = "Estado",
+  estadoLabels = { active: "Habilitado", inactive: "Deshabilitado" },
+  useTextLabels = false,
 }: DataTableProps<T>) => {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof T;
@@ -86,7 +92,7 @@ const DataTable = <T extends Record<string, unknown>>({
               ))}
 
               {/* Columnas de acción condicionales */}
-              <th className="w-[50px] border text-sm">Estado</th>
+              <th className="w-[50px] border text-sm">{estadoHeader}</th>
               {onEdit && <th className="w-[50px] border text-sm">Editar</th>}
               {onDelete && (
                 <th className="w-[50px] border text-sm">Eliminar</th>
@@ -116,14 +122,24 @@ const DataTable = <T extends Record<string, unknown>>({
                     {onToggleEstado ? (
                       <button
                         onClick={() => onToggleEstado(row)}
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white transition-colors ${
-                          isActive
-                            ? "bg-green-600 hover:bg-green-800"
-                            : "bg-red-600 hover:bg-red-800"
+                        className={`inline-flex items-center justify-center transition-colors ${
+                          useTextLabels
+                            ? `px-3 py-1 rounded-full text-xs font-medium ${
+                                isActive
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "bg-red-100 text-red-800 hover:bg-red-200"
+                              }`
+                            : `w-8 h-8 rounded-full text-white ${
+                                isActive
+                                  ? "bg-green-600 hover:bg-green-800"
+                                  : "bg-red-600 hover:bg-red-800"
+                              }`
                         }`}
-                        title={isActive ? "Habilitado" : "Deshabilitado"}
+                        title="Click para cambiar"
                       >
-                        {isActive ? (
+                        {useTextLabels ? (
+                          isActive ? estadoLabels.active : estadoLabels.inactive
+                        ) : isActive ? (
                           <CheckCircleIcon className="h-5 w-5" />
                         ) : (
                           <XCircleIcon className="h-5 w-5" />
@@ -131,12 +147,22 @@ const DataTable = <T extends Record<string, unknown>>({
                       </button>
                     ) : (
                       <span
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white ${
-                          isActive ? "bg-green-600" : "bg-red-600"
+                        className={`inline-flex items-center justify-center ${
+                          useTextLabels
+                            ? `px-3 py-1 rounded-full text-xs font-medium ${
+                                isActive
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`
+                            : `w-8 h-8 rounded-full text-white ${
+                                isActive ? "bg-green-600" : "bg-red-600"
+                              }`
                         }`}
-                        title={isActive ? "Habilitado" : "Deshabilitado"}
+                        title={isActive ? estadoLabels.active : estadoLabels.inactive}
                       >
-                        {isActive ? (
+                        {useTextLabels ? (
+                          isActive ? estadoLabels.active : estadoLabels.inactive
+                        ) : isActive ? (
                           <CheckCircleIcon className="h-5 w-5" />
                         ) : (
                           <XCircleIcon className="h-5 w-5" />

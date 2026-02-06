@@ -9,6 +9,7 @@ import {
 } from "../controllers/equiposJugadoresController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminOrStaffMiddleware } from "../middlewares/adminOrStaffMiddleware";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { validateRequest } from "../middlewares/validationMiddleware";
 
@@ -40,7 +41,7 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  adminMiddleware,
+  adminOrStaffMiddleware,
   [
     body("idjugador")
       .isInt()

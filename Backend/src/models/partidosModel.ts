@@ -1,7 +1,11 @@
 // Backend/src/models/partidosModel.ts
 
 import { pool } from "../config/db";
-import { findOrCreateCaja, shouldUpdateCaja } from "../services/cajasService";
+import {
+  findOrCreateCaja,
+  shouldUpdateCaja,
+  createCargosFechaPartido,
+} from "../services/cajasService";
 
 export interface IPartido {
   id?: number;
@@ -76,7 +80,9 @@ export const createPartido = async (partido: IPartido): Promise<IPartido> => {
   try {
     await client.query("BEGIN");
 
-    // 1. Insertar el partido (sin idfecha aún)
+    // Insertar el partido SIN crear caja
+    // La caja se crea cuando se edita el partido en el módulo Resultados
+    // (cuando se asigna día + profesor + sede)
     const columns = [
       "codtipo",
       "idequipo1",
@@ -112,60 +118,20 @@ export const createPartido = async (partido: IPartido): Promise<IPartido> => {
     const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
 
     const insertQuery = `
-      INSERT INTO partidos (${columns.join(", ")}, fhcarga) 
-      VALUES (${placeholders}, NOW()) 
+      INSERT INTO partidos (${columns.join(", ")}, fhcarga)
+      VALUES (${placeholders}, NOW())
       RETURNING *
     `;
 
     const insertResult = await client.query(insertQuery, values);
-    let newPartido = insertResult.rows[0];
+    const newPartido = insertResult.rows[0];
 
-    // 2. Verificar si tiene los 3 campos clave para gestionar caja
-    const tieneIdProfesor =
-      newPartido.idprofesor && newPartido.idprofesor !== 0;
-    const tieneNroFecha = newPartido.nrofecha && newPartido.nrofecha !== 0;
-    const tieneIdsede = newPartido.idsede && newPartido.idsede !== 0;
-
-    if (tieneIdProfesor && tieneNroFecha && tieneIdsede) {
-      console.log(
-        `✅ Partido ${newPartido.id} con datos completos - generando/buscando caja...`
-      );
-
-      // Obtener idtorneo desde la zona
-      const zonaQuery = `SELECT idtorneo FROM zonas WHERE id = $1`;
-      const zonaResult = await client.query(zonaQuery, [newPartido.idzona]);
-      const idtorneo = zonaResult.rows[0]?.idtorneo;
-
-      // Buscar o crear caja
-      const idfecha = await findOrCreateCaja({
-        idprofesor: newPartido.idprofesor,
-        codfecha: newPartido.nrofecha,
-        idsede: newPartido.idsede,
-        fecha: newPartido.fecha,
-        idtorneo,
-        idequipo1: newPartido.idequipo1,
-        idequipo2: newPartido.idequipo2,
-      });
-
-      console.log(`✅ Caja asignada: idfecha=${idfecha}`);
-
-      // 3. Actualizar el partido con el idfecha
-      const updateQuery = `
-        UPDATE partidos 
-        SET idfecha = $1 
-        WHERE id = $2 
-        RETURNING *
-      `;
-      const updateResult = await client.query(updateQuery, [
-        idfecha,
-        newPartido.id,
-      ]);
-      newPartido = updateResult.rows[0];
-    } else {
-      console.log(
-        `⚠️ Partido ${newPartido.id} sin datos completos para caja - no se genera planilla aún`
-      );
-    }
+    // NO crear caja automáticamente al crear partido (fixture)
+    // La caja y los cargos de fecha se generan SOLO cuando se edita
+    // el partido en Resultados con los 3 campos clave completos
+    console.log(
+      `📋 Partido ${newPartido.id} creado (fixture) - sin caja ni cargos de fecha`
+    );
 
     await client.query("COMMIT");
     return newPartido;
@@ -259,13 +225,23 @@ export const updatePartido = async (
 
       // Actualizar el idfecha del partido
       const updateCajaQuery = `
-        UPDATE partidos 
-        SET idfecha = $1 
-        WHERE id = $2 
+        UPDATE partidos
+        SET idfecha = $1
+        WHERE id = $2
         RETURNING *
       `;
       const finalResult = await client.query(updateCajaQuery, [idfecha, id]);
       updatedPartido = finalResult.rows[0];
+
+      // ✅ NUEVO: Crear cargos de fecha (deuda) para este partido
+      await createCargosFechaPartido({
+        idpartido: id,
+        idfecha,
+        idequipo1: updatedPartido.idequipo1,
+        idequipo2: updatedPartido.idequipo2,
+        idzona: updatedPartido.idzona,
+        nrofecha: updatedPartido.nrofecha,
+      });
     } else if (
       !updatedPartido.idfecha &&
       tieneIdProfesor &&
@@ -292,13 +268,23 @@ export const updatePartido = async (
       });
 
       const updateCajaQuery = `
-        UPDATE partidos 
-        SET idfecha = $1 
-        WHERE id = $2 
+        UPDATE partidos
+        SET idfecha = $1
+        WHERE id = $2
         RETURNING *
       `;
       const finalResult = await client.query(updateCajaQuery, [idfecha, id]);
       updatedPartido = finalResult.rows[0];
+
+      // ✅ NUEVO: Crear cargos de fecha (deuda) para este partido
+      await createCargosFechaPartido({
+        idpartido: id,
+        idfecha,
+        idequipo1: updatedPartido.idequipo1,
+        idequipo2: updatedPartido.idequipo2,
+        idzona: updatedPartido.idzona,
+        nrofecha: updatedPartido.nrofecha,
+      });
     }
 
     await client.query("COMMIT");

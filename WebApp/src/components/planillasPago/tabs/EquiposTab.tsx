@@ -183,9 +183,9 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
     if (!isEditable) return true;
     switch (field) {
       case "pago_ins":
-        return equipo.deuda_insc === 0 && equipo.pago_ins === 0;
+        return false; // Siempre habilitado aunque no haya deuda registrada
       case "pago_dep":
-        return equipo.deuda_dep === 0 && equipo.pago_dep === 0;
+        return false; // Siempre habilitado aunque no haya deuda registrada
       case "pago_fecha":
         return equipo.deuda_fecha === 0 && equipo.pago_fecha === 0;
       case "pago_descuento":

@@ -42,8 +42,8 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
     setEfectivoInput(efectivo_real?.toString() || "0");
   }, [efectivo_real]);
 
-  // Diferencia = Total Caja - Diferencia Caja (depósitos + pagos fecha)
-  const diferencia_final = totales.total_caja - totales.diferencia_caja;
+  // Diferencia = Total Caja - Efectivo Real (lo que se contó físicamente)
+  const diferencia_final = totales.total_caja - (parseFloat(efectivoInput) || 0);
 
   const handleEfectivoChange = (value: string) => {
     setEfectivoInput(value);
@@ -206,7 +206,7 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
                 : "text-red-600"
             }`}
           >
-            Total Caja - Diferencia
+            Total Caja - Efectivo Real
           </div>
         </div>
       </div>
@@ -241,7 +241,7 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
             • <strong>Efectivo Real:</strong> Lo que realmente hay en la caja física (ingresar manualmente)
           </li>
           <li>
-            • <strong>Diferencia:</strong> Total Caja - Diferencia Caja (depósitos + pagos fecha)
+            • <strong>Diferencia:</strong> Total Caja - Efectivo Real (sobrante o faltante de caja)
           </li>
         </ul>
       </div>

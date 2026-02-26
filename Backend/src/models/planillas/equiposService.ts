@@ -230,6 +230,33 @@ export const getEquiposByPlanilla = async (
       pagosMap.set(idequipo, existing);
     });
 
+    // 7b. Descuentos de FECHAS ANTERIORES (tipopago=4 de otras fechas del mismo torneo)
+    // Estos reducen la deuda total del equipo en fechas siguientes
+    const descuentosAntQuery = `
+      SELECT
+        e.id as idequipo,
+        COALESCE((
+          SELECT COALESCE(SUM(fe.importe), 0)
+          FROM wfechas_equipos fe
+          INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
+          WHERE fe.idequipo = e.id
+            AND fe.tipopago = 4
+            AND wtf.fhbaja IS NULL
+            AND fe.importe > 0
+            AND wtf.idtorneo = $2
+            AND fe.idfecha != $3
+        ), 0) as total_descuentos_ant
+      FROM wequipos e
+      WHERE e.id = ANY($1) AND e.fhbaja IS NULL
+    `;
+    const descuentosAntResult = await pool.query(descuentosAntQuery, [idsEquipos, idtorneo, idfecha]);
+    const descuentosAntMap = new Map(
+      descuentosAntResult.rows.map((r: any) => [
+        r.idequipo,
+        parseFloat(r.total_descuentos_ant || "0"),
+      ])
+    );
+
     // 8. Pagos de depósito de ESTA fecha (de wdepositos)
     const pagosDepQuery = `
       SELECT
@@ -267,24 +294,35 @@ export const getEquiposByPlanilla = async (
       const saldoInsc = saldoInscMap.get(idequipo) || { debe: 0, haber: 0 };
       const saldoFechasAnt = saldoFechasAntMap.get(idequipo) || { debe: 0, haber: 0 };
       const saldoDep = saldoDepMap.get(idequipo) || { debe: 0, haber: 0 };
+      const descuentosAnt = descuentosAntMap.get(idequipo) || 0;
 
-      // Deuda de inscripción = DEBE - HABER (sin contar pago de esta fecha)
-      const deudaInscPendiente = Math.max(0, saldoInsc.debe - saldoInsc.haber);
+      // Saldo neto de cada componente (puede ser negativo = saldo a favor)
+      const saldoInscNeto = saldoInsc.debe - saldoInsc.haber;
+      const saldoFechasAntNeto = saldoFechasAnt.debe - saldoFechasAnt.haber;
+      // Restamos pagoDepEstaFecha porque ya está incluido en saldoDep.haber
+      const saldoDepNeto = saldoDep.debe - (saldoDep.haber - pagoDepEstaFecha);
 
-      // Deuda de fechas anteriores = DEBE - HABER
-      const deudaFechasAntPendiente = Math.max(0, saldoFechasAnt.debe - saldoFechasAnt.haber);
+      // Para mostrar en columnas individuales: solo la parte positiva (deuda)
+      const deudaInscPendiente = Math.max(0, saldoInscNeto);
+      const deudaFechasAntPendiente = Math.max(0, saldoFechasAntNeto);
+      const deudaDepPendiente = Math.max(0, saldoDepNeto);
 
-      // Deuda de depósito = DEBE - HABER (sin contar pago de esta fecha)
-      // Restamos pagoDepEstaFecha porque ya está en haber total
-      const deudaDepPendiente = Math.max(0, saldoDep.debe - (saldoDep.haber - pagoDepEstaFecha));
+      // Créditos de saldos a favor (parte negativa de cada componente)
+      const creditoInsc = Math.min(0, saldoInscNeto);
+      const creditoFechasAnt = Math.min(0, saldoFechasAntNeto);
+      const creditoDep = Math.min(0, saldoDepNeto);
+      const creditoTotal = creditoInsc + creditoFechasAnt + creditoDep - descuentosAnt;
 
       // Deuda de ESTA fecha específica (valor_fecha * cantidad_partidos)
       const deuda_fecha = data.valor_fecha * data.cantidad_partidos;
 
-      // Total a pagar = inscripción pendiente + depósito pendiente + fechas anteriores + esta fecha
-      const total_pagar = deudaInscPendiente + deudaDepPendiente + deudaFechasAntPendiente + deuda_fecha;
+      // Total a pagar = suma de deudas individuales, descontando créditos acumulados y descuentos anteriores
+      const total_pagar = Math.max(
+        0,
+        deudaInscPendiente + deudaDepPendiente + deudaFechasAntPendiente + deuda_fecha + creditoTotal
+      );
 
-      // Total pagado esta fecha (incluyendo descuentos como pagos)
+      // Total pagado en esta fecha (incluyendo descuentos de esta fecha como pago)
       const total_pagado_esta_fecha =
         pagos.pago_ins + pagoDepEstaFecha + pagos.pago_fecha + pagos.pago_descuento;
       const deuda_total = total_pagar - total_pagado_esta_fecha;
@@ -299,14 +337,14 @@ export const getEquiposByPlanilla = async (
 
         deuda_insc: deudaInscPendiente,
         deuda_dep: deudaDepPendiente,
-        deuda_fecha_ant: deudaFechasAntPendiente, // Nueva columna para deuda de fechas anteriores
+        deuda_fecha_ant: deudaFechasAntPendiente,
         deuda_fecha,
         total_pagar,
 
         pago_ins: pagos.pago_ins,
         pago_dep: pagoDepEstaFecha,
         pago_fecha: pagos.pago_fecha,
-        pago_descuento: pagos.pago_descuento, // Nuevo campo para descuentos
+        pago_descuento: pagos.pago_descuento,
 
         deuda_total,
 

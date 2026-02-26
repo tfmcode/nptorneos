@@ -17,6 +17,7 @@ import {
 interface MedicoTabProps {
   medico: PlanillaMedico[];
   idfecha: number;
+  isEditable?: boolean;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -31,6 +32,7 @@ interface FormularioMedico {
 export const MedicoTab: React.FC<MedicoTabProps> = ({
   medico,
   idfecha,
+  isEditable = true,
   onSuccess,
   onError,
 }) => {
@@ -128,7 +130,7 @@ export const MedicoTab: React.FC<MedicoTabProps> = ({
     ]);
 
     if (!validacion.valido) {
-      alert(validacion.mensaje);
+      onError?.(validacion.mensaje || "Validación fallida");
       return;
     }
 
@@ -161,6 +163,7 @@ export const MedicoTab: React.FC<MedicoTabProps> = ({
       calcularTotal={calcularTotal}
       columnasTotal={3}
       isEditing={isEditing}
+      disabled={!isEditable}
     />
   );
 };

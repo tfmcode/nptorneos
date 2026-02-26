@@ -5,26 +5,32 @@ import { getTurnos } from "../../../api/codificadoresService";
 
 interface DatosTabProps {
   planilla: PlanillaPago;
+  isEditable?: boolean;
   onUpdateObserv: (observ: string) => void;
   onUpdateTurno?: (idturno: number) => void;
 }
 
 export const DatosTab: React.FC<DatosTabProps> = ({
   planilla,
+  isEditable = true,
   onUpdateObserv,
   onUpdateTurno,
 }) => {
   const [turnos, setTurnos] = useState<Codificador[]>([]);
   const [loadingTurnos, setLoadingTurnos] = useState(true);
-  // ✅ NUEVO: Estado local para el turno seleccionado
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<number>(
     planilla.idturno || 0
   );
+  // Estado local para observaciones (evita textarea no editable)
+  const [localObserv, setLocalObserv] = useState(planilla.observ || "");
 
-  // ✅ NUEVO: Actualizar turno local cuando cambia la planilla
   useEffect(() => {
     setTurnoSeleccionado(planilla.idturno || 0);
   }, [planilla.idturno]);
+
+  useEffect(() => {
+    setLocalObserv(planilla.observ || "");
+  }, [planilla.observ]);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -132,7 +138,8 @@ export const DatosTab: React.FC<DatosTabProps> = ({
             <>
               <select
                 value={turnoSeleccionado}
-                className="mt-1 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                disabled={!isEditable}
+                className={`mt-1 w-full px-3 py-2 border rounded-md ${isEditable ? "focus:ring-2 focus:ring-blue-500" : "bg-gray-50 text-gray-500 cursor-not-allowed"}`}
                 onChange={(e) => {
                   handleTurnoChange(Number(e.target.value));
                 }}
@@ -200,9 +207,13 @@ export const DatosTab: React.FC<DatosTabProps> = ({
         </label>
         <textarea
           rows={4}
-          value={planilla.observ || ""}
-          onChange={(e) => onUpdateObserv(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+          value={localObserv}
+          disabled={!isEditable}
+          onChange={(e) => {
+            setLocalObserv(e.target.value);
+            onUpdateObserv(e.target.value);
+          }}
+          className={`w-full px-3 py-2 border rounded-md ${isEditable ? "focus:ring-2 focus:ring-blue-500" : "bg-gray-50 text-gray-500"}`}
           placeholder="Ej: Transferencias, Tiburón $35.000..."
         />
         <p className="text-xs text-gray-500 mt-1">
@@ -213,158 +224,3 @@ export const DatosTab: React.FC<DatosTabProps> = ({
   );
 };
 
-interface TotalesTabProps {
-  totales: {
-    ingreso_inscripciones: number;
-    ingreso_depositos: number;
-    ingreso_fecha: number;
-    total_ingresos: number;
-    egreso_arbitros: number;
-    egreso_canchas: number;
-    egreso_profesores: number;
-    egreso_medico: number;
-    egreso_otros: number;
-    total_egresos: number;
-    total_caja: number;
-    total_efectivo: number;
-    diferencia_caja: number;
-  };
-  observ_caja?: string;
-  onUpdateObservCaja: (observ: string) => void;
-}
-
-const currency = (n: number) => `$${n.toLocaleString("es-AR")}`;
-
-export const TotalesTab: React.FC<TotalesTabProps> = ({
-  totales,
-  observ_caja,
-  onUpdateObservCaja,
-}) => {
-  return (
-    <div className="space-y-6">
-      <h3 className="text-md font-semibold">Resumen Financiero</h3>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div className="border rounded-lg p-4 bg-green-50">
-          <h4 className="text-sm font-semibold text-green-700 mb-3">
-            INGRESOS
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Inscripciones</span>
-              <span className="font-medium">
-                {currency(totales.ingreso_inscripciones)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Depósitos</span>
-              <span className="font-medium">
-                {currency(totales.ingreso_depositos)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Fecha</span>
-              <span className="font-medium">
-                {currency(totales.ingreso_fecha)}
-              </span>
-            </div>
-            <div className="flex justify-between border-t pt-2 font-semibold text-green-700">
-              <span>TOTAL INGRESOS</span>
-              <span>{currency(totales.total_ingresos)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="border rounded-lg p-4 bg-red-50">
-          <h4 className="text-sm font-semibold text-red-700 mb-3">EGRESOS</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Árbitros</span>
-              <span className="font-medium">
-                {currency(totales.egreso_arbitros)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Canchas</span>
-              <span className="font-medium">
-                {currency(totales.egreso_canchas)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Profesores</span>
-              <span className="font-medium">
-                {currency(totales.egreso_profesores)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Serv. Médico</span>
-              <span className="font-medium">
-                {currency(totales.egreso_medico)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Otros Gastos</span>
-              <span className="font-medium">
-                {currency(totales.egreso_otros)}
-              </span>
-            </div>
-            <div className="flex justify-between border-t pt-2 font-semibold text-red-700">
-              <span>TOTAL EGRESOS</span>
-              <span>{currency(totales.total_egresos)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-200">
-          <div className="text-sm text-gray-600">Total Caja</div>
-          <div className="text-2xl font-bold text-blue-600">
-            {currency(totales.total_caja)}
-          </div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg text-center border border-green-200">
-          <div className="text-sm text-gray-600">Total Efectivo</div>
-          <div className="text-2xl font-bold text-green-600">
-            {currency(totales.total_efectivo)}
-          </div>
-        </div>
-        <div
-          className={`p-4 rounded-lg text-center border ${
-            totales.diferencia_caja === 0
-              ? "bg-gray-50 border-gray-200"
-              : totales.diferencia_caja > 0
-              ? "bg-green-50 border-green-200"
-              : "bg-red-50 border-red-200"
-          }`}
-        >
-          <div className="text-sm text-gray-600">Diferencia de Caja</div>
-          <div
-            className={`text-2xl font-bold ${
-              totales.diferencia_caja === 0
-                ? "text-gray-600"
-                : totales.diferencia_caja > 0
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            {currency(totales.diferencia_caja)}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Observación de Cierre de Caja
-        </label>
-        <textarea
-          rows={3}
-          value={observ_caja || ""}
-          onChange={(e) => onUpdateObservCaja(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-          placeholder="Ej: 1 power"
-        />
-      </div>
-    </div>
-  );
-};

@@ -12,6 +12,7 @@ import {
 import {
   getPlanillasByFiltros,
   getPlanillaCompleta,
+  clearPlanillas,
 } from "../../store/slices/planillasPagosSlice";
 
 import { fetchTorneos } from "../../store/slices/torneoSlice";
@@ -227,6 +228,7 @@ const PlanillaPagos: React.FC = () => {
                   idsede: 0,
                   estado: undefined,
                 });
+                dispatch(clearPlanillas());
               }}
               className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition"
             >

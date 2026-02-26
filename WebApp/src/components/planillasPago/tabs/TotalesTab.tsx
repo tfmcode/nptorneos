@@ -1,6 +1,6 @@
 // WebApp/src/components/planillasPago/tabs/TotalesTab.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface TotalesTabProps {
   totales: {
@@ -37,8 +37,13 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
     efectivo_real?.toString() || "0"
   );
 
-  // Calcular diferencia real: Efectivo Real - Total Efectivo (lo que debería haber)
-  const diferencia_real = parseFloat(efectivoInput || "0") - totales.total_efectivo;
+  // Sincronizar efectivoInput cuando el prop cambia (ej. al refrescar datos)
+  useEffect(() => {
+    setEfectivoInput(efectivo_real?.toString() || "0");
+  }, [efectivo_real]);
+
+  // Diferencia = Total Caja - Diferencia Caja (depósitos + pagos fecha)
+  const diferencia_final = totales.total_caja - totales.diferencia_caja;
 
   const handleEfectivoChange = (value: string) => {
     setEfectivoInput(value);
@@ -131,24 +136,8 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
         </div>
       </div>
 
-      {/* EFECTIVO*/} 
-      <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-3 rounded-xl border-2 border-yellow-300 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">💳</span>
-            <div>
-              <div className="text-xs font-bold text-yellow-800">EFECTIVO</div>
-              <div className="text-[10px] text-yellow-600">(Depósitos + Pagos Fecha)</div>
-            </div>
-          </div>
-          <div className="text-xl font-black text-yellow-700 tabular-nums">
-            {currency(totales.diferencia_caja)}
-          </div>
-        </div>
-      </div>
-
       {/* Resultados Finales */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-4 rounded-xl shadow-sm border-2 border-blue-300">
           <div className="text-[10px] font-bold text-blue-700 mb-1">
             TOTAL CAJA
@@ -158,18 +147,6 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
           </div>
           <div className="text-[9px] text-blue-600 mt-1">
             Ingresos - Egresos
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-4 rounded-xl shadow-sm border-2 border-purple-300">
-          <div className="text-[10px] font-bold text-purple-700 mb-1">
-            EFECTIVO ESPERADO
-          </div>
-          <div className="text-2xl font-black text-purple-800 tabular-nums">
-            {currency(totales.total_efectivo)}
-          </div>
-          <div className="text-[9px] text-purple-600 mt-1">
-            Inscripciones - Egresos
           </div>
         </div>
 
@@ -191,18 +168,18 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
 
         <div
           className={`p-4 rounded-xl shadow-sm border-2 ${
-            diferencia_real === 0
+            diferencia_final === 0
               ? "bg-gradient-to-br from-gray-100 to-gray-200 border-gray-400"
-              : diferencia_real > 0
+              : diferencia_final > 0
               ? "bg-gradient-to-br from-green-100 to-green-200 border-green-400"
               : "bg-gradient-to-br from-red-100 to-red-200 border-red-400"
           }`}
         >
           <div
             className={`text-[10px] font-bold mb-1 ${
-              diferencia_real === 0
+              diferencia_final === 0
                 ? "text-gray-700"
-                : diferencia_real > 0
+                : diferencia_final > 0
                 ? "text-green-700"
                 : "text-red-700"
             }`}
@@ -211,29 +188,25 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
           </div>
           <div
             className={`text-2xl font-black tabular-nums ${
-              diferencia_real === 0
+              diferencia_final === 0
                 ? "text-gray-800"
-                : diferencia_real > 0
+                : diferencia_final > 0
                 ? "text-green-800"
                 : "text-red-800"
             }`}
           >
-            {currency(diferencia_real)}
+            {currency(diferencia_final)}
           </div>
           <div
             className={`text-[9px] mt-1 font-semibold ${
-              diferencia_real === 0
+              diferencia_final === 0
                 ? "text-gray-600"
-                : diferencia_real > 0
+                : diferencia_final > 0
                 ? "text-green-600"
                 : "text-red-600"
             }`}
           >
-            {diferencia_real === 0
-              ? "Cuadrada ✓"
-              : diferencia_real > 0
-              ? "Sobra"
-              : "Falta"}
+            Total Caja - Diferencia
           </div>
         </div>
       </div>
@@ -262,25 +235,13 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
         </h5>
         <ul className="text-xs text-blue-700 space-y-1">
           <li>
-            • <strong>Total Caja:</strong> Todo lo cobrado (efectivo) menos egresos
-          </li>
-          <li>
-            • <strong>Efectivo Esperado:</strong> Solo inscripciones en efectivo menos egresos (lo que debería haber en la caja)
+            • <strong>Total Caja:</strong> Total ingresos menos total egresos
           </li>
           <li>
             • <strong>Efectivo Real:</strong> Lo que realmente hay en la caja física (ingresar manualmente)
           </li>
           <li>
-            • <strong>Diferencia:</strong> Efectivo Real - Efectivo Esperado
-          </li>
-          <li>
-            • <strong>Si Diferencia = 0:</strong> La caja está cuadrada ✓
-          </li>
-          <li>
-            • <strong>Si Diferencia &gt; 0:</strong> Sobra efectivo en caja
-          </li>
-          <li>
-            • <strong>Si Diferencia &lt; 0:</strong> Falta efectivo en caja
+            • <strong>Diferencia:</strong> Total Caja - Diferencia Caja (depósitos + pagos fecha)
           </li>
         </ul>
       </div>

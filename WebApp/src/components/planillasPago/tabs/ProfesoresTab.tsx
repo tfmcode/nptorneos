@@ -17,6 +17,7 @@ import {
 interface ProfesoresTabProps {
   profesores: PlanillaProfesor[];
   idfecha: number;
+  isEditable?: boolean;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -31,6 +32,7 @@ interface FormularioProfesor {
 export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
   profesores,
   idfecha,
+  isEditable = true,
   onSuccess,
   onError,
 }) => {
@@ -129,7 +131,7 @@ export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
     ]);
 
     if (!validacion.valido) {
-      alert(validacion.mensaje);
+      onError?.(validacion.mensaje || "Validación fallida");
       return;
     }
 
@@ -164,6 +166,7 @@ export const ProfesoresTab: React.FC<ProfesoresTabProps> = ({
       calcularTotal={calcularTotal}
       columnasTotal={3}
       isEditing={isEditing}
+      disabled={!isEditable}
     />
   );
 };

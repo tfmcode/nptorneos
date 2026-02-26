@@ -19,6 +19,7 @@ import {
 interface ArbitrosTabProps {
   arbitros: PlanillaArbitro[];
   idfecha: number;
+  isEditable?: boolean;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -33,6 +34,7 @@ interface FormularioArbitro {
 export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
   arbitros,
   idfecha,
+  isEditable = true,
   onSuccess,
   onError,
 }) => {
@@ -233,25 +235,27 @@ export const ArbitrosTab: React.FC<ArbitrosTabProps> = ({
       </div>
 
       {/* Formulario de Entrada */}
-      <FormularioEntrada
-        campos={campos}
-        valores={formData}
-        onChange={handleFormChange}
-        onSubmit={handleAgregar}
-        campoCalculado={{
-          label: "Total",
-          valor: formatearMoneda(calcularTotalFormulario()),
-        }}
-        textoBoton="Agregar"
-        colorBoton="green"
-        disabled={isLoading}
-      />
+      {isEditable && (
+        <FormularioEntrada
+          campos={campos}
+          valores={formData}
+          onChange={handleFormChange}
+          onSubmit={handleAgregar}
+          campoCalculado={{
+            label: "Total",
+            valor: formatearMoneda(calcularTotalFormulario()),
+          }}
+          textoBoton="Agregar"
+          colorBoton="green"
+          disabled={isLoading}
+        />
+      )}
 
       {/* Tabla de Registros */}
       <TablaGenerica
         columnas={columnas}
         datos={data}
-        onDelete={handleEliminar}
+        onDelete={isEditable ? handleEliminar : undefined}
         mensajeVacio="No hay árbitros registrados"
         mostrarTotal={true}
         calcularTotal={calcularTotal}

@@ -13,10 +13,11 @@ export const getOtrosGastosByPlanilla = async (
 ): Promise<PlanillaOtroGasto[]> => {
   try {
     const query = `
-      SELECT 
+      SELECT
         fo.*,
-        NULL as descripcion_gasto
+        c.descripcion as descripcion_gasto
       FROM fechas_otros fo
+      LEFT JOIN codificadores c ON fo.codgasto = c.id
       WHERE fo.idfecha = $1
       ORDER BY fo.orden
     `;

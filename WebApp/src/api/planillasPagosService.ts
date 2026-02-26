@@ -427,6 +427,28 @@ export const updateDescuentoEquipo = async (
   }
 };
 
+export const updateObservPlanilla = async (
+  idfecha: number,
+  observ: string | null
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/observ`, { observ });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
+export const updateObservCajaPlanilla = async (
+  idfecha: number,
+  observ_caja: string | null
+): Promise<void> => {
+  try {
+    await API.put(`/api/planillas-pago/${idfecha}/observ-caja`, { observ_caja });
+  } catch (error) {
+    return handleAxiosError(error);
+  }
+};
+
 export const exportarPlanillaCSV = async (idfecha: number): Promise<void> => {
   try {
     const response = await API.get(`/api/planillas-pago/${idfecha}/exportar`, {

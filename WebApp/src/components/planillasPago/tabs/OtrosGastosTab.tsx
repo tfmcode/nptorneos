@@ -14,6 +14,7 @@ import {
 interface OtrosGastosTabProps {
   otros_gastos: PlanillaOtroGasto[];
   idfecha: number;
+  isEditable?: boolean;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -29,6 +30,7 @@ interface FormularioOtroGasto {
 export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
   otros_gastos,
   idfecha,
+  isEditable = true,
   onSuccess,
   onError,
 }) => {
@@ -130,7 +132,7 @@ export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
     ]);
 
     if (!validacion.valido) {
-      alert(validacion.mensaje);
+      onError?.(validacion.mensaje || "Validación fallida");
       return;
     }
 
@@ -166,6 +168,7 @@ export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
       calcularTotal={calcularTotal}
       columnasTotal={4}
       isEditing={isEditing}
+      disabled={!isEditable}
     />
   );
 };

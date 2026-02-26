@@ -81,11 +81,23 @@ export const getPlanillasByFiltros = async (
           WHEN wtf.fhcierre IS NOT NULL THEN 'cerrada'
           ELSE 'abierta'
         END as estado,
-        (SELECT COUNT(*) FROM partidos p 
+        COALESCE(
+          wtf.totcierre,
+          (
+            SELECT COALESCE(
+              SUM(CASE WHEN fe.tipopago IN (1, 3) THEN fe.importe ELSE 0 END)
+              - SUM(CASE WHEN fe.tipopago = 4 THEN fe.importe ELSE 0 END),
+              0
+            )
+            FROM wfechas_equipos fe
+            WHERE fe.idfecha = wtf.id
+          )
+        ) as total_caja_calc,
+        (SELECT COUNT(*) FROM partidos p
          WHERE p.idfecha = wtf.id AND p.fhbaja IS NULL) as cantidad_partidos,
-        (SELECT z.nombre FROM partidos p 
+        (SELECT z.nombre FROM partidos p
          INNER JOIN zonas z ON p.idzona = z.id
-         WHERE p.idfecha = wtf.id AND p.fhbaja IS NULL 
+         WHERE p.idfecha = wtf.id AND p.fhbaja IS NULL
          LIMIT 1) as zona_nombre
       FROM wtorneos_fechas wtf
       LEFT JOIN wsedes s ON wtf.idsede = s.id
@@ -156,7 +168,7 @@ export const getPlanillasByFiltros = async (
       estado: row.estado,
       fhcierre: row.fhcierre,
       fhcierrecaja: row.fhcierrecaja,
-      total_caja: parseFloat(row.totcierre || "0"),
+      total_caja: parseFloat(row.total_caja_calc || "0"),
       cantidad_partidos: row.cantidad_partidos || 0,
     }));
   } catch (error) {
@@ -363,7 +375,7 @@ export const recalcularTotalesPlanilla = async (
     );
 
     const updateQuery = `
-      UPDATE wtorneos_fechas 
+      UPDATE wtorneos_fechas
       SET totcierre = $1, totefectivo = $2
       WHERE id = $3
     `;
@@ -375,6 +387,7 @@ export const recalcularTotalesPlanilla = async (
     ]);
   } catch (error) {
     console.error("Error en recalcularTotalesPlanilla:", error);
+    throw error; // propagar para que cerrarPlanilla y cerrarCaja fallen correctamente
   }
 };
 
@@ -383,10 +396,20 @@ export const cerrarPlanilla = async (
   idprofesor: number
 ): Promise<void> => {
   try {
+    // Verificar que la planilla existe y no está ya cerrada
+    const checkQuery = `SELECT fhcierre, fhcierrecaja FROM wtorneos_fechas WHERE id = $1`;
+    const checkResult = await pool.query(checkQuery, [idfecha]);
+    if (checkResult.rows.length === 0) {
+      throw new Error("Planilla no encontrada.");
+    }
+    if (checkResult.rows[0].fhcierre) {
+      throw new Error("La planilla ya está cerrada.");
+    }
+
     await recalcularTotalesPlanilla(idfecha);
 
     const query = `
-      UPDATE wtorneos_fechas 
+      UPDATE wtorneos_fechas
       SET fhcierre = NOW(), idprofesor_cierre = $1
       WHERE id = $2
     `;
@@ -428,6 +451,32 @@ export const updateTurno = async (
   }
 };
 
+export const updateObserv = async (
+  idfecha: number,
+  observ: string | null
+): Promise<void> => {
+  try {
+    const query = `UPDATE wtorneos_fechas SET observ = $1 WHERE id = $2`;
+    await pool.query(query, [observ, idfecha]);
+  } catch (error) {
+    console.error("Error en updateObserv:", error);
+    throw error;
+  }
+};
+
+export const updateObservCaja = async (
+  idfecha: number,
+  observ_caja: string | null
+): Promise<void> => {
+  try {
+    const query = `UPDATE wtorneos_fechas SET observ_caja = $1 WHERE id = $2`;
+    await pool.query(query, [observ_caja, idfecha]);
+  } catch (error) {
+    console.error("Error en updateObservCaja:", error);
+    throw error;
+  }
+};
+
 export const updateEfectivoReal = async (
   idfecha: number,
   totefectivo: number
@@ -450,10 +499,23 @@ export const cerrarCaja = async (
   idusuario: number
 ): Promise<void> => {
   try {
+    // Verificar que la planilla está cerrada antes de contabilizar
+    const checkQuery = `SELECT fhcierre, fhcierrecaja FROM wtorneos_fechas WHERE id = $1`;
+    const checkResult = await pool.query(checkQuery, [idfecha]);
+    if (checkResult.rows.length === 0) {
+      throw new Error("Planilla no encontrada.");
+    }
+    if (!checkResult.rows[0].fhcierre) {
+      throw new Error("La planilla debe estar cerrada antes de contabilizar.");
+    }
+    if (checkResult.rows[0].fhcierrecaja) {
+      throw new Error("La caja ya está contabilizada.");
+    }
+
     await recalcularTotalesPlanilla(idfecha);
 
     const query = `
-      UPDATE wtorneos_fechas 
+      UPDATE wtorneos_fechas
       SET fhcierrecaja = NOW(), idusrcierrecaja = $1
       WHERE id = $2
     `;

@@ -14,6 +14,7 @@ import {
 interface CanchasTabProps {
   canchas: PlanillaCancha[];
   idfecha: number;
+  isEditable?: boolean;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -27,6 +28,7 @@ interface FormularioCancha {
 export const CanchasTab: React.FC<CanchasTabProps> = ({
   canchas,
   idfecha,
+  isEditable = true,
   onSuccess,
   onError,
 }) => {
@@ -93,7 +95,7 @@ export const CanchasTab: React.FC<CanchasTabProps> = ({
     ]);
 
     if (!validacion.valido) {
-      alert(validacion.mensaje);
+      onError?.(validacion.mensaje || "Validación fallida");
       return;
     }
 
@@ -127,6 +129,7 @@ export const CanchasTab: React.FC<CanchasTabProps> = ({
       calcularTotal={calcularTotal}
       columnasTotal={2}
       isEditing={isEditing}
+      disabled={!isEditable}
     />
   );
 };

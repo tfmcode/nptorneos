@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { PlanillaCompleta } from "../../types/planillasPago";
@@ -15,6 +15,8 @@ import { OtrosGastosTab } from "./tabs/OtrosGastosTab";
 import {
   updateTurnoPlanilla,
   updateEfectivoRealPlanilla,
+  updateObservPlanilla,
+  updateObservCajaPlanilla,
   cerrarPlanilla,
   cerrarCaja,
   reabrirPlanilla,
@@ -49,16 +51,16 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
   } = planillaCompleta;
 
   const { user } = useSelector((state: RootState) => state.auth);
-  const { proveedores } = useSelector((state: RootState) => state.proveedores);
 
   const [activeTab, setActiveTab] = useState<string>("equipos");
-  const [, setObserv] = useState(planilla.observ || "");
   const [observCaja, setObservCaja] = useState(planilla.observ_caja || "");
   const [efectivoReal, setEfectivoReal] = useState(planilla.totefectivo || 0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState<string | null>(
-    null
-  );
+  const [showConfirmDialog, setShowConfirmDialog] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const observDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const observCajaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setPlanillaCompleta(initialPlanillaCompleta);
@@ -68,6 +70,13 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     setEfectivoReal(planilla.totefectivo || 0);
     setObservCaja(planilla.observ_caja || "");
   }, [planilla]);
+
+  // Auto-limpiar notificaciones después de 4 segundos
+  useEffect(() => {
+    if (!notification) return;
+    const timer = setTimeout(() => setNotification(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notification]);
 
   const refreshData = useCallback(async () => {
     if (!planilla.idfecha) return;
@@ -116,7 +125,30 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
 
   const handleError = (error: string) => {
     console.error("❌ Error:", error);
-    alert(`Error: ${error}`);
+    setNotification({ type: "error", message: error });
+  };
+
+  const handleUpdateObserv = (value: string) => {
+    if (observDebounceRef.current) clearTimeout(observDebounceRef.current);
+    observDebounceRef.current = setTimeout(async () => {
+      try {
+        await updateObservPlanilla(planilla.idfecha, value || null);
+      } catch (error) {
+        console.error("Error al guardar observación:", error);
+      }
+    }, 800);
+  };
+
+  const handleUpdateObservCaja = (value: string) => {
+    setObservCaja(value);
+    if (observCajaDebounceRef.current) clearTimeout(observCajaDebounceRef.current);
+    observCajaDebounceRef.current = setTimeout(async () => {
+      try {
+        await updateObservCajaPlanilla(planilla.idfecha, value || null);
+      } catch (error) {
+        console.error("Error al guardar observación de caja:", error);
+      }
+    }, 800);
   };
 
   const handleUpdateTurno = async (idturno: number) => {
@@ -152,7 +184,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     setIsProcessing(true);
     try {
       await cerrarPlanilla(planilla.idfecha, planilla.idprofesor);
-      alert("✅ Planilla cerrada exitosamente");
+      setNotification({ type: "success", message: "Planilla cerrada exitosamente" });
       await refreshData();
       onUpdate?.();
       setShowConfirmDialog(null);
@@ -169,7 +201,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     setIsProcessing(true);
     try {
       await cerrarCaja(planilla.idfecha, Number(user?.id) || 1);
-      alert("✅ Caja contabilizada exitosamente");
+      setNotification({ type: "success", message: "Caja contabilizada exitosamente" });
       await refreshData();
       onUpdate?.();
       setShowConfirmDialog(null);
@@ -186,7 +218,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
     setIsProcessing(true);
     try {
       await reabrirPlanilla(planilla.idfecha);
-      alert("✅ Planilla reabierta exitosamente");
+      setNotification({ type: "success", message: "Planilla reabierta exitosamente" });
       await refreshData();
       onUpdate?.();
       setShowConfirmDialog(null);
@@ -214,15 +246,22 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
   const isClosed = !!planilla.fhcierre && !planilla.fhcierrecaja;
   const isContabilizada = !!planilla.fhcierrecaja;
 
-  const profesorAsignado = proveedores.find(
-    (p) => p.id === planilla.idprofesor
-  );
-
   return (
     <div className="flex flex-col h-full">
       {isRefreshing && (
         <div className="absolute top-0 left-0 right-0 bg-blue-500 text-white text-center py-1 text-sm z-50">
           Actualizando datos...
+        </div>
+      )}
+
+      {notification && (
+        <div
+          className={`absolute top-0 left-0 right-0 text-white text-center py-2 text-sm z-50 ${
+            notification.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {notification.type === "success" ? "✅ " : "❌ "}
+          {notification.message}
         </div>
       )}
 
@@ -242,7 +281,8 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
         {activeTab === "datos" && (
           <DatosTab
             planilla={planilla}
-            onUpdateObserv={setObserv}
+            isEditable={isEditable}
+            onUpdateObserv={handleUpdateObserv}
             onUpdateTurno={handleUpdateTurno}
           />
         )}
@@ -260,6 +300,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
           <ArbitrosTab
             arbitros={arbitros}
             idfecha={planilla.idfecha}
+            isEditable={isEditable}
             onSuccess={handleSuccess}
             onError={handleError}
           />
@@ -269,6 +310,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
           <CanchasTab
             canchas={canchas}
             idfecha={planilla.idfecha}
+            isEditable={isEditable}
             onSuccess={handleSuccess}
             onError={handleError}
           />
@@ -278,6 +320,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
           <ProfesoresTab
             profesores={profesores}
             idfecha={planilla.idfecha}
+            isEditable={isEditable}
             onSuccess={handleSuccess}
             onError={handleError}
           />
@@ -287,6 +330,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
           <MedicoTab
             medico={medico}
             idfecha={planilla.idfecha}
+            isEditable={isEditable}
             onSuccess={handleSuccess}
             onError={handleError}
           />
@@ -296,6 +340,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
           <OtrosGastosTab
             otros_gastos={otros_gastos}
             idfecha={planilla.idfecha}
+            isEditable={isEditable}
             onSuccess={handleSuccess}
             onError={handleError}
           />
@@ -307,7 +352,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
             efectivo_real={efectivoReal}
             observ_caja={observCaja}
             onUpdateEfectivoReal={handleUpdateEfectivoReal}
-            onUpdateObservCaja={setObservCaja}
+            onUpdateObservCaja={handleUpdateObservCaja}
           />
         )}
       </div>
@@ -412,11 +457,7 @@ const PlanillaDetalleTabs: React.FC<Props> = ({
                   </p>
                   <p className="mt-2">
                     Profesor que cierra:{" "}
-                    <strong>
-                      {profesorAsignado?.nombre ||
-                        planilla.profesor_nombre ||
-                        "N/A"}
-                    </strong>
+                    <strong>{planilla.profesor_nombre || "N/A"}</strong>
                   </p>
                   <p className="mt-2">
                     Una vez cerrada, no se podrán editar los equipos ni pagos.

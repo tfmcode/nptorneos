@@ -36,6 +36,8 @@ import {
   updateDescuentoController,
   updateEfectivoRealController,
   exportarPlanillaController,
+  updateObservController,
+  updateObservCajaController,
 } from "../controllers/planillasPagoController";
 
 const router = express.Router();
@@ -464,6 +466,22 @@ router.put(
   ],
   validateRequest,
   asyncHandler(updateEfectivoRealController)
+);
+
+router.put(
+  "/:idfecha/observ",
+  authMiddleware,
+  [param("idfecha").isInt().withMessage("ID de fecha inválido")],
+  validateRequest,
+  asyncHandler(updateObservController)
+);
+
+router.put(
+  "/:idfecha/observ-caja",
+  authMiddleware,
+  [param("idfecha").isInt().withMessage("ID de fecha inválido")],
+  validateRequest,
+  asyncHandler(updateObservCajaController)
 );
 
 export default router;

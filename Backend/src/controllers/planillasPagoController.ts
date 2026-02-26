@@ -623,6 +623,42 @@ export const updateDescuentoController = async (
   }
 };
 
+export const updateObservController = async (req: Request, res: Response) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { observ } = req.body;
+
+    if (isNaN(idfecha)) {
+      return res.status(400).json({ message: "ID de fecha inválido." });
+    }
+
+    await planillasModel.updateObserv(idfecha, observ ?? null);
+
+    return res.status(200).json({ message: "Observación actualizada exitosamente." });
+  } catch (error) {
+    console.error("❌ Error al actualizar observación:", error);
+    return res.status(500).json({ message: "Error al actualizar observación.", error });
+  }
+};
+
+export const updateObservCajaController = async (req: Request, res: Response) => {
+  try {
+    const idfecha = Number(req.params.idfecha);
+    const { observ_caja } = req.body;
+
+    if (isNaN(idfecha)) {
+      return res.status(400).json({ message: "ID de fecha inválido." });
+    }
+
+    await planillasModel.updateObservCaja(idfecha, observ_caja ?? null);
+
+    return res.status(200).json({ message: "Observación de caja actualizada exitosamente." });
+  } catch (error) {
+    console.error("❌ Error al actualizar observación de caja:", error);
+    return res.status(500).json({ message: "Error al actualizar observación de caja.", error });
+  }
+};
+
 export const updateEfectivoRealController = async (
   req: Request,
   res: Response

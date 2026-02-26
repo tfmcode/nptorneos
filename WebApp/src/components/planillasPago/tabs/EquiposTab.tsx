@@ -391,6 +391,10 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
                   <td className="px-2 py-2 text-right bg-orange-50 border-r border-gray-300">
                     {(equipo.deuda_fecha_ant || 0) > 0 ? (
                       <span className="text-orange-600 font-medium">{formatMoney(equipo.deuda_fecha_ant || 0)}</span>
+                    ) : (equipo.deuda_fecha_ant || 0) < 0 ? (
+                      <span className="text-green-600 font-medium" title="Saldo a favor">
+                        S.Fav {formatMoney(Math.abs(equipo.deuda_fecha_ant || 0))}
+                      </span>
                     ) : (
                       <span className="text-gray-400">$0</span>
                     )}
@@ -485,7 +489,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
           <li>• <strong>AUS:</strong> Marca el equipo como ausente (no computa económicamente)</li>
           <li>• <strong>Deuda Insc:</strong> Saldo de inscripción (wtorneos_equipos_insc - pagos tipopago=1)</li>
           <li>• <strong>Deuda Dep:</strong> Saldo de depósitos (wdepositos codtipo=2 - codtipo=1)</li>
-          <li>• <strong>Deuda Fch.Ant:</strong> Saldo de fechas anteriores sin pagar</li>
+          <li>• <strong>Deuda Fch.Ant:</strong> Saldo de fechas anteriores (naranja=deuda, verde=saldo a favor)</li>
           <li>• <strong>Deuda Fecha:</strong> Valor por fecha × cantidad de partidos de esta fecha</li>
           <li>• <strong>Campos verdes (✏️):</strong> Click para editar el pago (bloqueado si deuda=0)</li>
           <li>• <strong>Desc. (✏️):</strong> Descuento aplicado al equipo</li>

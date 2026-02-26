@@ -70,19 +70,20 @@ export const getCuentasCorrientesGeneral = async (): Promise<
 > => {
   const query = `
     WITH movimientos_equipos AS (
-      -- 1️⃣ Deudas de inscripción (torneos)
-      SELECT 
+      -- 1️⃣ Deudas de inscripción (zonas_equipos)
+      SELECT
         e.id as idequipo,
         e.nombre as nombre_equipo,
-        SUM(tei.inscrip) as total_debe,
+        SUM(ze.valor_insc) as total_debe,
         0 as total_haber,
-        MAX(tei.fhcarga) as ultimo_movimiento
-      FROM wtorneos_equipos_insc tei
-      INNER JOIN wtorneos t ON tei.idtorneo = t.id
-      INNER JOIN wequipos e ON tei.idequipo = e.id
-      WHERE t.fhbaja IS NULL 
+        MAX(ze.fhcarga) as ultimo_movimiento
+      FROM zonas_equipos ze
+      INNER JOIN wtorneos t ON ze.idtorneo = t.id
+      INNER JOIN wequipos e ON ze.idequipo = e.id
+      WHERE t.fhbaja IS NULL
         AND e.fhbaja IS NULL
-        AND tei.inscrip > 0
+        AND ze.fhbaja IS NULL
+        AND ze.valor_insc > 0
       GROUP BY e.id, e.nombre
 
       UNION ALL

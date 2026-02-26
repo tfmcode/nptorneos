@@ -92,14 +92,17 @@ export const getEquiposByPlanilla = async (
 
     const idsEquipos = Array.from(equiposMap.keys());
 
-    // 4. SALDO INSCRIPCIÓN - DEBE: wtorneos_equipos_insc.inscrip, HABER: SUM(wfechas_equipos WHERE tipopago=1)
+    // 4. SALDO INSCRIPCIÓN - DEBE: zonas_equipos.valor_insc, HABER: SUM(wfechas_equipos WHERE tipopago=1)
     const saldoInscripcionQuery = `
       SELECT
         e.id as idequipo,
         COALESCE((
-          SELECT COALESCE(SUM(tei.inscrip), 0)
-          FROM wtorneos_equipos_insc tei
-          WHERE tei.idequipo = e.id AND tei.idtorneo = $2
+          SELECT COALESCE(SUM(ze.valor_insc), 0)
+          FROM zonas_equipos ze
+          WHERE ze.idequipo = e.id
+            AND ze.idtorneo = $2
+            AND ze.fhbaja IS NULL
+            AND ze.valor_insc > 0
         ), 0) as debe_insc,
         COALESCE((
           SELECT COALESCE(SUM(fe.importe), 0)
@@ -126,7 +129,7 @@ export const getEquiposByPlanilla = async (
       ])
     );
 
-    // 5. SALDO FECHAS ANTERIORES - DEBE: wfechas_equipos_hab, HABER: wfechas_equipos WHERE tipopago=3
+    // 5. SALDO FECHAS ANTERIORES - DEBE: wfechas_equipos_hab, HABER: wfechas_equipos WHERE tipopago IN (3, 4)
     const saldoFechasAntQuery = `
       SELECT
         e.id as idequipo,
@@ -145,7 +148,7 @@ export const getEquiposByPlanilla = async (
           FROM wfechas_equipos fe
           INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
           WHERE fe.idequipo = e.id
-            AND fe.tipopago = 3
+            AND fe.tipopago IN (3, 4)
             AND wtf.fhbaja IS NULL
             AND fe.importe > 0
             AND wtf.idtorneo = $2
@@ -230,33 +233,6 @@ export const getEquiposByPlanilla = async (
       pagosMap.set(idequipo, existing);
     });
 
-    // 7b. Descuentos de FECHAS ANTERIORES (tipopago=4 de otras fechas del mismo torneo)
-    // Estos reducen la deuda total del equipo en fechas siguientes
-    const descuentosAntQuery = `
-      SELECT
-        e.id as idequipo,
-        COALESCE((
-          SELECT COALESCE(SUM(fe.importe), 0)
-          FROM wfechas_equipos fe
-          INNER JOIN wtorneos_fechas wtf ON fe.idfecha = wtf.id
-          WHERE fe.idequipo = e.id
-            AND fe.tipopago = 4
-            AND wtf.fhbaja IS NULL
-            AND fe.importe > 0
-            AND wtf.idtorneo = $2
-            AND fe.idfecha != $3
-        ), 0) as total_descuentos_ant
-      FROM wequipos e
-      WHERE e.id = ANY($1) AND e.fhbaja IS NULL
-    `;
-    const descuentosAntResult = await pool.query(descuentosAntQuery, [idsEquipos, idtorneo, idfecha]);
-    const descuentosAntMap = new Map(
-      descuentosAntResult.rows.map((r: any) => [
-        r.idequipo,
-        parseFloat(r.total_descuentos_ant || "0"),
-      ])
-    );
-
     // 8. Pagos de depósito de ESTA fecha (de wdepositos)
     const pagosDepQuery = `
       SELECT
@@ -294,32 +270,25 @@ export const getEquiposByPlanilla = async (
       const saldoInsc = saldoInscMap.get(idequipo) || { debe: 0, haber: 0 };
       const saldoFechasAnt = saldoFechasAntMap.get(idequipo) || { debe: 0, haber: 0 };
       const saldoDep = saldoDepMap.get(idequipo) || { debe: 0, haber: 0 };
-      const descuentosAnt = descuentosAntMap.get(idequipo) || 0;
 
-      // Saldo neto de cada componente (puede ser negativo = saldo a favor)
+      // Saldo neto de cada componente (negativo = saldo a favor)
       const saldoInscNeto = saldoInsc.debe - saldoInsc.haber;
       const saldoFechasAntNeto = saldoFechasAnt.debe - saldoFechasAnt.haber;
       // Restamos pagoDepEstaFecha porque ya está incluido en saldoDep.haber
       const saldoDepNeto = saldoDep.debe - (saldoDep.haber - pagoDepEstaFecha);
 
-      // Para mostrar en columnas individuales: solo la parte positiva (deuda)
+      // Para mostrar en columnas individuales de insc/dep: solo la parte positiva (deuda)
       const deudaInscPendiente = Math.max(0, saldoInscNeto);
-      const deudaFechasAntPendiente = Math.max(0, saldoFechasAntNeto);
       const deudaDepPendiente = Math.max(0, saldoDepNeto);
-
-      // Créditos de saldos a favor (parte negativa de cada componente)
-      const creditoInsc = Math.min(0, saldoInscNeto);
-      const creditoFechasAnt = Math.min(0, saldoFechasAntNeto);
-      const creditoDep = Math.min(0, saldoDepNeto);
-      const creditoTotal = creditoInsc + creditoFechasAnt + creditoDep - descuentosAnt;
 
       // Deuda de ESTA fecha específica (valor_fecha * cantidad_partidos)
       const deuda_fecha = data.valor_fecha * data.cantidad_partidos;
 
-      // Total a pagar = suma de deudas individuales, descontando créditos acumulados y descuentos anteriores
+      // Total a pagar = suma algebraica de todos los saldos netos + deuda de esta fecha
+      // saldoFechasAntNeto puede ser negativo (saldo a favor) y reduce el total
       const total_pagar = Math.max(
         0,
-        deudaInscPendiente + deudaDepPendiente + deudaFechasAntPendiente + deuda_fecha + creditoTotal
+        saldoInscNeto + saldoDepNeto + saldoFechasAntNeto + deuda_fecha
       );
 
       // Total pagado en esta fecha (incluyendo descuentos de esta fecha como pago)
@@ -337,7 +306,7 @@ export const getEquiposByPlanilla = async (
 
         deuda_insc: deudaInscPendiente,
         deuda_dep: deudaDepPendiente,
-        deuda_fecha_ant: deudaFechasAntPendiente,
+        deuda_fecha_ant: saldoFechasAntNeto,
         deuda_fecha,
         total_pagar,
 

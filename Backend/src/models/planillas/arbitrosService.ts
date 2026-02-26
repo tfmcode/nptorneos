@@ -58,16 +58,9 @@ export const addArbitro = async (
     const total = Number(arbitro.partidos) * Number(arbitro.valor_partido);
 
     const query = `
-      INSERT INTO fechas_arbitros 
+      INSERT INTO fechas_arbitros
         (idfecha, orden, idarbitro, idprofesor, partidos, valor_partido, total, fhcarga)
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-      ON CONFLICT (idfecha, orden)
-      DO UPDATE SET
-        idarbitro = EXCLUDED.idarbitro,
-        idprofesor = EXCLUDED.idprofesor,
-        partidos = EXCLUDED.partidos,
-        valor_partido = EXCLUDED.valor_partido,
-        total = EXCLUDED.total
       RETURNING *
     `;
 

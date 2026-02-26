@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   PlanillaEquipo,
   PlanillaArbitro,
@@ -75,6 +75,7 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
   const [deletedItems, setDeletedItems] = useState<T[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     setData(initialData);
@@ -197,6 +198,8 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
   }, [initialData]);
 
   const handleSave = async () => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsEditing(true);
 
     try {
@@ -312,12 +315,13 @@ export function usePlanillaEdition<T extends PlanillaEntity>({
       setDeletedItems([]);
       setHasChanges(false);
 
-      onSuccess?.();
+      await onSuccess?.();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Error al guardar cambios";
       onError?.(errorMessage);
     } finally {
+      isSavingRef.current = false;
       setIsEditing(false);
     }
   };

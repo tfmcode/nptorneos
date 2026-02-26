@@ -178,21 +178,31 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
     })}`;
   };
 
-  // Determina si un campo de pago debe estar bloqueado (cuando la deuda correspondiente es 0)
+  // Determina si un campo de pago debe estar bloqueado
   const isFieldDisabled = (equipo: PlanillaEquipo, field: EditingField): boolean => {
     if (!isEditable) return true;
     switch (field) {
       case "pago_ins":
-        return false; // Siempre habilitado aunque no haya deuda registrada
+        return equipo.pago_ins > 0; // Bloqueado si ya se registró un pago de inscripción
       case "pago_dep":
-        return false; // Siempre habilitado aunque no haya deuda registrada
+        return equipo.pago_dep > 0; // Bloqueado si ya se registró un pago de depósito
       case "pago_fecha":
         return equipo.deuda_fecha === 0 && equipo.pago_fecha === 0;
       case "pago_descuento":
-        // Descuento siempre editable si hay algo que pagar
         return equipo.total_pagar === 0;
       default:
         return false;
+    }
+  };
+
+  const getDisabledTitle = (equipo: PlanillaEquipo, field: EditingField): string => {
+    switch (field) {
+      case "pago_ins":
+        return equipo.pago_ins > 0 ? "Inscripción ya registrada" : "Sin deuda pendiente";
+      case "pago_dep":
+        return equipo.pago_dep > 0 ? "Depósito ya registrado" : "Sin deuda pendiente";
+      default:
+        return "Sin deuda pendiente";
     }
   };
 
@@ -245,7 +255,7 @@ export const EquiposTab: React.FC<EquiposTabProps> = ({
       return (
         <div
           className="px-2 py-1 rounded text-gray-400 cursor-not-allowed"
-          title="Sin deuda pendiente"
+          title={getDisabledTitle(equipo, field)}
         >
           {formatMoney(currentValue)}
         </div>

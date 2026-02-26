@@ -130,6 +130,7 @@ export const getEquiposByPlanilla = async (
     );
 
     // 5. SALDO FECHAS ANTERIORES - DEBE: wfechas_equipos_hab, HABER: wfechas_equipos WHERE tipopago IN (3, 4)
+    // Solo incluir fechas ANTERIORES (fecha < fecha actual), no fechas futuras o la misma
     const saldoFechasAntQuery = `
       SELECT
         e.id as idequipo,
@@ -137,11 +138,12 @@ export const getEquiposByPlanilla = async (
           SELECT COALESCE(SUM(feh.importe), 0)
           FROM wfechas_equipos_hab feh
           INNER JOIN wtorneos t ON feh.idtorneo = t.id
+          INNER JOIN wtorneos_fechas wtf_ant ON feh.idfecha = wtf_ant.id
           WHERE feh.idequipo = e.id
             AND feh.importe > 0
             AND t.fhbaja IS NULL
             AND feh.idtorneo = $2
-            AND feh.idfecha != $3
+            AND wtf_ant.fecha < (SELECT fecha FROM wtorneos_fechas WHERE id = $3)
         ), 0) as debe_fecha_ant,
         COALESCE((
           SELECT COALESCE(SUM(fe.importe), 0)
@@ -152,7 +154,7 @@ export const getEquiposByPlanilla = async (
             AND wtf.fhbaja IS NULL
             AND fe.importe > 0
             AND wtf.idtorneo = $2
-            AND fe.idfecha != $3
+            AND wtf.fecha < (SELECT fecha FROM wtorneos_fechas WHERE id = $3)
         ), 0) as haber_fecha_ant
       FROM wequipos e
       WHERE e.id = ANY($1) AND e.fhbaja IS NULL

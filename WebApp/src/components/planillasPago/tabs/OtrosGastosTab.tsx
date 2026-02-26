@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../../store";
+import { fetchCodificadores } from "../../../store/slices/codificadorSlice";
+import { fetchProveedores } from "../../../store/slices/proveedoresSlice";
 import { PlanillaOtroGasto } from "../../../types/planillasPago";
 import { usePlanillaEdition } from "../../../hooks/usePlanillaEdition";
 import { SeccionPlanilla } from "../shared/SeccionPlanilla";
@@ -24,7 +28,7 @@ interface FormularioOtroGasto {
   idprofesor: number;
   cantidad: number;
   valor_unidad: number;
-  [key: string]: unknown; // Signatura de índice para compatibilidad
+  [key: string]: unknown;
 }
 
 export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
@@ -34,6 +38,10 @@ export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
   onSuccess,
   onError,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { codificadores } = useSelector((state: RootState) => state.codificadores);
+  const { proveedores } = useSelector((state: RootState) => state.proveedores);
+
   const { data, isEditing, handleAdd, handleDelete, handleSave } =
     usePlanillaEdition({
       entityType: "otro_gasto",
@@ -50,27 +58,45 @@ export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
     valor_unidad: 0,
   });
 
+  // Cargar codificadores y proveedores al montar
+  useEffect(() => {
+    dispatch(fetchCodificadores());
+    dispatch(fetchProveedores({ page: 1, limit: 1000, searchTerm: "" }));
+  }, [dispatch]);
+
+  // Gastos Varios = idcodificador 4, activos
+  const gastosDisponibles = Array.isArray(codificadores)
+    ? codificadores
+        .filter((c) => c.idcodificador === 4 && c.codestado === "1")
+        .map((c) => ({
+          label: c.descripcion || `Código: ${c.id}`,
+          value: c.id,
+        }))
+    : [];
+
+  // Profesores = codtipo 2
+  const profesoresDisponibles = Array.isArray(proveedores)
+    ? proveedores
+        .filter((p) => p.codtipo === 2)
+        .map((p) => ({
+          label: p.nombre,
+          value: p.id || 0,
+        }))
+    : [];
+
   const campos: CampoFormulario<FormularioOtroGasto>[] = [
     {
       name: "codgasto",
       label: "Gasto",
       type: "select",
       required: true,
-      options: [
-        { label: "Gasto 1", value: 1 },
-        { label: "Gasto 2", value: 2 },
-        // TODO: Cargar desde API
-      ],
+      options: gastosDisponibles,
     },
     {
       name: "idprofesor",
       label: "Profesor",
       type: "select",
-      options: [
-        { label: "Profesor 1", value: 1 },
-        { label: "Profesor 2", value: 2 },
-        // TODO: Cargar desde API
-      ],
+      options: profesoresDisponibles,
     },
     {
       name: "cantidad",
@@ -136,7 +162,6 @@ export const OtrosGastosTab: React.FC<OtrosGastosTabProps> = ({
       return;
     }
 
-    // ✅ CORREGIDO: Pasar los datos del formulario al agregar
     handleAdd(formData);
     setFormData(resetearFormulario(formData));
   };

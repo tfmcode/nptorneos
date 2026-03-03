@@ -41,8 +41,13 @@ export const calcularTotales = (
     .filter((e) => e.ausente === 0) // Solo equipos presentes
     .reduce((sum, e) => sum + (e.pago_fecha || 0), 0);
 
+  // Descuentos: reducen el ingreso real de caja (no son pagos en efectivo)
+  const ingreso_descuentos = equipos
+    .filter((e) => e.ausente === 0)
+    .reduce((sum, e) => sum + (e.pago_descuento || 0), 0);
+
   const total_ingresos =
-    ingreso_inscripciones + ingreso_depositos + ingreso_fecha;
+    ingreso_inscripciones + ingreso_depositos + ingreso_fecha - ingreso_descuentos;
 
   // ========================================
   // EGRESOS
@@ -83,6 +88,7 @@ export const calcularTotales = (
     ingreso_inscripciones,
     ingreso_depositos,
     ingreso_fecha,
+    ingreso_descuentos,
     total_ingresos,
     egreso_arbitros,
     egreso_canchas,
@@ -104,6 +110,7 @@ export const formatearTotales = (totales: TotalesPlanilla): TotalesPlanilla => {
     ingreso_inscripciones: Number(totales.ingreso_inscripciones.toFixed(2)),
     ingreso_depositos: Number(totales.ingreso_depositos.toFixed(2)),
     ingreso_fecha: Number(totales.ingreso_fecha.toFixed(2)),
+    ingreso_descuentos: Number(totales.ingreso_descuentos.toFixed(2)),
     total_ingresos: Number(totales.total_ingresos.toFixed(2)),
     egreso_arbitros: Number(totales.egreso_arbitros.toFixed(2)),
     egreso_canchas: Number(totales.egreso_canchas.toFixed(2)),

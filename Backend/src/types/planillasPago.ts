@@ -138,6 +138,7 @@ export interface TotalesPlanilla {
   ingreso_inscripciones: number;
   ingreso_depositos: number;
   ingreso_fecha: number;
+  ingreso_descuentos: number;
   total_ingresos: number;
   egreso_arbitros: number;
   egreso_canchas: number;

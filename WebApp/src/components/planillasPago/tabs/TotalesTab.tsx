@@ -7,6 +7,7 @@ interface TotalesTabProps {
     ingreso_inscripciones: number;
     ingreso_depositos: number;
     ingreso_fecha: number;
+    ingreso_descuentos: number;
     total_ingresos: number;
     egreso_arbitros: number;
     egreso_canchas: number;
@@ -80,6 +81,14 @@ export const TotalesTab: React.FC<TotalesTabProps> = ({
                 {currency(totales.ingreso_fecha)}
               </span>
             </div>
+            {(totales.ingreso_descuentos || 0) > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Descuentos</span>
+                <span className="font-bold text-red-500 text-sm tabular-nums">
+                  -{currency(totales.ingreso_descuentos)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center pt-2 mt-2 border-t-2 border-green-300">
               <span className="text-xs font-bold text-green-800">TOTAL</span>
               <span className="font-black text-green-800 text-base tabular-nums">
